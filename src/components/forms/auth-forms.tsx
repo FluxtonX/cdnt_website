@@ -127,7 +127,7 @@ export function LoginForm() {
       <SecureBadge />
 
       <p className="text-center text-sm text-banking-muted font-medium">
-        Don't have an account?{" "}
+        Don&apos;t have an account?{" "}
         <Link href="/register" className="font-bold text-banking-blue hover:underline">
           Join North Union today
         </Link>

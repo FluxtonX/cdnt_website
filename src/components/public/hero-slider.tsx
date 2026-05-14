@@ -123,6 +123,6 @@ export function HeroSlider() {
   );
 }
 
-function cn(...inputs: any[]) {
+function cn(...inputs: string[]) {
   return inputs.filter(Boolean).join(" ");
 }

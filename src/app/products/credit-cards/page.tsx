@@ -1,11 +1,7 @@
 import Link from "next/link";
 import { 
-  CreditCard, 
   CheckCircle2, 
   ArrowRight, 
-  Plane, 
-  ShoppingBag, 
-  Crown, 
   ChevronRight,
   ShieldCheck,
   Zap
@@ -15,16 +11,24 @@ import { creditCards } from "@/data/mock";
 import { cn } from "@/lib/utils";
 
 function ProductCard({ card }: { card: typeof creditCards[0] }) {
-  const Icon = card.name.includes("Signature") ? Plane : card.name.includes("Cashback") ? ShoppingBag : Crown;
-
   return (
     <div className="flex flex-col rounded-3xl border border-banking-border bg-white shadow-sm hover:shadow-2xl hover:border-banking-blue transition-all overflow-hidden group">
-      <div className={cn("h-48 flex items-center justify-center relative overflow-hidden", card.color)}>
-        <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-50" />
-        <CreditCard className="h-24 w-24 text-white/20 absolute right-[-10%] bottom-[-10%] rotate-12" />
-        <div className="z-10 text-center">
-          <Icon className="h-10 w-10 text-banking-gold mx-auto mb-3" />
-          <h3 className="text-xl font-bold text-white px-6">{card.name}</h3>
+      <div className="relative h-56 overflow-hidden bg-banking-ink">
+        <img
+          src={card.image}
+          alt={`${card.name} lifestyle benefits`}
+          className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-105"
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-banking-ink/88 via-banking-ink/44 to-banking-ink/14" />
+        <div className="absolute inset-0 bg-gradient-to-t from-banking-ink/60 via-transparent to-transparent" />
+        <div className="absolute left-6 right-6 top-6 z-10">
+          <span className="inline-flex rounded-full border border-banking-gold/30 bg-banking-gold/12 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-banking-gold backdrop-blur">
+            {card.type}
+          </span>
+        </div>
+        <div className="absolute bottom-6 left-6 right-6 z-10">
+          <h3 className="max-w-[260px] text-2xl font-semibold leading-tight text-white">{card.name}</h3>
+          <p className="mt-2 text-xs font-medium leading-5 text-white/72">{card.rewards}</p>
         </div>
       </div>
       
@@ -83,7 +87,7 @@ export default function CreditCardsPage() {
               </div>
               <h1 className="text-4xl font-bold md:text-6xl leading-tight">Cards Designed for Your Ambition.</h1>
               <p className="mt-6 text-lg text-white/70 leading-relaxed">
-                Whether you're looking for premium travel rewards, everyday cashback, or institutional-grade credit limits, North Union has the perfect card for your financial journey.
+                Whether you&apos;re looking for premium travel rewards, everyday cashback, or institutional-grade credit limits, North Union has the perfect card for your financial journey.
               </p>
             </div>
           </div>

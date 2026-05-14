@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev -H 0.0.0.0",
+    "clean": "powershell -NoProfile -Command \"if (Test-Path .next-build) { Remove-Item -Recurse -Force .next-build }\"",
+    "build:clean": "npm run clean && npm run build",
     "build": "next build",
     "start": "next dev -H 0.0.0.0",
     "start:prod": "next start",

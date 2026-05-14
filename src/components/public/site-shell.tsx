@@ -3,11 +3,9 @@
 import * as React from "react";
 import Link from "next/link";
 import { 
-  Landmark, 
   Search, 
   Globe, 
   Phone, 
-  User, 
   Menu, 
   X,
   Twitter,
@@ -17,10 +15,11 @@ import {
   Youtube
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { MegaMenu, MenuSection } from "./mega-menu";
 import { cn } from "@/lib/utils";
 
+
+import { usePathname } from "next/navigation";
 
 const topLinksLeft = [
   "Personal", "Business", "Commercial", "Wealth", "Institutional", "About NUB"
@@ -42,12 +41,24 @@ const bottomLinks = [
   "Accounts", "Chequing Accounts", "Savings Accounts", "International Banking", "Student Banking", "Help With My Account", "NUB Vantage"
 ];
 
+const accountNavRoutes: Record<string, string> = {
+  Accounts: "/accounts",
+  "Chequing Accounts": "/accounts/chequing-accounts",
+  "Savings Accounts": "/accounts/savings-accounts",
+  "International Banking": "/accounts/international-banking",
+  "Student Banking": "/accounts/student-banking",
+  "Help With My Account": "/accounts/help-with-my-account",
+  "NUB Vantage": "/accounts/nub-vantage",
+};
+
 export function SiteHeader() {
   const [openMenu, setOpenMenu] = React.useState<string | null>(null);
   const [openBottomMenu, setOpenBottomMenu] = React.useState<string | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [isSearchOpen, setIsSearchOpen] = React.useState(false);
   const [currentLang, setCurrentLang] = React.useState("EN");
+
+  const pathname = usePathname();
 
   return (
     <>
@@ -56,15 +67,38 @@ export function SiteHeader() {
         <div className="hidden border-b border-banking-border bg-banking-offWhite lg:block">
           <div className="mx-auto flex h-9 max-w-7xl items-center justify-between px-5">
             <nav className="flex items-center gap-6">
-              {topLinksLeft.map((link) => (
-                <Link 
-                  key={link} 
-                  href="#" 
-                  className="text-[11px] font-bold text-banking-muted hover:text-banking-blue transition-colors"
-                >
-                  {link}
-                </Link>
-              ))}
+              {topLinksLeft.map((link) => {
+                const href = 
+                  link === "Personal" ? "/personal" : 
+                  link === "Business" ? "/business" :
+                  link === "Commercial" ? "/commercial" :
+                  link === "Wealth" ? "/wealth" :
+                  link === "Institutional" ? "/institutional" :
+                  link === "About NUB" ? "/about" : 
+                  "#";
+                
+                const isActive = pathname === href;
+
+                return (
+                  <Link 
+                    key={link} 
+                    href={href} 
+                    className={cn(
+                      "text-[11px] font-bold transition-all uppercase tracking-wider relative group",
+                      isActive ? "text-banking-blue" : "text-banking-muted hover:text-banking-blue"
+                    )}
+                  >
+                    {link}
+                    <motion.div 
+                      className="absolute -bottom-1 left-0 h-[2px] bg-banking-gold"
+                      initial={{ width: 0 }}
+                      animate={{ width: isActive ? "100%" : 0 }}
+                      whileHover={{ width: "100%" }}
+                      transition={{ duration: 0.2 }}
+                    />
+                  </Link>
+                );
+              })}
             </nav>
             <nav className="flex items-center gap-6">
               <Link href="#" className="text-[11px] font-bold text-banking-muted hover:text-banking-blue transition-colors">Promotions</Link>
@@ -204,12 +238,7 @@ export function SiteHeader() {
                   onMouseLeave={() => setOpenBottomMenu(null)}
                 >
                   <Link 
-                    href={
-                      link === "Accounts" ? "/accounts" : 
-                      link.includes("Accounts") ? "/accounts" :
-                      link === "NUB Vantage" ? "/accounts" : 
-                      "#"
-                    } 
+                    href={accountNavRoutes[link] ?? "/accounts"} 
                     className={cn(
                       "flex h-full items-center text-[12px] font-bold text-banking-text hover:text-banking-blue border-b-2 transition-all",
                       openBottomMenu === link ? "border-banking-blue text-banking-blue" : "border-transparent"
@@ -225,17 +254,17 @@ export function SiteHeader() {
                         <span className="text-[10px] font-bold text-banking-muted uppercase tracking-widest">{link} Options</span>
                       </div>
                       {[
-                        `View ${link} details`,
-                        "Current Rates",
-                        "Apply Online",
-                        "Frequently Asked Questions"
+                        { label: `View ${link} details`, href: accountNavRoutes[link] ?? "/accounts" },
+                        { label: "Current Rates", href: "/accounts/current-rates" },
+                        { label: "Apply Online", href: "/accounts/apply" },
+                        { label: "Frequently Asked Questions", href: "/accounts/faq" },
                       ].map(sub => (
                         <Link 
-                          key={sub} 
-                          href="#" 
+                          key={sub.label} 
+                          href={sub.href} 
                           className="block px-4 py-2 text-[11px] font-bold text-banking-text hover:bg-banking-offWhite hover:text-banking-blue"
                         >
-                          {sub}
+                          {sub.label}
                         </Link>
                       ))}
                     </div>
@@ -294,10 +323,16 @@ export function SiteHeader() {
               <div className="p-8">
                 <h4 className="text-xs font-bold uppercase tracking-widest text-banking-muted">Popular Searches</h4>
                 <div className="mt-4 flex flex-wrap gap-2">
-                  {["Open an Account", "Mortgage Rates", "Find an ATM", "Login Help", "NUB Vantage"].map(tag => (
-                    <button key={tag} className="rounded-full bg-banking-offWhite border border-banking-border px-4 py-2 text-sm font-bold text-banking-text hover:border-banking-blue hover:text-banking-blue transition-colors">
+                  {[
+                    ["Open an Account", "/accounts/apply"],
+                    ["Mortgage Rates", "#"],
+                    ["Find an ATM", "/contact"],
+                    ["Login Help", "/accounts/help-with-my-account"],
+                    ["NUB Vantage", "/accounts/nub-vantage"],
+                  ].map(([tag, href]) => (
+                    <Link key={tag} href={href} className="rounded-full bg-banking-offWhite border border-banking-border px-4 py-2 text-sm font-bold text-banking-text hover:border-banking-blue hover:text-banking-blue transition-colors">
                       {tag}
-                    </button>
+                    </Link>
                   ))}
                 </div>
               </div>
@@ -360,18 +395,18 @@ export function SiteFooter() {
           <div>
             <h4 className="text-sm font-bold uppercase tracking-widest text-white">Personal Banking</h4>
             <ul className="mt-6 space-y-4">
-              <li><Link href="/accounts" className="text-sm text-white/50 hover:text-banking-gold transition-colors">Chequing Accounts</Link></li>
-              <li><Link href="/accounts" className="text-sm text-white/50 hover:text-banking-gold transition-colors">Savings Accounts</Link></li>
+              <li><Link href="/accounts/chequing-accounts" className="text-sm text-white/50 hover:text-banking-gold transition-colors">Chequing Accounts</Link></li>
+              <li><Link href="/accounts/savings-accounts" className="text-sm text-white/50 hover:text-banking-gold transition-colors">Savings Accounts</Link></li>
               <li><Link href="/accounts/advantage" className="text-sm text-white/50 hover:text-banking-gold transition-colors">Advantage Banking</Link></li>
-              <li><Link href="/accounts/student" className="text-sm text-white/50 hover:text-banking-gold transition-colors">Student Banking</Link></li>
-              <li><Link href="/savings/high-interest" className="text-sm text-white/50 hover:text-banking-gold transition-colors">High Interest Savings</Link></li>
+              <li><Link href="/accounts/student-banking" className="text-sm text-white/50 hover:text-banking-gold transition-colors">Student Banking</Link></li>
+              <li><Link href="/accounts/savings-accounts" className="text-sm text-white/50 hover:text-banking-gold transition-colors">High Interest Savings</Link></li>
             </ul>
           </div>
 
           <div>
             <h4 className="text-sm font-bold uppercase tracking-widest text-white">Company</h4>
             <ul className="mt-6 space-y-4">
-              <li><Link href="/about" className="text-sm text-white/50 hover:text-banking-gold transition-colors">About Us</Link></li>
+              <li><Link href="/about" className="text-sm text-white/50 hover:text-banking-gold transition-colors">About NUB</Link></li>
               <li><Link href="/pricing" className="text-sm text-white/50 hover:text-banking-gold transition-colors">Fees & Pricing</Link></li>
               <li><Link href="/security" className="text-sm text-white/50 hover:text-banking-gold transition-colors">Security & Compliance</Link></li>
               <li><Link href="/help" className="text-sm text-white/50 hover:text-banking-gold transition-colors">Help Center</Link></li>

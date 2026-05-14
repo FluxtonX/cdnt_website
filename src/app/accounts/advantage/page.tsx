@@ -7,7 +7,8 @@ import {
   CreditCard, 
   ShieldCheck,
   CircleDollarSign,
-  Info
+  Info,
+  Landmark
 } from "lucide-react";
 import { SiteShell } from "@/components/public/site-shell";
 

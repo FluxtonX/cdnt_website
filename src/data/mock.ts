@@ -223,7 +223,7 @@ export const creditCards = [
     interestRate: "19.99%",
     rewards: "2 pts per $1 spent",
     perks: ["Premium Travel Insurance", "Airport Lounge Access", "No FX Fees"],
-    image: "/cards/signature.png",
+    image: "/cards/signature-visa.png",
     color: "bg-banking-blue",
   },
   {
@@ -233,7 +233,7 @@ export const creditCards = [
     interestRate: "20.99%",
     rewards: "4% Cashback on Groceries",
     perks: ["Extended Warranty", "Purchase Protection", "Mobile Device Insurance"],
-    image: "/cards/cashback.png",
+    image: "/cards/cashback-mastercard.png",
     color: "bg-banking-navy",
   },
   {
@@ -243,8 +243,7 @@ export const creditCards = [
     interestRate: "15.99%",
     rewards: "5 pts per $1 spent",
     perks: ["24/7 Concierge", "unlimited Lounge Key", "Private Event Access"],
-    image: "/cards/elite.png",
+    image: "/cards/elite-world-elite.png",
     color: "bg-banking-ink",
   },
 ];
-

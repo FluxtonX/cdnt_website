@@ -3,6 +3,13 @@ import type { MetadataRoute } from "next";
 const routes = [
   "",
   "/about",
+  "/personal",
+  "/business",
+  "/commercial",
+  "/institutional",
+  "/wealth",
+  "/advice",
+  "/accounts",
   "/pricing",
   "/security",
   "/help",

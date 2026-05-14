@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import {
   ArrowRight,
@@ -13,17 +15,18 @@ import {
   TrendingUp,
   CheckCircle2,
   Landmark,
+  MapPin,
 } from "lucide-react";
 import {
   FaqSection,
   FeatureGrid,
   FinalCta,
-  HowItWorks,
   SectionHeader,
   StatsBand,
 } from "@/components/public/page-blocks";
 import { HeroSlider } from "@/components/public/hero-slider";
 import { SiteShell } from "@/components/public/site-shell";
+import { motion } from "framer-motion";
 
 const productCategories = [
   {
@@ -360,6 +363,102 @@ export default function HomePage() {
       </section>
 
       {/* FAQ & CTA */}
+
+      {/* Find Branch Section */}
+      <section className="relative overflow-hidden bg-banking-ink py-20 text-white md:py-24">
+        <img
+          src="/branch-map.png"
+          alt="Global banking locations map"
+          className="absolute inset-0 h-full w-full object-cover object-center opacity-80 saturate-[1.08]"
+        />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(7,17,31,0.94)_0%,rgba(7,17,31,0.78)_36%,rgba(7,17,31,0.35)_66%,rgba(7,17,31,0.16)_100%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_76%_42%,rgba(253,194,5,0.18),transparent_26%),linear-gradient(180deg,rgba(7,17,31,0.12),rgba(7,17,31,0.52))]" />
+        <div className="absolute left-[58%] top-[28%] z-0 hidden h-10 w-10 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-white text-rose-600 shadow-xl ring-4 ring-white/45 md:grid">
+          <MapPin className="h-6 w-6 fill-current" />
+        </div>
+        <div className="absolute left-[72%] top-[58%] z-0 hidden h-10 w-10 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-white text-rose-600 shadow-xl ring-4 ring-white/45 md:grid">
+          <MapPin className="h-6 w-6 fill-current" />
+        </div>
+        <div className="absolute left-[83%] top-[38%] z-0 hidden h-10 w-10 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-white text-rose-600 shadow-xl ring-4 ring-white/45 lg:grid">
+          <MapPin className="h-6 w-6 fill-current" />
+        </div>
+        <div className="relative z-10 mx-auto grid max-w-7xl items-center gap-10 px-5 lg:grid-cols-[0.82fr_1.18fr]">
+          <motion.div
+            initial={{ opacity: 0, y: 18 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="max-w-2xl"
+          >
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/12 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-banking-gold shadow-lg backdrop-blur">
+              Near me
+            </div>
+            <h2 className="text-4xl font-black leading-tight tracking-normal text-white md:text-5xl">
+              Find a North Union branch or advisor near you.
+            </h2>
+            <p className="mt-5 max-w-xl text-base font-medium leading-8 text-white/82">
+              Explore nearby branches, commercial advisory centers, private
+              client offices, and institutional service desks across the North
+              Union network.
+            </p>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <button className="rounded-xl bg-banking-gold px-7 py-4 text-xs font-black uppercase tracking-widest text-banking-ink shadow-xl shadow-black/20 transition hover:bg-white">
+                Use my location
+              </button>
+              <button className="rounded-xl border border-white/25 bg-white/12 px-7 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg backdrop-blur transition hover:bg-white/20">
+                Search by city
+              </button>
+            </div>
+          </motion.div>
+
+          <div className="relative min-h-[430px] overflow-hidden rounded-[2rem] border border-white/25 bg-white/[0.12] shadow-2xl shadow-black/35 backdrop-blur-md">
+            <img
+              src="/branch-map.png"
+              alt="Detailed map of nearby North Union service points"
+              className="absolute inset-0 h-full w-full object-cover object-center opacity-95"
+            />
+            <div className="absolute inset-0 bg-white/10" />
+            <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-banking-ink/52" />
+
+            {[
+              ["left-[16%] top-[24%]", "bg-banking-gold"],
+              ["left-[34%] top-[42%]", "bg-sky-300"],
+              ["left-[55%] top-[31%]", "bg-banking-gold"],
+              ["left-[72%] top-[49%]", "bg-sky-300"],
+              ["left-[46%] top-[66%]", "bg-banking-gold"],
+            ].map(([position, color]) => (
+              <div
+                key={position}
+                className={`absolute ${position} z-10 grid h-10 w-10 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-white shadow-[0_0_35px_rgba(253,194,5,0.55)] ring-4 ring-white/40`}
+              >
+                <span className={`h-3.5 w-3.5 rounded-full ${color}`} />
+              </div>
+            ))}
+
+            <div className="absolute left-4 top-4 z-20 rounded-xl border border-banking-border bg-white px-4 py-3 text-banking-ink shadow-xl sm:left-5 sm:top-5">
+              <p className="text-[10px] font-black uppercase tracking-widest text-banking-muted">Live coverage</p>
+              <p className="mt-1 text-sm font-black">12 offices within 25 km</p>
+            </div>
+
+            <div className="absolute bottom-5 left-5 right-5 z-20 rounded-2xl border border-white/20 bg-banking-ink/88 p-4 text-white shadow-2xl backdrop-blur-md sm:left-6 sm:right-auto sm:w-[380px]">
+              <div className="flex gap-4">
+                <div className="grid h-24 w-28 shrink-0 place-items-center rounded-xl bg-white text-banking-blue shadow-inner">
+                  <Landmark className="h-10 w-10" />
+                </div>
+                <div className="min-w-0 py-1">
+                  <div className="flex items-center gap-2 text-banking-gold">
+                    <MapPin className="h-4 w-4" />
+                    <p className="text-[10px] font-black uppercase tracking-widest">Nearest branch</p>
+                  </div>
+                  <p className="mt-2 text-base font-bold leading-tight">North Union Financial Centre</p>
+                  <p className="mt-1 text-xs font-semibold leading-5 text-white/78">
+                    Full-service banking, advisory support, ATMs, and private meeting suites.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <FaqSection />
       <FinalCta />
