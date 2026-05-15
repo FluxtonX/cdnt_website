@@ -26,6 +26,7 @@ import {
 } from "@/components/public/page-blocks";
 import { HeroSlider } from "@/components/public/hero-slider";
 import { SiteShell } from "@/components/public/site-shell";
+import { CryptoShowcase } from "@/components/public/crypto-showcase";
 import { motion } from "framer-motion";
 
 const productCategories = [
@@ -95,6 +96,9 @@ export default function HomePage() {
 
       {/* Stats Section */}
       <StatsBand />
+
+      {/* Crypto Deposit & Withdraw Showcase */}
+      <CryptoShowcase />
 
       {/* Main Features */}
       <section className="mx-auto max-w-7xl px-5 py-24">

@@ -1,4 +1,8 @@
+"use client";
+
+import Link from "next/link";
 import { ArrowUpRight, TrendingUp, ShieldAlert, BarChart3, Info } from "lucide-react";
+
 import { PageTitle, Panel, PerformanceChart } from "@/components/dashboard/blocks";
 import { AllocationDonut, PortfolioInsightStrip } from "@/components/dashboard/portfolio-insights";
 import { portfolioAssets } from "@/data/mock";
@@ -22,6 +26,8 @@ function RiskMetric({ label, value, detail, status }: { label: string; value: st
     </div>
   );
 }
+
+
 
 export default function PortfolioPage() {
   return (
@@ -56,44 +62,63 @@ export default function PortfolioPage() {
                     <th className="pb-4">Net P/L</th>
                     <th className="pb-4">Network</th>
                     <th className="pb-4">Allocation</th>
+                    <th className="pb-4 text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-banking-border">
-                  {portfolioAssets.map((asset) => (
-                    <tr key={asset.symbol} className="group hover:bg-banking-offWhite transition-colors">
-                      <td className="py-5">
-                        <div className="flex items-center gap-3">
-                          <div className="grid h-8 w-8 place-items-center rounded-full bg-banking-offWhite font-bold text-xs group-hover:bg-white transition-colors">
-                            {asset.symbol.charAt(0)}
+                  {portfolioAssets.map((asset) => {
+                    return (
+                      <tr key={asset.symbol} className="group hover:bg-banking-offWhite transition-colors">
+                        <td className="py-5">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white shadow-sm transition-transform group-hover:scale-110">
+                              <img 
+                                src={asset.image} 
+                                alt={asset.symbol} 
+                                className="h-full w-full object-cover" 
+                                onError={(e) => {
+                                  // Fallback if image fails
+                                  (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${asset.symbol}&background=random`;
+                                }}
+                              />
+                            </div>
+                            <div>
+                              <p className="font-bold text-banking-text">{asset.symbol}</p>
+                              <p className="text-[11px] text-banking-muted">{asset.name}</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-bold text-banking-text">{asset.symbol}</p>
-                            <p className="text-xs text-banking-muted">{asset.name}</p>
+                        </td>
+                        <td className="py-5 font-medium text-banking-text">{asset.balance}</td>
+                        <td className="py-5 font-bold text-banking-text">{asset.value}</td>
+                        <td className="py-5">
+                          <span className="inline-flex items-center gap-1 font-bold text-emerald-600">
+                            <ArrowUpRight className="h-3 w-3" />
+                            {asset.change}
+                          </span>
+                        </td>
+                        <td className="py-5 text-[11px] font-bold text-banking-muted uppercase tracking-tight">{asset.network}</td>
+                        <td className="py-5">
+                          <div className="flex items-center gap-2">
+                            <div className="h-1.5 flex-1 rounded-full bg-slate-100">
+                              <div 
+                                className="h-1.5 rounded-full bg-banking-blue" 
+                                style={{ width: `${asset.allocation}%` }} 
+                              />
+                            </div>
+                            <span className="text-[11px] font-bold w-8">{asset.allocation}%</span>
                           </div>
-                        </div>
-                      </td>
-                      <td className="py-5 font-medium text-banking-text">{asset.balance}</td>
-                      <td className="py-5 font-bold text-banking-text">{asset.value}</td>
-                      <td className="py-5">
-                        <span className="inline-flex items-center gap-1 font-bold text-emerald-600">
-                          <ArrowUpRight className="h-3 w-3" />
-                          {asset.change}
-                        </span>
-                      </td>
-                      <td className="py-5 text-xs font-bold text-banking-muted uppercase tracking-tight">{asset.network}</td>
-                      <td className="py-5">
-                        <div className="flex items-center gap-2">
-                          <div className="h-1.5 flex-1 rounded-full bg-slate-100">
-                            <div 
-                              className="h-1.5 rounded-full bg-banking-blue" 
-                              style={{ width: `${asset.allocation}%` }} 
-                            />
-                          </div>
-                          <span className="text-[11px] font-bold w-8">{asset.allocation}%</span>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="py-5 text-right">
+                          <Link 
+                            href="/exchange" 
+                            className="text-xs font-bold text-banking-blue hover:text-banking-navy transition-colors"
+                          >
+                            Trade
+                          </Link>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

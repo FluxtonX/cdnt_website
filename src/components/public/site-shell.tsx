@@ -358,14 +358,12 @@ export function SiteFooter() {
                   className="h-full w-auto object-contain" 
                   onError={(e) => {
                     e.currentTarget.style.display = 'none';
-                    e.currentTarget.parentElement?.classList.add('flex', 'items-center', 'font-bold', 'text-banking-blue', 'text-xl');
+                    e.currentTarget.parentElement?.classList.add('flex', 'items-center', 'font-bold', 'text-white', 'text-xl');
                     if(e.currentTarget.parentElement) e.currentTarget.parentElement.innerText = 'NORTH UNION';
                   }}
                 />
               </div>
             </Link>
-
-
 
             <p className="mt-8 max-w-sm text-sm font-medium leading-7 text-white/60">
               North Union is a premier digital banking and crypto portfolio platform. 
@@ -391,36 +389,41 @@ export function SiteFooter() {
             </div>
           </div>
 
-          
           <div>
             <h4 className="text-sm font-bold uppercase tracking-widest text-white">Personal Banking</h4>
-            <ul className="mt-6 space-y-4">
+            <ul className="mt-6 space-y-3">
               <li><Link href="/accounts/chequing-accounts" className="text-sm text-white/50 hover:text-banking-gold transition-colors">Chequing Accounts</Link></li>
               <li><Link href="/accounts/savings-accounts" className="text-sm text-white/50 hover:text-banking-gold transition-colors">Savings Accounts</Link></li>
               <li><Link href="/accounts/advantage" className="text-sm text-white/50 hover:text-banking-gold transition-colors">Advantage Banking</Link></li>
               <li><Link href="/accounts/student-banking" className="text-sm text-white/50 hover:text-banking-gold transition-colors">Student Banking</Link></li>
-              <li><Link href="/accounts/savings-accounts" className="text-sm text-white/50 hover:text-banking-gold transition-colors">High Interest Savings</Link></li>
+              <li><Link href="/accounts/international-banking" className="text-sm text-white/50 hover:text-banking-gold transition-colors">International Banking</Link></li>
+              <li><Link href="/accounts/nub-vantage" className="text-sm text-white/50 hover:text-banking-gold transition-colors">NUB Vantage</Link></li>
             </ul>
           </div>
 
           <div>
-            <h4 className="text-sm font-bold uppercase tracking-widest text-white">Company</h4>
-            <ul className="mt-6 space-y-4">
+            <h4 className="text-sm font-bold uppercase tracking-widest text-white">Products</h4>
+            <ul className="mt-6 space-y-3">
+              <li><Link href="/products/credit-cards" className="text-sm text-white/50 hover:text-banking-gold transition-colors">Credit Cards</Link></li>
+              <li><Link href="#" className="text-sm text-white/50 hover:text-banking-gold transition-colors">Mortgages</Link></li>
+              <li><Link href="#" className="text-sm text-white/50 hover:text-banking-gold transition-colors">Personal Loans</Link></li>
+              <li><Link href="#" className="text-sm text-white/50 hover:text-banking-gold transition-colors">Investments</Link></li>
+              <li><Link href="/personal" className="text-sm text-white/50 hover:text-banking-gold transition-colors">Crypto Portfolio</Link></li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="text-sm font-bold uppercase tracking-widest text-white">Company & Legal</h4>
+            <ul className="mt-6 space-y-3">
               <li><Link href="/about" className="text-sm text-white/50 hover:text-banking-gold transition-colors">About NUB</Link></li>
               <li><Link href="/pricing" className="text-sm text-white/50 hover:text-banking-gold transition-colors">Fees & Pricing</Link></li>
               <li><Link href="/security" className="text-sm text-white/50 hover:text-banking-gold transition-colors">Security & Compliance</Link></li>
-              <li><Link href="/help" className="text-sm text-white/50 hover:text-banking-gold transition-colors">Help Center</Link></li>
-              <li><Link href="/contact" className="text-sm text-white/50 hover:text-banking-gold transition-colors">Contact Support</Link></li>
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="text-sm font-bold uppercase tracking-widest text-white">Legal</h4>
-            <ul className="mt-6 space-y-4">
-              <li><Link href="/terms" className="text-sm text-white/50 hover:text-banking-gold transition-colors">Terms of Service</Link></li>
               <li><Link href="/privacy" className="text-sm text-white/50 hover:text-banking-gold transition-colors">Privacy Policy</Link></li>
+              <li><Link href="/terms" className="text-sm text-white/50 hover:text-banking-gold transition-colors">Terms of Service</Link></li>
               <li><Link href="/risk-disclosure" className="text-sm text-white/50 hover:text-banking-gold transition-colors">Risk Disclosure</Link></li>
               <li><Link href="/statements" className="text-sm text-white/50 hover:text-banking-gold transition-colors">Financial Statements</Link></li>
+              <li><Link href="/help" className="text-sm text-white/50 hover:text-banking-gold transition-colors">Help Center</Link></li>
+              <li><Link href="/contact" className="text-sm text-white/50 hover:text-banking-gold transition-colors">Contact Support</Link></li>
             </ul>
           </div>
         </div>
@@ -429,7 +432,6 @@ export function SiteFooter() {
           <div className="flex flex-col md:flex-row justify-between gap-6 text-xs text-white/40 leading-relaxed">
             <div className="max-w-3xl space-y-4">
               <p>
-                North Union Financial is a fintech SaaS platform providing user-facing interfaces for onboarding, 
                 KYC verification, portfolio visibility, and support. We are not a bank or a regulated custody provider. 
                 All financial services are simulated or provided through licensed third-party partners where applicable.
               </p>

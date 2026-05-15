@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowDownToLine, CircleDollarSign, Plus, ArrowUpRight, ShieldCheck } from "lucide-react";
+import { ArrowDownToLine, CircleDollarSign, Plus, ArrowUpRight, ShieldCheck, RefreshCw } from "lucide-react";
 import {
   AccountHealth,
   AssetRow,
@@ -21,20 +21,27 @@ export default function DashboardPage() {
         description="Welcome back. Here is your unified view of your portfolio, accounts, and market performance."
         action={
           <div className="flex gap-3">
-            <button className="group/lock relative inline-flex items-center gap-2 rounded-lg bg-slate-200 px-6 py-2.5 text-sm font-bold text-slate-500 cursor-not-allowed">
-              <Plus className="h-4 w-4" />
+            <Link
+              href="/deposit"
+              className="relative inline-flex items-center gap-2 rounded-lg bg-banking-blue px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-banking-blue/20 hover:bg-banking-navy transition-all active:scale-95"
+            >
+              <ArrowDownToLine className="h-4 w-4" />
               Deposit
-              <div className="absolute -top-1 -right-1 rounded-full bg-banking-gold p-1 shadow-lg">
-                <ShieldCheck className="h-2.5 w-2.5 text-banking-ink" />
-              </div>
-            </button>
-            <button className="group/lock relative inline-flex items-center gap-2 rounded-lg border border-banking-border bg-slate-100 px-6 py-2.5 text-sm font-bold text-slate-400 cursor-not-allowed">
+            </Link>
+            <Link
+              href="/withdraw"
+              className="relative inline-flex items-center gap-2 rounded-lg border-2 border-banking-blue bg-white px-6 py-2.5 text-sm font-bold text-banking-blue hover:bg-blue-50 transition-all active:scale-95"
+            >
               <ArrowUpRight className="h-4 w-4" />
               Withdraw
-              <div className="absolute -top-1 -right-1 rounded-full bg-slate-400 p-1 shadow-lg">
-                <ShieldCheck className="h-2.5 w-2.5 text-white" />
-              </div>
-            </button>
+            </Link>
+            <Link
+              href="/exchange"
+              className="relative inline-flex items-center gap-2 rounded-lg bg-banking-gold px-6 py-2.5 text-sm font-bold text-banking-ink shadow-lg shadow-banking-gold/20 hover:bg-amber-400 transition-all active:scale-95"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Exchange
+            </Link>
           </div>
         }
       />

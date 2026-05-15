@@ -1,39 +1,95 @@
-import { ArrowUpRight, ShieldCheck } from "lucide-react";
+"use client";
+
+import { ArrowUpRight, ArrowDownRight, ShieldCheck } from "lucide-react";
 
 const prices = [
-  { symbol: "BTC", price: "$69,420.12", change: "+4.8%" },
-  { symbol: "ETH", price: "$3,395.40", change: "+2.1%" },
-  { symbol: "USDT", price: "$1.00", change: "0.0%" },
+  {
+    symbol: "BTC",
+    name: "Bitcoin",
+    price: "$92,350.12",
+    change: "+4.8%",
+    up: true,
+    bg: "bg-orange-50",
+    border: "border-orange-100",
+    image: "https://cryptologos.cc/logos/bitcoin-btc-logo.png",
+  },
+  {
+    symbol: "ETH",
+    name: "Ethereum",
+    price: "$3,395.40",
+    change: "+2.1%",
+    up: true,
+    bg: "bg-blue-50",
+    border: "border-blue-100",
+    image: "https://cryptologos.cc/logos/ethereum-eth-logo.png",
+  },
+  {
+    symbol: "BNB",
+    name: "Binance",
+    price: "$840.20",
+    change: "+1.4%",
+    up: true,
+    bg: "bg-yellow-50",
+    border: "border-yellow-100",
+    image: "https://cryptologos.cc/logos/bnb-bnb-logo.png",
+  },
+  {
+    symbol: "SOL",
+    name: "Solana",
+    price: "$210.50",
+    change: "+7.2%",
+    up: true,
+    bg: "bg-purple-50",
+    border: "border-purple-100",
+    image: "https://cryptologos.cc/logos/solana-sol-logo.png",
+  },
 ];
 
 export function MarketStrip() {
   return (
-    <section className="mb-6 grid gap-3 lg:grid-cols-[1fr_340px]">
-      <div className="grid gap-3 rounded-lg border border-banking-border bg-white p-4 shadow-sm md:grid-cols-3">
-        {prices.map((item) => (
-          <div key={item.symbol} className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-banking-muted">
-                {item.symbol}
-              </p>
-              <p className="mt-1 text-lg font-semibold">{item.price}</p>
-            </div>
-            <div className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-              <ArrowUpRight className="h-3.5 w-3.5" />
-              {item.change}
-            </div>
+    <section className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_1fr_340px]">
+      {prices.map((item) => (
+        <div
+          key={item.symbol}
+          className={`flex items-center gap-3 rounded-xl border ${item.border} ${item.bg} p-4 transition-all hover:shadow-md`}
+        >
+          {/* Coin Icon */}
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white shadow-sm border border-banking-border p-1.5">
+            <img src={item.image} alt={item.symbol} className="h-full w-full object-contain" />
           </div>
-        ))}
-      </div>
-      <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-emerald-800 shadow-sm">
-        <div className="flex gap-3">
-          <ShieldCheck className="h-5 w-5 shrink-0" />
-          <div>
-            <p className="font-semibold">Account healthy</p>
-            <p className="mt-1 text-sm leading-5">
-              KYC approved, 2FA enabled, no active restrictions.
-            </p>
+
+          {/* Info */}
+          <div className="min-w-0 flex-1">
+            <div className="flex items-baseline gap-1.5">
+              <p className="text-sm font-bold text-banking-text">{item.symbol}</p>
+              <p className="text-[10px] text-banking-muted truncate">{item.name}</p>
+            </div>
+            <p className="mt-0.5 text-base font-bold text-banking-text tabular-nums">{item.price}</p>
           </div>
+
+          {/* Change Badge */}
+          <div className={`shrink-0 inline-flex items-center gap-0.5 rounded-lg px-2 py-1 text-[11px] font-bold ${
+            item.up ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-600"
+          }`}>
+            {item.up
+              ? <ArrowUpRight className="h-3 w-3" />
+              : <ArrowDownRight className="h-3 w-3" />
+            }
+            {item.change}
+          </div>
+        </div>
+      ))}
+
+      {/* Account Health */}
+      <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500 shadow-sm">
+          <ShieldCheck className="h-5 w-5 text-white" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-bold text-emerald-800">Account Healthy</p>
+          <p className="mt-0.5 text-[11px] text-emerald-600 leading-relaxed">
+            KYC approved · 2FA on · No restrictions
+          </p>
         </div>
       </div>
     </section>
