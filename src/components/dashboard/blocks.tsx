@@ -1,3 +1,6 @@
+"use client";
+
+import React, { useState } from "react";
 import Link from "next/link";
 import { LucideIcon } from "lucide-react";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -95,24 +98,203 @@ export function Panel({
 }
 
 export function PerformanceChart() {
-  const bars = [45, 52, 48, 65, 59, 72, 85, 78, 92, 88, 95];
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+
+  const data = [
+    { day: "Mon", value: 50000, label: "$50,000" },
+    { day: "Tue", value: 15000, label: "$15,000" },
+    { day: "Wed", value: 50000, label: "$50,000" },
+    { day: "Thu", value: 30000, label: "$30,000" },
+    { day: "Fri", value: 52000, label: "$52,000" },
+    { day: "Sat", value: 5000,  label: "$5,000"  },
+    { day: "Sun", value: 52000, label: "$52,000" },
+  ];
+
+  // SVG dimensions
+  const viewBoxWidth = 800;
+  const viewBoxHeight = 280;
+  const paddingLeft = 60;
+  const paddingRight = 30;
+  const paddingTop = 20;
+  const paddingBottom = 40;
+
+  const chartWidth = viewBoxWidth - paddingLeft - paddingRight;
+  const chartHeight = viewBoxHeight - paddingTop - paddingBottom;
+  const maxVal = 60000;
+
+  // Compute point coordinates
+  const points = data.map((d, index) => {
+    const x = paddingLeft + (index / (data.length - 1)) * chartWidth;
+    const y = paddingTop + chartHeight * (1 - d.value / maxVal);
+    return { x, y, ...d };
+  });
+
+  // Generate cubic bezier curve path d-attribute
+  let linePath = "";
+  let areaPath = "";
+
+  if (points.length > 0) {
+    linePath = `M ${points[0].x},${points[0].y}`;
+    const dx = (chartWidth / (data.length - 1)) * 0.35;
+
+    for (let i = 0; i < points.length - 1; i++) {
+      const pStart = points[i];
+      const pEnd = points[i + 1];
+      linePath += ` C ${pStart.x + dx},${pStart.y} ${pEnd.x - dx},${pEnd.y} ${pEnd.x},${pEnd.y}`;
+    }
+
+    // Close the area path for fill gradient
+    areaPath = `${linePath} L ${points[points.length - 1].x},${paddingTop + chartHeight} L ${points[0].x},${paddingTop + chartHeight} Z`;
+  }
+
+  // Y-axis grid line values
+  const yTicks = [60000, 45000, 30000, 15000, 0];
+
   return (
-    <div className="flex h-56 items-end gap-3 rounded-xl bg-banking-offWhite p-6 border border-banking-border shadow-inner">
-      {bars.map((point, index) => (
-        <div key={index} className="flex flex-1 items-end group relative h-full">
-          <div
-            className={cn(
-              "w-full rounded-t-lg transition-all duration-500 shadow-lg",
-              index === bars.length - 1 ? "bg-banking-gold" : "bg-banking-blue/60 group-hover:bg-banking-blue"
-            )}
-            style={{ height: `${point}%` }}
+    <div className="relative w-full overflow-hidden bg-white">
+      <svg
+        viewBox={`0 0 ${viewBoxWidth} ${viewBoxHeight}`}
+        className="w-full h-auto overflow-visible select-none"
+      >
+        <defs>
+          {/* Area Gradient */}
+          <linearGradient id="chartLineGradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#014EA1" stopOpacity="0.2" />
+            <stop offset="100%" stopColor="#014EA1" stopOpacity="0.0" />
+          </linearGradient>
+        </defs>
+
+        {/* Horizontal Gridlines */}
+        {yTicks.map((tick, i) => {
+          const y = paddingTop + chartHeight * (1 - tick / maxVal);
+          return (
+            <g key={tick} className="opacity-75">
+              <line
+                x1={paddingLeft}
+                y1={y}
+                x2={viewBoxWidth - paddingRight}
+                y2={y}
+                stroke="#E2E8F0"
+                strokeWidth={i === yTicks.length - 1 ? 1.5 : 1}
+                strokeDasharray={i === yTicks.length - 1 ? "0" : "5 5"}
+              />
+              {/* Y Axis Labels */}
+              <text
+                x={paddingLeft - 12}
+                y={y + 4}
+                textAnchor="end"
+                className="text-[10px] font-bold fill-banking-muted font-sans"
+              >
+                {tick === 0 ? "0" : tick}
+              </text>
+            </g>
+          );
+        })}
+
+        {/* Vertical Ticks (small lines) on the bottom axis */}
+        {points.map((pt) => (
+          <line
+            key={pt.day}
+            x1={pt.x}
+            y1={paddingTop + chartHeight}
+            x2={pt.x}
+            y2={paddingTop + chartHeight + 4}
+            stroke="#E2E8F0"
+            strokeWidth={1}
           />
-          <div className="absolute -top-10 left-1/2 -translate-x-1/2 rounded-md bg-banking-ink px-2.5 py-1.5 text-[9px] font-black text-white opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0 shadow-xl whitespace-nowrap z-20">
-            {point}.4% APY
-            <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-banking-ink" />
-          </div>
+        ))}
+
+        {/* Area Under Curve */}
+        {areaPath && (
+          <path
+            d={areaPath}
+            fill="url(#chartLineGradient)"
+            className="transition-all duration-300"
+          />
+        )}
+
+        {/* Spline Path */}
+        {linePath && (
+          <path
+            d={linePath}
+            fill="none"
+            stroke="#014EA1"
+            strokeWidth={2.5}
+            strokeLinecap="round"
+            className="transition-all duration-300"
+          />
+        )}
+
+        {/* Data Circles / Interactive Hotspots */}
+        {points.map((pt, index) => {
+          const isHovered = hoveredIndex === index;
+          return (
+            <g
+              key={pt.day}
+              onMouseEnter={() => setHoveredIndex(index)}
+              onMouseLeave={() => setHoveredIndex(null)}
+              className="cursor-pointer"
+            >
+              {/* Invisible large outer circle for easier hovering */}
+              <circle
+                cx={pt.x}
+                cy={pt.y}
+                r={16}
+                fill="transparent"
+              />
+              
+              {/* Glowing halo when hovered */}
+              <circle
+                cx={pt.x}
+                cy={pt.y}
+                r={isHovered ? 8 : 4}
+                fill={isHovered ? "#3878B8" : "transparent"}
+                fillOpacity={0.3}
+                className="transition-all duration-200 ease-out"
+              />
+
+              {/* White outer stroke circle */}
+              <circle
+                cx={pt.x}
+                cy={pt.y}
+                r={isHovered ? 5.5 : 4}
+                fill="#FFFFFF"
+                stroke="#014EA1"
+                strokeWidth={isHovered ? 2.5 : 2}
+                className="transition-all duration-200 ease-out shadow-sm"
+              />
+              
+              {/* X Axis Labels */}
+              <text
+                x={pt.x}
+                y={paddingTop + chartHeight + 20}
+                textAnchor="middle"
+                className={cn(
+                  "text-[11px] font-bold transition-colors font-sans",
+                  isHovered ? "fill-banking-blue" : "fill-banking-muted"
+                )}
+              >
+                {pt.day}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+
+      {/* HTML Floating Tooltip */}
+      {hoveredIndex !== null && (
+        <div
+          className="absolute z-30 pointer-events-none rounded-lg bg-banking-ink px-3 py-1.5 text-[11px] font-bold text-white shadow-xl flex flex-col gap-0.5 -translate-x-1/2 -translate-y-full transition-all duration-150"
+          style={{
+            left: `${(points[hoveredIndex].x / viewBoxWidth) * 100}%`,
+            top: `${(points[hoveredIndex].y / viewBoxHeight) * 100 - 4}%`,
+          }}
+        >
+          <span className="opacity-70 text-[9px] uppercase tracking-wider">{points[hoveredIndex].day} Portfolio Value</span>
+          <span className="text-banking-gold text-xs font-black">{points[hoveredIndex].label} CAD</span>
+          <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-banking-ink" />
         </div>
-      ))}
+      )}
     </div>
   );
 }

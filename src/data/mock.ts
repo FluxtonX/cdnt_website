@@ -30,7 +30,6 @@ export const publicNav = [
 
 export const userNav = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/kyc", label: "KYC", icon: FileCheck2 },
   { href: "/wallets", label: "Wallets", icon: Wallet },
   { href: "/deposit", label: "Deposit", icon: ArrowDownToLine },
   { href: "/withdraw", label: "Withdraw", icon: CircleDollarSign },
