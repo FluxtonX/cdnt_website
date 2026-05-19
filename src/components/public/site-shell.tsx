@@ -346,42 +346,36 @@ export function SiteHeader() {
 
 export function SiteFooter() {
   return (
-    <footer className="bg-banking-blue pt-20 pb-10 text-white">
-      <div className="mx-auto max-w-7xl px-5">
-        <div className="grid gap-12 lg:grid-cols-5">
+    <footer className="relative bg-[#07111F] pt-24 pb-12 text-white border-t border-white/5">
+      {/* Background radial highlight */}
+      <div className="absolute right-0 bottom-0 h-96 w-96 rounded-full bg-banking-blue/10 blur-[120px] pointer-events-none" />
+      
+      <div className="mx-auto max-w-7xl px-5 relative z-10">
+        <div className="grid gap-12 lg:grid-cols-6">
           <div className="lg:col-span-2">
-            <Link href="/" className="inline-flex items-center hover:scale-105 transition-transform">
-              <div className="h-12 w-auto">
-                <img 
-                  src="/logo.png" 
-                  alt="North Union" 
-                  className="h-full w-auto object-contain" 
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none';
-                    e.currentTarget.parentElement?.classList.add('flex', 'items-center', 'font-bold', 'text-white', 'text-xl');
-                    if(e.currentTarget.parentElement) e.currentTarget.parentElement.innerText = 'NORTH UNION';
-                  }}
-                />
+            <Link href="/" className="inline-flex items-center gap-2 group">
+              <div className="h-10 w-auto flex items-center font-bold text-white text-2xl tracking-tight">
+                <span className="inline-block h-6 w-6 rounded-full bg-gradient-to-tr from-[#3061EF] to-sky-400 mr-2 shadow-lg shadow-blue-500/30" />
+                North Union
               </div>
             </Link>
 
-            <p className="mt-8 max-w-sm text-sm font-medium leading-7 text-white/60">
-              North Union is a premier digital banking and crypto portfolio platform. 
-              We provide institutional-grade security and sophisticated financial tools 
-              for modern investors.
+            <p className="mt-6 max-w-sm text-sm font-medium leading-7 text-white/50">
+              Bridging traditional banking with the digital asset economy. 
+              Built to protect, grow, and empower your wealth with institutional-grade security.
             </p>
+            
             <div className="mt-8 flex gap-4">
               {[
                 { icon: Twitter, href: "#" },
                 { icon: Linkedin, href: "#" },
                 { icon: Facebook, href: "#" },
                 { icon: Instagram, href: "#" },
-                { icon: Youtube, href: "#" },
               ].map((social, i) => (
                 <Link 
                   key={i} 
                   href={social.href}
-                  className="h-10 w-10 rounded-full bg-white/10 border border-white/10 flex items-center justify-center text-white/60 hover:bg-banking-gold hover:text-banking-ink hover:border-banking-gold transition-all"
+                  className="h-9 w-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/40 hover:bg-[#3061EF] hover:text-white hover:border-[#3061EF] transition-all"
                 >
                   <social.icon className="h-4 w-4" />
                 </Link>
@@ -390,59 +384,61 @@ export function SiteFooter() {
           </div>
 
           <div>
-            <h4 className="text-sm font-bold uppercase tracking-widest text-white">Personal Banking</h4>
-            <ul className="mt-6 space-y-3">
-              <li><Link href="/accounts/chequing-accounts" className="text-sm text-white/50 hover:text-banking-gold transition-colors">Chequing Accounts</Link></li>
-              <li><Link href="/accounts/savings-accounts" className="text-sm text-white/50 hover:text-banking-gold transition-colors">Savings Accounts</Link></li>
-              <li><Link href="/accounts/advantage" className="text-sm text-white/50 hover:text-banking-gold transition-colors">Advantage Banking</Link></li>
-              <li><Link href="/accounts/student-banking" className="text-sm text-white/50 hover:text-banking-gold transition-colors">Student Banking</Link></li>
-              <li><Link href="/accounts/international-banking" className="text-sm text-white/50 hover:text-banking-gold transition-colors">International Banking</Link></li>
-              <li><Link href="/accounts/nub-vantage" className="text-sm text-white/50 hover:text-banking-gold transition-colors">NUB Vantage</Link></li>
+            <h4 className="text-xs font-bold uppercase tracking-widest text-[#3061EF]">Products</h4>
+            <ul className="mt-6 space-y-3.5">
+              <li><Link href="/accounts" className="text-sm text-white/50 hover:text-white transition-colors">Accounts</Link></li>
+              <li><Link href="/products/credit-cards" className="text-sm text-white/50 hover:text-white transition-colors">Credit Cards</Link></li>
+              <li><Link href="#" className="text-sm text-white/50 hover:text-white transition-colors">Mortgages</Link></li>
+              <li><Link href="#" className="text-sm text-white/50 hover:text-white transition-colors">Loans</Link></li>
             </ul>
           </div>
 
           <div>
-            <h4 className="text-sm font-bold uppercase tracking-widest text-white">Products</h4>
-            <ul className="mt-6 space-y-3">
-              <li><Link href="/products/credit-cards" className="text-sm text-white/50 hover:text-banking-gold transition-colors">Credit Cards</Link></li>
-              <li><Link href="#" className="text-sm text-white/50 hover:text-banking-gold transition-colors">Mortgages</Link></li>
-              <li><Link href="#" className="text-sm text-white/50 hover:text-banking-gold transition-colors">Personal Loans</Link></li>
-              <li><Link href="#" className="text-sm text-white/50 hover:text-banking-gold transition-colors">Investments</Link></li>
-              <li><Link href="/personal" className="text-sm text-white/50 hover:text-banking-gold transition-colors">Crypto Portfolio</Link></li>
+            <h4 className="text-xs font-bold uppercase tracking-widest text-[#3061EF]">Wealth</h4>
+            <ul className="mt-6 space-y-3.5">
+              <li><Link href="/wealth" className="text-sm text-white/50 hover:text-white transition-colors">Wealth Management</Link></li>
+              <li><Link href="#" className="text-sm text-white/50 hover:text-white transition-colors">Managed Portfolios</Link></li>
+              <li><Link href="#" className="text-sm text-white/50 hover:text-white transition-colors">Advisory Services</Link></li>
+              <li><Link href="#" className="text-sm text-white/50 hover:text-white transition-colors">Private Banking</Link></li>
             </ul>
           </div>
 
           <div>
-            <h4 className="text-sm font-bold uppercase tracking-widest text-white">Company & Legal</h4>
-            <ul className="mt-6 space-y-3">
-              <li><Link href="/about" className="text-sm text-white/50 hover:text-banking-gold transition-colors">About NUB</Link></li>
-              <li><Link href="/pricing" className="text-sm text-white/50 hover:text-banking-gold transition-colors">Fees & Pricing</Link></li>
-              <li><Link href="/security" className="text-sm text-white/50 hover:text-banking-gold transition-colors">Security & Compliance</Link></li>
-              <li><Link href="/privacy" className="text-sm text-white/50 hover:text-banking-gold transition-colors">Privacy Policy</Link></li>
-              <li><Link href="/terms" className="text-sm text-white/50 hover:text-banking-gold transition-colors">Terms of Service</Link></li>
-              <li><Link href="/risk-disclosure" className="text-sm text-white/50 hover:text-banking-gold transition-colors">Risk Disclosure</Link></li>
-              <li><Link href="/statements" className="text-sm text-white/50 hover:text-banking-gold transition-colors">Financial Statements</Link></li>
-              <li><Link href="/help" className="text-sm text-white/50 hover:text-banking-gold transition-colors">Help Center</Link></li>
-              <li><Link href="/contact" className="text-sm text-white/50 hover:text-banking-gold transition-colors">Contact Support</Link></li>
+            <h4 className="text-xs font-bold uppercase tracking-widest text-[#3061EF]">Pricing</h4>
+            <ul className="mt-6 space-y-3.5">
+              <li><Link href="/pricing" className="text-sm text-white/50 hover:text-white transition-colors">Personal Fees</Link></li>
+              <li><Link href="#" className="text-sm text-white/50 hover:text-white transition-colors">Business Fees</Link></li>
+              <li><Link href="#" className="text-sm text-white/50 hover:text-white transition-colors">Crypto Trading Fees</Link></li>
+              <li><Link href="#" className="text-sm text-white/50 hover:text-white transition-colors">Interac Limits</Link></li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="text-xs font-bold uppercase tracking-widest text-[#3061EF]">Company</h4>
+            <ul className="mt-6 space-y-3.5">
+              <li><Link href="/about" className="text-sm text-white/50 hover:text-white transition-colors">About NUB</Link></li>
+              <li><Link href="/contact" className="text-sm text-white/50 hover:text-white transition-colors">Contact Support</Link></li>
+              <li><Link href="/security" className="text-sm text-white/50 hover:text-white transition-colors">Security First</Link></li>
+              <li><Link href="/privacy" className="text-sm text-white/50 hover:text-white transition-colors">Privacy Policy</Link></li>
             </ul>
           </div>
         </div>
 
-        <div className="mt-20 border-t border-white/10 pt-8">
+        <div className="mt-20 border-t border-white/5 pt-8">
           <div className="flex flex-col md:flex-row justify-between gap-6 text-xs text-white/40 leading-relaxed">
-            <div className="max-w-3xl space-y-4">
+            <div className="max-w-4xl space-y-3">
               <p>
-                KYC verification, portfolio visibility, and support. We are not a bank or a regulated custody provider. 
-                All financial services are simulated or provided through licensed third-party partners where applicable.
+                KYC verification, portfolio visibility, and support are simulated. We are not a registered bank in Canada or a licensed custody provider. 
+                All digital asset representations and transactions are simulated for platform evaluation purposes.
               </p>
               <p>
                 &copy; {new Date().getFullYear()} North Union Financial Services Inc. All rights reserved. 
-                Member CDIC (Simulated).
+                Member CDIC (Simulated protection applies to fiat-equivalent deposits).
               </p>
             </div>
             <div className="flex gap-6 whitespace-nowrap">
-              <Link href="#" className="hover:text-white underline">Accessibility</Link>
-              <Link href="#" className="hover:text-white underline">AdChoices</Link>
+              <Link href="/terms" className="hover:text-white underline">Terms of Service</Link>
+              <Link href="/risk-disclosure" className="hover:text-white underline">Risk Disclosure</Link>
             </div>
           </div>
         </div>

@@ -9,6 +9,10 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ["var(--font-inter)", "sans-serif"],
+        heading: ["var(--font-plus-jakarta-sans)", "sans-serif"],
+      },
       colors: {
         banking: {
           blue: "#014EA1",
