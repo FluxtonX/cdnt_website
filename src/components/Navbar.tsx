@@ -47,6 +47,7 @@ export default function Navbar() {
               height={100}
               quality={100}
               priority
+              unoptimized={true}
               className="h-8 w-auto object-contain"
             />
           </Link>

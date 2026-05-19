@@ -46,6 +46,7 @@ export default function Footer() {
                 height={160}
                 quality={100}
                 priority
+                unoptimized={true}
                 className="h-10 w-auto object-contain brightness-0 invert"
               />
             </Link>
