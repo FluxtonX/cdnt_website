@@ -3,28 +3,16 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: light;
-  --background: #f8fafc;
-  --foreground: #0b1220;
+  --background: #F4F6FA;
+  --foreground: #0A0F2C;
 }
 
 .dark {
-  color-scheme: dark;
-  --background: #07111f;
-  --foreground: #f8fafc;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-html {
-  scroll-behavior: smooth;
+  --background: #0A0F2C;
+  --foreground: #F4F6FA;
 }
 
 body {
-  min-height: 100vh;
-  margin: 0;
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-inter), sans-serif;
@@ -35,45 +23,8 @@ h1, h2, h3, h4, h5, h6 {
   letter-spacing: -0.025em;
 }
 
-.dark body {
-  background: #07111f;
-  color: #f8fafc;
-}
-
-.dark .bg-white {
-  background-color: #0d1b2e;
-}
-
-.dark .bg-banking-offWhite {
-  background-color: #07111f;
-}
-
-.dark .text-banking-text {
-  color: #f8fafc;
-}
-
-.dark .text-banking-muted {
-  color: #a8b3c7;
-}
-
-.dark .border-banking-border {
-  border-color: rgba(229, 234, 241, 0.14);
-}
-
-.dark input,
-.dark textarea,
-.dark select {
-  background-color: #0d1b2e;
-  color: #f8fafc;
-}
-
-button,
-input,
-textarea,
-select {
-  font: inherit;
-}
-
-::selection {
-  background: rgba(253, 194, 5, 0.32);
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
 }

@@ -16,26 +16,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://northunion.example"),
-  title: {
-    default: "North Union",
-    template: "%s | North Union",
-  },
-  description: "Secure fintech banking and crypto portfolio platform.",
-  keywords: [
-    "North Union",
-    "fintech",
-    "crypto portfolio",
-    "KYC",
-    "Interac withdrawals",
-    "secure banking dashboard",
-  ],
-  openGraph: {
-    title: "North Union",
-    description: "Secure fintech banking and crypto portfolio platform.",
-    type: "website",
-    siteName: "North Union",
-  },
+  title: "North Union Bank — Banking Meets Crypto Intelligence",
+  description: "A regulated Canadian digital bank with a built-in crypto engine.",
 };
 
 export default function RootLayout({

@@ -1,48 +1,27 @@
-"use client";
-
-import React from "react";
-import { SiteShell } from "@/components/public/site-shell";
-import Hero from "@/components/Hero";
-import TickerBar from "@/components/TickerBar";
-import SecuritySection from "@/components/SecuritySection";
-import FeatureSection from "@/components/FeatureSection";
-import MarketSection from "@/components/MarketSection";
-import StepsSection from "@/components/StepsSection";
-import MobileAppSection from "@/components/MobileAppSection";
-import Testimonials from "@/components/Testimonials";
+import Navbar from "@/components/Navbar";
+import HeroSection from "@/components/HeroSection";
+import TrustSection from "@/components/TrustSection";
+import FeaturesSection from "@/components/FeaturesSection";
+import DigitalAssetsSection from "@/components/DigitalAssetsSection";
+import OnboardingSection from "@/components/OnboardingSection";
+import AppPreviewSection from "@/components/AppPreviewSection";
+import TestimonialsSection from "@/components/TestimonialsSection";
 import CTASection from "@/components/CTASection";
+import Footer from "@/components/Footer";
 
-export default function HomePage() {
+export default function Home() {
   return (
-    <SiteShell>
-      <div className="bg-[#FAF9F5] text-slate-800 antialiased overflow-x-hidden font-sans">
-        {/* Hero Section */}
-        <Hero />
-
-        {/* Capsule Ticker Bar */}
-        <TickerBar />
-
-        {/* Security & Compliance Grid */}
-        <SecuritySection />
-
-        {/* Banking & Crypto Features Grid */}
-        <FeatureSection />
-
-        {/* Dark Market Section with Neon Charts */}
-        <MarketSection />
-
-        {/* Quick Signup Steps */}
-        <StepsSection />
-
-        {/* Overlapping Mobile App Mockups */}
-        <MobileAppSection />
-
-        {/* Client Testimonials */}
-        <Testimonials />
-
-        {/* Neon Gradient Call to Action */}
-        <CTASection />
-      </div>
-    </SiteShell>
+    <main className="min-h-screen">
+      <Navbar />
+      <HeroSection />
+      <TrustSection />
+      <FeaturesSection />
+      <DigitalAssetsSection />
+      <OnboardingSection />
+      <AppPreviewSection />
+      <TestimonialsSection />
+      <CTASection />
+      <Footer />
+    </main>
   );
 }

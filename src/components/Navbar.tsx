@@ -1,150 +1,129 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
+import Image from "next/image";
 import Link from "next/link";
-import { Menu, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Menu, X } from "lucide-react";
+import { Button } from "./ui/Button";
+
+const NAV_LINKS = [
+  { name: "Home", href: "#" },
+  { name: "About", href: "#" },
+  { name: "Pricing", href: "#" },
+  { name: "Security", href: "#" },
+  { name: "Help", href: "#" },
+];
 
 export default function Navbar() {
-  const [isOpen, setIsOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
-      if (window.scrollY > 20) {
-        setScrolled(true);
-      } else {
-        setScrolled(false);
-      }
+      setIsScrolled(window.scrollY > 10);
     };
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const navLinks = [
-    { name: "Home", href: "/" },
-    { name: "About", href: "/about" },
-    { name: "Pricing", href: "/pricing" },
-    { name: "Security", href: "/security" },
-    { name: "Help", href: "/help" },
-  ];
-
   return (
-    <motion.header
-      className={`fixed top-4 left-0 right-0 z-50 transition-all duration-300 px-4 sm:px-6 lg:px-8`}
-      initial={{ y: -50, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.5 }}
+    <header
+      className={`fixed top-0 w-full z-50 transition-all duration-300 ${
+        isScrolled
+          ? "bg-white/80 backdrop-blur-md border-b border-gray-200 shadow-sm"
+          : "bg-transparent border-b border-transparent"
+      }`}
     >
-      <div
-        className={`mx-auto max-w-7xl rounded-full border transition-all duration-300 ${
-          scrolled
-            ? "bg-white/80 backdrop-blur-md border-slate-200/60 shadow-[0_10px_30px_rgba(0,0,0,0.04)]"
-            : "bg-white/95 border-slate-100 shadow-[0_8px_25px_rgba(0,0,0,0.02)]"
-        }`}
-      >
-        <div className="flex h-16 items-center justify-between px-6 sm:px-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-20">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 group">
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-tr from-[#3061EF] to-[#60a5fa] shadow-md shadow-blue-500/20 group-hover:scale-105 transition-transform duration-300">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                className="h-5 w-5 text-white"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-.778.099-1.533.284-2.253"
-                />
-              </svg>
-            </span>
-            <span className="text-lg font-extrabold text-[#0B1220] tracking-tight group-hover:text-[#3061EF] transition-colors duration-300">
-              North Union
-            </span>
-          </Link>
+          <div className="flex-shrink-0 flex items-center">
+            <Link href="/" className="flex items-center">
+              <Image
+                src="/assets/logo.png"
+                alt="North Union Bank"
+                width={120}
+                height={40}
+                className="h-10 w-auto object-contain"
+              />
+            </Link>
+          </div>
 
-          {/* Desktop Navigation Links */}
-          <nav className="hidden md:flex items-center gap-8">
-            {navLinks.map((link) => (
+          {/* Desktop Nav */}
+          <nav className="hidden md:flex items-center space-x-8">
+            {NAV_LINKS.map((link) => (
               <Link
                 key={link.name}
                 href={link.href}
-                className="text-sm font-semibold text-slate-600 hover:text-[#3061EF] transition-colors duration-200"
+                className="text-[14px] font-medium text-gray-700 hover:text-primary-blue transition-colors duration-200"
               >
                 {link.name}
               </Link>
             ))}
           </nav>
 
-          {/* Desktop Call to Actions */}
-          <div className="hidden md:flex items-center gap-6">
-            <Link
-              href="/login"
-              className="text-sm font-bold text-slate-700 hover:text-[#3061EF] transition-colors duration-200"
-            >
+          {/* CTA Buttons */}
+          <div className="hidden md:flex items-center space-x-4">
+            <Button variant="secondary" className="px-5 py-2 text-[14px]">
               Sign In
-            </Link>
-            <Link
-              href="/register"
-              className="inline-flex items-center justify-center rounded-full bg-[#0B1220] hover:bg-[#3061EF] px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-slate-900/10 hover:shadow-blue-500/20 transition-all hover:scale-105 duration-250 active:scale-[0.98]"
-            >
+            </Button>
+            <Button variant="primary" className="px-5 py-2 text-[14px]">
               Open Account
-            </Link>
+            </Button>
           </div>
 
-          {/* Mobile Menu Toggle */}
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            className="md:hidden p-2 rounded-full hover:bg-slate-100 text-slate-600 transition-colors"
-          >
-            {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </button>
+          {/* Mobile Menu Button */}
+          <div className="flex md:hidden items-center">
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="p-2 text-gray-600 hover:text-primary-navy transition-colors"
+            >
+              {isMobileMenuOpen ? (
+                <X className="w-6 h-6" />
+              ) : (
+                <Menu className="w-6 h-6" />
+              )}
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Mobile Navigation Drawer */}
+      {/* Mobile Menu Drawer */}
       <AnimatePresence>
-        {isOpen && (
+        {isMobileMenuOpen && (
           <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.2 }}
-            className="absolute top-20 left-4 right-4 z-40 rounded-3xl bg-white border border-slate-100 p-6 shadow-2xl md:hidden"
+            className="md:hidden bg-white border-b border-gray-200 overflow-hidden"
           >
-            <div className="flex flex-col gap-4">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.name}
-                  href={link.href}
-                  onClick={() => setIsOpen(false)}
-                  className="text-base font-semibold text-slate-700 hover:text-[#3061EF] px-3 py-2 rounded-xl hover:bg-slate-50 transition-all duration-200"
-                >
-                  {link.name}
-                </Link>
-              ))}
-              <div className="h-px bg-slate-100 my-2" />
-              <Link
-                href="/login"
-                onClick={() => setIsOpen(false)}
-                className="text-base font-semibold text-slate-700 hover:text-[#3061EF] px-3 py-2 rounded-xl hover:bg-slate-50 transition-all duration-200"
-              >
-                Sign In
-              </Link>
-              <Link
-                href="/register"
-                onClick={() => setIsOpen(false)}
-                className="inline-flex w-full items-center justify-center rounded-full bg-[#0B1220] hover:bg-[#3061EF] py-3 text-sm font-bold text-white shadow-md transition-all duration-200"
-              >
-                Open Account
-              </Link>
+            <div className="px-4 pt-2 pb-6 space-y-4 shadow-inner">
+              <nav className="flex flex-col space-y-3">
+                {NAV_LINKS.map((link) => (
+                  <Link
+                    key={link.name}
+                    href={link.href}
+                    className="block px-3 py-2 text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-primary-blue rounded-md"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    {link.name}
+                  </Link>
+                ))}
+              </nav>
+              <div className="flex flex-col space-y-3 px-3 pt-4 border-t border-gray-100">
+                <Button variant="secondary" className="w-full justify-center">
+                  Sign In
+                </Button>
+                <Button variant="primary" className="w-full justify-center">
+                  Open Account
+                </Button>
+              </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
-    </motion.header>
+    </header>
   );
 }

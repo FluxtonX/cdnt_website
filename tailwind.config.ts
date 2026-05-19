@@ -14,26 +14,33 @@ const config: Config = {
         heading: ["var(--font-plus-jakarta-sans)", "sans-serif"],
       },
       colors: {
-        banking: {
-          blue: "#014EA1",
-          navy: "#003B7A",
-          sky: "#3878B8",
-          gold: "#FDC205",
-          goldLight: "#FCD854",
-          offWhite: "#F8FAFC",
-          border: "#E5EAF1",
-          text: "#0B1220",
-          muted: "#64748B",
-          ink: "#07111F",
+        primary: {
+          navy: "#0A0F2C",
+          blue: "#1A3FBB",
+        },
+        accent: {
+          gold: "#E8A020",
+          green: "#22C55E",
+          red: "#EF4444",
+        },
+        bg: {
+          light: "#F4F6FA",
+          white: "#FFFFFF",
+        },
+        text: {
+          primary: "#0A0F2C",
+          secondary: "#6B7280",
+          muted: "#9CA3AF",
         },
       },
-      boxShadow: {
-        glow: "0 24px 80px rgba(1, 78, 161, 0.28)",
-        gold: "0 18px 45px rgba(253, 194, 5, 0.2)",
+      keyframes: {
+        marquee: {
+          "0%": { transform: "translateX(0%)" },
+          "100%": { transform: "translateX(-50%)" },
+        },
       },
-      backgroundImage: {
-        "auth-radial":
-          "radial-gradient(circle at top left, rgba(253,194,5,0.20), transparent 30%), radial-gradient(circle at bottom right, rgba(56,120,184,0.32), transparent 34%), linear-gradient(135deg, #002D5F 0%, #003B7A 42%, #07111F 100%)",
+      animation: {
+        marquee: "marquee 30s linear infinite",
       },
     },
   },

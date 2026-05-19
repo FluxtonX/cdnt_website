@@ -1,53 +1,49 @@
-"use client";
-
-import React from "react";
-import Link from "next/link";
-import { motion } from "framer-motion";
+import { Button } from "./ui/Button";
 
 export default function CTASection() {
   return (
-    <section className="bg-white py-16 px-4 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-7xl">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.98 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-[#014EA1] via-[#003B7A] to-[#07111F] py-20 px-8 text-center text-white shadow-2xl border border-white/10"
-        >
-          {/* Neon Glow Highlights */}
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(48,97,239,0.2),transparent_60%)] pointer-events-none" />
-          <div className="absolute top-[20%] left-[10%] h-1 w-1 bg-white rounded-full opacity-60 animate-pulse" />
-          <div className="absolute top-[60%] right-[15%] h-1.5 w-1.5 bg-white rounded-full opacity-45" />
-          <div className="absolute bottom-[15%] left-[30%] h-1 w-1 bg-white rounded-full opacity-50" />
+    <section className="py-16 md:py-24 bg-white px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto">
+        <div className="relative bg-primary-navy rounded-[2.5rem] py-20 px-8 md:px-16 text-center overflow-hidden shadow-2xl">
+          
+          {/* Inner Glow */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] md:w-[80%] h-[120%] md:h-[80%] bg-primary-blue/30 blur-[120px] rounded-full pointer-events-none" />
+          
+          {/* Subtle Grid Overlay */}
+          <div 
+            className="absolute inset-0 z-0 opacity-10" 
+            style={{
+              backgroundImage: "radial-gradient(#ffffff 1px, transparent 1px)",
+              backgroundSize: "32px 32px"
+            }}
+          />
 
-          <div className="relative z-10 mx-auto max-w-3xl">
-            <h2 className="text-3xl font-extrabold tracking-tight sm:text-5xl leading-tight">
-              Your Financial Future, <br />
-              <span className="text-[#60a5fa] bg-gradient-to-r from-sky-400 to-[#60a5fa] bg-clip-text text-transparent">
-                Unified.
-              </span>
-            </h2>
-            <p className="mt-6 text-base text-white/70 leading-relaxed max-w-xl mx-auto">
-              Join over 100,000+ Canadians building their assets with North Union's modern, secure financial ecosystem.
+          <div className="relative z-10 max-w-3xl mx-auto">
+            <p className="text-accent-gold font-semibold tracking-widest text-sm uppercase mb-6">
+              Your Financial Future
             </p>
-
-            <div className="mt-10 flex flex-wrap justify-center gap-4">
-              <Link
-                href="/register"
-                className="inline-flex items-center justify-center rounded-full bg-white hover:bg-slate-55 px-8 py-4 text-sm font-bold text-[#0B1220] shadow-lg transition-transform hover:scale-105 duration-300"
-              >
+            
+            <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight mb-8">
+              Your Financial Future, <br />
+              <span className="text-accent-gold">Unified.</span>
+            </h2>
+            
+            <p className="text-lg md:text-xl text-gray-300 leading-relaxed mb-10 max-w-2xl mx-auto">
+              Join 100,000+ Canadians saving, banking and investing — with the 
+              confidence of regulation and the speed of crypto.
+            </p>
+            
+            <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
+              <Button variant="gold" className="w-full sm:w-auto h-14 px-8 text-base shadow-lg shadow-accent-gold/20">
                 Open Account
-              </Link>
-              <Link
-                href="/contact"
-                className="inline-flex items-center justify-center rounded-full border border-white/20 bg-white/5 hover:bg-white/10 px-8 py-4 text-sm font-bold text-white transition-transform hover:scale-105 duration-300"
-              >
-                Talk to our team
-              </Link>
+              </Button>
+              <Button variant="ghost-dark" className="w-full sm:w-auto h-14 px-8 text-base">
+                Talk to our Team
+              </Button>
             </div>
           </div>
-        </motion.div>
+
+        </div>
       </div>
     </section>
   );
