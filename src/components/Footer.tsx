@@ -42,8 +42,10 @@ export default function Footer() {
               <Image
                 src="/assets/logo.png"
                 alt="North Union Bank"
-                width={160}
-                height={53}
+                width={480}
+                height={160}
+                quality={100}
+                priority
                 className="h-10 w-auto object-contain brightness-0 invert"
               />
             </Link>

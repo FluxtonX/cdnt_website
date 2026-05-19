@@ -43,8 +43,10 @@ export default function Navbar() {
             <Image
               src="/assets/logo.png"
               alt="North Union Bank"
-              width={100}
-              height={33}
+              width={300}
+              height={100}
+              quality={100}
+              priority
               className="h-8 w-auto object-contain"
             />
           </Link>
