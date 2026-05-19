@@ -1,5 +1,6 @@
 import Navbar from "@/components/Navbar";
 import HeroSection from "@/components/HeroSection";
+import TickerBar from "@/components/TickerBar";
 import TrustSection from "@/components/TrustSection";
 import FeaturesSection from "@/components/FeaturesSection";
 import DigitalAssetsSection from "@/components/DigitalAssetsSection";
@@ -14,6 +15,7 @@ export default function Home() {
     <main className="min-h-screen">
       <Navbar />
       <HeroSection />
+      <TickerBar />
       <TrustSection />
       <FeaturesSection />
       <DigitalAssetsSection />

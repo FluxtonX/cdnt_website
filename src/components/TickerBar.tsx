@@ -1,50 +1,48 @@
 "use client";
 
 import React from "react";
-import { motion } from "framer-motion";
+
+const items = [
+  { symbol: "BTC", price: "$98,420.13", change: "+2.41%", up: true  },
+  { symbol: "ETH", price: "$3,612.04",  change: "+1.18%", up: true  },
+  { symbol: "SOL", price: "$248.92",    change: "-0.62%", up: false },
+  { symbol: "USDT", price: "$1.0001",   change: "+0.01%", up: true  },
+];
+
+function TickerItem({ symbol, price, change, up }: { symbol: string; price: string; change: string; up: boolean }) {
+  return (
+    <div className="flex items-center gap-1.5 mx-8 whitespace-nowrap">
+      <span className="text-sm font-bold text-gray-800">{symbol}</span>
+      <span className="text-sm text-gray-500">{price}</span>
+      <span className={`text-xs font-medium ${up ? "text-green-500" : "text-red-500"}`}>
+        {up ? "↑" : "↓"}{change}
+      </span>
+    </div>
+  );
+}
 
 export default function TickerBar() {
-  const coins = [
-    { name: "BTC", fullName: "Bitcoin", price: "$99,420.12", change: "+2.42%", up: true },
-    { name: "ETH", fullName: "Ethereum", price: "$2,912.04", change: "+1.08%", up: true },
-    { name: "SOL", fullName: "Solana", price: "$219.82", change: "-0.35%", up: false },
-    { name: "USDT", fullName: "Tether", price: "$1.0001", change: "+0.03%", up: true },
-    { name: "BTC", fullName: "Bitcoin", price: "$99,420.12", change: "+2.42%", up: true }, // duplicates for marquee flow on mobile if needed
-    { name: "ETH", fullName: "Ethereum", price: "$2,912.04", change: "+1.08%", up: true },
-  ];
-
   return (
-    <div className="w-full px-4 sm:px-6 lg:px-8 -translate-y-6 relative z-30">
-      <div className="mx-auto max-w-7xl">
-        <motion.div 
-          initial={{ opacity: 0, y: 15 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
-          className="rounded-full bg-white border border-slate-200/60 shadow-[0_12px_30px_rgba(0,0,0,0.03)] px-6 py-4 overflow-hidden"
-        >
-          <div className="flex items-center justify-between gap-8 md:justify-around overflow-x-auto scrollbar-none whitespace-nowrap">
-            {coins.slice(0, 4).map((coin, index) => (
-              <div key={index} className="flex items-center gap-2.5 min-w-[150px] md:min-w-0">
-                {/* Small indicator dot */}
-                <span className={`h-1.5 w-1.5 rounded-full ${coin.up ? "bg-emerald-500" : "bg-rose-500"}`} />
-                <span className="text-sm font-extrabold text-[#0B1220]">{coin.name}</span>
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{coin.fullName}</span>
-                <span className="text-sm font-bold text-slate-700">{coin.price}</span>
-                <span 
-                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                    coin.up 
-                      ? "text-emerald-700 bg-emerald-500/10" 
-                      : "text-rose-700 bg-rose-500/10"
-                  }`}
-                >
-                  {coin.change}
-                </span>
-              </div>
-            ))}
-          </div>
-        </motion.div>
+    <div className="relative overflow-hidden border-t border-b border-gray-100 bg-white py-3">
+      
+      {/* LIVE badge — pinned left */}
+      <div className="absolute left-0 top-0 bottom-0 z-10 flex items-center bg-white px-4 gap-2">
+        <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+        <span className="text-xs font-semibold text-gray-700 tracking-wide">LIVE</span>
       </div>
+
+      {/* Left fade overlay */}
+      <div className="ticker-fade-left" />
+
+      {/* Scrolling track — items duplicated for seamless loop */}
+      <div className="ticker-track pl-[120px]">
+        {[...items, ...items, ...items, ...items].map((item, i) => (
+          <TickerItem key={i} {...item} />
+        ))}
+      </div>
+
+      {/* Right fade overlay */}
+      <div className="ticker-fade-right" />
     </div>
   );
 }

@@ -1,134 +1,191 @@
 "use client";
 
-import Image from "next/image";
 import { motion } from "framer-motion";
-import { Button } from "./ui/Button";
-
-const TICKER_ITEMS = [
-  { symbol: "BTC", price: "$98,420.13", change: "+1.43%", isPositive: true },
-  { symbol: "ETH", price: "$3,612.04", change: "+0.87%", isPositive: true },
-  { symbol: "SOL", price: "$248.92", change: "-0.34%", isPositive: false },
-  { symbol: "USDT", price: "$1.0001", change: "+0.01%", isPositive: true },
-  { symbol: "BNB", price: "$612.40", change: "+2.11%", isPositive: true },
-];
+import { CONTAINER } from "./Navbar";
 
 export default function HeroSection() {
   return (
-    <section className="relative min-h-screen bg-bg-light pt-32 pb-16 overflow-hidden flex flex-col justify-center">
-      {/* Background Dot Pattern (CSS-based) */}
-      <div 
-        className="absolute inset-0 z-0 opacity-[0.03]" 
-        style={{
-          backgroundImage: "radial-gradient(#0A0F2C 1px, transparent 1px)",
-          backgroundSize: "24px 24px"
-        }}
-      />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 flex-grow flex flex-col justify-center">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
+    <section 
+      className="min-h-screen flex items-center overflow-hidden relative"
+      style={{
+        background: "linear-gradient(135deg, #EEF2FF 0%, #F8F9FF 50%, #F0E8FF 100%)"
+      }}
+    >
+      <div className={`${CONTAINER} w-full flex flex-col lg:flex-row items-center gap-16 pt-32 pb-16`}>
+        
+        {/* Left Column */}
+        <div className="flex-1 max-w-xl z-10">
           
-          {/* Left Column (60%) */}
+          {/* Trust Badge */}
           <motion.div 
-            className="lg:col-span-7 space-y-8"
-            initial={{ opacity: 0, y: 40 }}
+            className="inline-flex items-center gap-2 bg-white border border-gray-200 rounded-full px-3 py-1.5 shadow-sm mb-6"
+            initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
+            transition={{ duration: 0.5 }}
+          >
+            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+            <span className="text-[12px] text-gray-600 font-medium">
+              FINTRAC registered · CDIC-style insured deposits
+            </span>
+          </motion.div>
+
+          {/* Heading */}
+          <div className="space-y-1 mb-6">
+            <motion.h1 
+              className="font-extrabold text-[42px] sm:text-[56px] leading-tight text-gray-900"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.15 }}
+            >
+              Banking Meets
+            </motion.h1>
+            <motion.h1 
+              className="font-extrabold text-[42px] sm:text-[56px] leading-none text-primary-blue"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+            >
+              Crypto
+            </motion.h1>
+            <motion.h1 
+              className="font-extrabold text-[42px] sm:text-[56px] leading-none text-primary-blue"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.45 }}
+            >
+              Intelligence
+            </motion.h1>
+          </div>
+
+          {/* Body Copy */}
+          <motion.p 
+            className="text-gray-500 text-[16px] leading-relaxed max-w-md mt-4"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.6 }}
+          >
+            A regulated Canadian digital bank with a built-in crypto engine. 
+            Move money, save smarter, and invest in digital assets — all from 
+            one elegant, insured account.
+          </motion.p>
+
+          {/* CTA Buttons */}
+          <motion.div 
+            className="flex flex-col sm:flex-row gap-4 mt-8"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.75 }}
+          >
+            <button className="bg-primary-navy text-white rounded-full px-7 py-3.5 font-semibold text-[15px] hover:bg-blue-900 transition-all flex items-center justify-center gap-2">
+              Open Account <span>→</span>
+            </button>
+            <button className="bg-white border border-gray-200 text-gray-800 rounded-full px-7 py-3.5 font-medium text-[15px] hover:bg-gray-50 hover:border-gray-300 transition-all flex items-center justify-center gap-2">
+              Explore Platform <span>↗</span>
+            </button>
+          </motion.div>
+
+          {/* Stats Row */}
+          <motion.div 
+            className="flex gap-10 mt-10"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.9 }}
           >
             <div>
-              <p className="text-accent-gold font-semibold tracking-widest text-sm uppercase mb-4">
-                Built For Trust
+              <p className="text-[22px] font-bold text-gray-900 leading-none">100k+</p>
+              <p className="text-[13px] text-gray-500 mt-1">Canadians onboard</p>
+            </div>
+            <div>
+              <p className="text-[22px] font-bold text-gray-900 leading-none">$2.4B</p>
+              <p className="text-[13px] text-gray-500 mt-1">Assets secured</p>
+            </div>
+            <div>
+              <p className="text-[22px] font-bold text-gray-900 leading-none flex items-center gap-1">
+                4.9<span className="text-amber-500">★</span>
               </p>
-              <h1 className="text-5xl sm:text-6xl lg:text-[64px] font-extrabold text-text-primary leading-[1.1] tracking-tight">
-                Banking Meets <br />
-                <span className="relative inline-block mt-2">
-                  <span className="relative z-10 text-primary-blue">Crypto Intelligence</span>
-                  <span className="absolute bottom-1 left-0 w-full h-3 bg-primary-blue/10 -z-10 transform -rotate-1"></span>
-                </span>
-              </h1>
-            </div>
-
-            <p className="text-lg text-text-secondary max-w-xl leading-relaxed">
-              A regulated Canadian digital bank with a built-in crypto engine. 
-              Move money, save smarter, and invest in digital assets — all from one deposit-insured account.
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-4 pt-4">
-              <Button variant="primary" className="text-base h-12 px-8">
-                Open Account &rarr;
-              </Button>
-              <Button variant="secondary" className="text-base h-12 px-8 bg-white border-gray-300 text-gray-800 hover:bg-gray-50">
-                Explore Platform &nearr;
-              </Button>
-            </div>
-
-            <div className="grid grid-cols-3 divide-x divide-gray-200 pt-8 mt-8 border-t border-gray-200/60 max-w-2xl">
-              <div className="pr-6">
-                <p className="text-3xl font-bold text-text-primary">100k+</p>
-                <p className="text-sm text-text-muted mt-1">Accounts Opened</p>
-              </div>
-              <div className="px-6">
-                <p className="text-3xl font-bold text-text-primary">$2.4B</p>
-                <p className="text-sm text-text-muted mt-1">Assets Managed</p>
-              </div>
-              <div className="pl-6">
-                <p className="text-3xl font-bold text-text-primary">4.9★</p>
-                <p className="text-sm text-text-muted mt-1">App Store Rating</p>
-              </div>
+              <p className="text-[13px] text-gray-500 mt-1">App Store</p>
             </div>
           </motion.div>
 
-          {/* Right Column (40%) */}
-          <div className="lg:col-span-5 relative h-[500px] sm:h-[600px] w-full mt-12 lg:mt-0">
-            {/* Background Radial Glow */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-primary-blue/20 blur-[100px] rounded-full -z-10" />
-
-            <motion.div
-              className="absolute right-[20%] top-0 w-64 sm:w-72 z-0"
-              initial={{ opacity: 0, x: 100, y: 50, rotate: 0 }}
-              animate={{ opacity: 1, x: 0, y: 0, rotate: 10 }}
-              transition={{ type: "spring", stiffness: 50, damping: 20, delay: 0.2 }}
-            >
-              <Image
-                src="/assets/phone-dark.png"
-                alt="Crypto Portfolio Interface"
-                width={300}
-                height={600}
-                className="w-full h-auto drop-shadow-2xl rounded-[2.5rem]"
-              />
-            </motion.div>
-
-            <motion.div
-              className="absolute left-[10%] sm:left-[20%] top-12 sm:top-16 w-64 sm:w-72 z-10"
-              initial={{ opacity: 0, x: 100, y: 50, rotate: 0 }}
-              animate={{ opacity: 1, x: 0, y: 0, rotate: -8 }}
-              transition={{ type: "spring", stiffness: 50, damping: 20, delay: 0.4 }}
-            >
-              <Image
-                src="/assets/phone-light.png"
-                alt="Banking Interface"
-                width={300}
-                height={600}
-                className="w-full h-auto drop-shadow-2xl rounded-[2.5rem]"
-              />
-            </motion.div>
-          </div>
         </div>
-      </div>
 
-      {/* Ticker Marquee */}
-      <div className="absolute bottom-0 left-0 w-full bg-primary-navy py-3 overflow-hidden border-t border-white/10 z-20">
-        <div className="flex whitespace-nowrap animate-marquee hover:[animation-play-state:paused]">
-          {/* Double the items for infinite scroll effect */}
-          {[...TICKER_ITEMS, ...TICKER_ITEMS, ...TICKER_ITEMS, ...TICKER_ITEMS].map((item, index) => (
-            <div key={index} className="flex items-center space-x-2 mx-8">
-              <span className="text-white font-medium text-sm">{item.symbol}</span>
-              <span className="text-gray-300 text-sm">{item.price}</span>
-              <span className={`text-sm font-medium ${item.isPositive ? 'text-accent-green' : 'text-accent-red'}`}>
-                {item.change}
-              </span>
+        {/* Right Column - Floating Cards */}
+        <div className="flex-1 relative min-h-[480px] w-full mt-12 lg:mt-0">
+          
+          {/* Card 1: North Union Bank Card */}
+          <motion.div
+            className="absolute top-8 left-0 sm:left-8 w-[300px] h-[180px] rounded-3xl shadow-2xl p-6 text-white z-10"
+            style={{ background: "linear-gradient(135deg, #1A3FBB 0%, #0A0F2C 100%)" }}
+            animate={{ y: [0, -8, 0] }}
+            transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+          >
+            <div className="flex justify-between items-start">
+              <span className="text-xs font-semibold tracking-widest">NORTH UNION</span>
+              <div className="w-6 h-6 border border-white/40 rounded flex items-center justify-center opacity-80">
+                <div className="w-3 h-3 bg-white/80 rounded-sm" />
+              </div>
             </div>
-          ))}
+            <div className="mt-8">
+              <p className="text-xs opacity-60">Available balance</p>
+              <p className="text-2xl font-bold mt-1">$48,210.94</p>
+            </div>
+            <p className="text-sm font-mono opacity-80 mt-6 tracking-widest">•••• 4471</p>
+          </motion.div>
+
+          {/* Card 2: Bitcoin Price Card */}
+          <motion.div
+            className="absolute top-0 right-0 sm:right-4 w-[160px] bg-white rounded-2xl shadow-xl p-4 border border-gray-100 z-20"
+            animate={{ y: [0, -6, 0] }}
+            transition={{ repeat: Infinity, duration: 3.5, delay: 0.5, ease: "easeInOut" }}
+          >
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-full bg-amber-500 flex items-center justify-center">
+                <span className="text-white text-xs font-bold font-sans">B</span>
+              </div>
+              <div>
+                <p className="text-sm font-semibold leading-none">Bitcoin</p>
+                <p className="text-xs text-gray-400 mt-0.5">BTC</p>
+              </div>
+            </div>
+            <p className="text-xl font-bold text-gray-900 mt-3">$98,420</p>
+            <div className="flex items-center justify-between mt-1">
+              <p className="text-sm text-green-500 font-medium">↗ 2.41%</p>
+            </div>
+            <div className="mt-3">
+              <svg width="60" height="24" viewBox="0 0 60 24" className="overflow-visible">
+                <path 
+                  d="M 0,20 Q 20,15 30,10 Q 45,3 60,2" 
+                  stroke="#22C55E" 
+                  strokeWidth="2" 
+                  fill="none" 
+                  strokeLinecap="round"
+                />
+              </svg>
+            </div>
+          </motion.div>
+
+          {/* Card 3: Transaction Card */}
+          <motion.div
+            className="absolute bottom-8 right-0 sm:right-12 w-[260px] bg-white rounded-2xl shadow-xl p-4 border border-gray-100 z-20"
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.8 }}
+          >
+            <p className="text-xs text-gray-400 font-medium mb-2">Interac e-Transfer</p>
+            <div className="flex justify-between items-center mb-3">
+              <p className="text-sm font-semibold text-gray-800">to Sophie L.</p>
+              <p className="text-sm font-semibold text-gray-900">-$240.00</p>
+            </div>
+            <div>
+              <div className="w-full h-1 rounded-full bg-gray-200 overflow-hidden">
+                <div className="h-full bg-primary-blue w-[70%]" />
+              </div>
+              <p className="text-xs text-gray-400 mt-1.5">Completed · just now</p>
+            </div>
+          </motion.div>
+
         </div>
+
       </div>
     </section>
   );
