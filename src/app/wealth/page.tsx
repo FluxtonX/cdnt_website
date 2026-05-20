@@ -38,7 +38,7 @@ export default function WealthManagementPage() {
                   <span className="text-banking-gold italic">Generational Wealth.</span>
                 </h1>
                 <p className="mt-8 text-xl leading-relaxed text-white/50 font-medium">
-                  North Union Wealth provides bespoke investment management and 
+                  CDNT Wealth provides bespoke investment management and 
                   holistic planning for individuals, families, and institutions who 
                   require extraordinary financial care.
                 </p>
@@ -135,7 +135,7 @@ export default function WealthManagementPage() {
                 <h2 className="text-xs font-bold uppercase tracking-[0.4em] text-banking-gold mb-6">The Client Standard</h2>
                 <h3 className="text-5xl font-bold leading-tight">Personalized Attention. <br />Global Resources.</h3>
                 <p className="mt-8 text-lg text-white/50 font-medium leading-relaxed">
-                  As a North Union Private Client, you are assigned a dedicated Wealth 
+                  As a CDNT Private Client, you are assigned a dedicated Wealth 
                   Manager supported by a global team of specialists in tax, investment, 
                   and fiduciary law.
                 </p>

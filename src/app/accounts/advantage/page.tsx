@@ -24,7 +24,7 @@ export default function AdvantageBankingPage() {
               <ChevronRight className="h-3 w-3" />
               <span className="text-banking-blue">Advantage Banking</span>
             </nav>
-            <h1 className="text-4xl font-bold text-banking-text md:text-5xl">North Union Advantage Banking</h1>
+            <h1 className="text-4xl font-bold text-banking-text md:text-5xl">CDNT Advantage Banking</h1>
             <p className="mt-6 text-xl text-banking-muted leading-relaxed">
               Our most versatile chequing account designed for your daily life. Unlimited transactions, no monthly fee with a minimum balance, and premium security.
             </p>
@@ -87,7 +87,7 @@ export default function AdvantageBankingPage() {
               },
               {
                 title: "International Transfers",
-                description: "Send money globally with competitive rates and zero North Union transfer fees.",
+                description: "Send money globally with competitive rates and zero CDNT transfer fees.",
                 icon: Globe
               },
               {
@@ -97,11 +97,11 @@ export default function AdvantageBankingPage() {
               },
               {
                 title: "Premium Security",
-                description: "Protected by the North Union Security Guarantee and 24/7 fraud monitoring.",
+                description: "Protected by the CDNT Security Guarantee and 24/7 fraud monitoring.",
                 icon: ShieldCheck
               },
               {
-                title: "North Union Vantage",
+                title: "CDNT Vantage",
                 description: "Access exclusive rewards, partner offers, and value-added services automatically.",
                 icon: Landmark
               }
@@ -147,7 +147,7 @@ export default function AdvantageBankingPage() {
                   <td className="px-6 py-4 text-sm text-banking-muted">Unlimited (Free)</td>
                 </tr>
                 <tr>
-                  <td className="px-6 py-4 text-sm font-semibold text-banking-text">Non-North Union ATM</td>
+                  <td className="px-6 py-4 text-sm font-semibold text-banking-text">Non-CDNT ATM</td>
                   <td className="px-6 py-4 text-sm text-banking-muted">$2.00 in Canada, $5.00 International</td>
                 </tr>
                 <tr>

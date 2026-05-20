@@ -6,7 +6,7 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X } from "lucide-react";
 
-export const CONTAINER = "max-w-6xl mx-auto px-6";
+export const CONTAINER = "max-w-7xl w-full mx-auto px-6";
 
 const NAV_LINKS = [
   { name: "Home", href: "#" },
@@ -22,33 +22,33 @@ export default function Navbar() {
 
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 80);
+      setIsScrolled(window.scrollY > 20);
     };
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   return (
-    <div className="pt-4 px-6 fixed top-0 left-0 right-0 z-50">
+    <div className="pt-4 px-4 sm:px-6 fixed top-0 left-0 right-0 z-50 flex justify-center">
       <header
-        className={`max-w-6xl mx-auto rounded-full border px-6 py-3 flex items-center justify-between transition-all duration-300 ${
+        className={`w-full max-w-7xl rounded-full border px-6 py-2 flex items-center justify-between transition-all duration-500 ease-in-out ${
           isScrolled
-            ? "bg-white/90 backdrop-blur-md shadow-md border-gray-200"
-            : "bg-white shadow-sm border-gray-100"
+            ? "bg-gradient-to-r from-[#022B5B]/95 to-[#0054A6]/95 backdrop-blur shadow-[0_8px_30px_rgb(0,0,0,0.12)] border-white/10"
+            : "bg-gradient-to-r from-[#022B5B] to-[#0054A6] shadow-lg border-white/5"
         }`}
       >
         {/* Logo */}
         <div className="flex-shrink-0 flex items-center">
-          <Link href="/" className="flex items-center">
+          <Link href="/" className="flex items-center group">
             <Image
-              src="/assets/logo.png"
-              alt="North Union Bank"
+              src="/cdnt-logo.png"
+              alt="CDNT Bank Logo"
               width={300}
               height={100}
               quality={100}
               priority
               unoptimized={true}
-              className="h-8 w-auto object-contain"
+              className="h-10 md:h-12 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
             />
           </Link>
         </div>
@@ -59,10 +59,10 @@ export default function Navbar() {
             <Link
               key={link.name}
               href={link.href}
-              className={`text-[14px] transition-colors duration-200 ${
-                link.name === "Home" 
-                  ? "text-primary-blue font-semibold" 
-                  : "font-medium text-gray-700 hover:text-primary-blue"
+              className={`text-[15px] transition-all duration-300 tracking-wide ${
+                link.name === "Home"
+                  ? "text-[#60A5FA] font-semibold"
+                  : "font-medium text-white/80 hover:text-white"
               }`}
             >
               {link.name}
@@ -72,10 +72,10 @@ export default function Navbar() {
 
         {/* CTA Buttons */}
         <div className="hidden md:flex items-center space-x-6">
-          <button className="text-[14px] font-medium text-gray-700 hover:text-primary-blue transition-colors">
+          <button className="text-[15px] font-medium text-white/80 hover:text-white transition-all duration-300 tracking-wide">
             Sign in
           </button>
-          <button className="bg-primary-navy text-white rounded-full px-5 py-2.5 text-sm font-medium hover:bg-slate-800 transition-colors">
+          <button className="relative overflow-hidden bg-white/10 backdrop-blur-md border border-white/20 text-white rounded-full px-7 py-2.5 text-[15px] font-medium shadow-[0_4px_14px_0_rgba(255,255,255,0.1)] hover:bg-white/20 hover:shadow-[0_6px_20px_rgba(255,255,255,0.2)] hover:-translate-y-0.5 transition-all duration-300">
             Open Account
           </button>
         </div>
@@ -84,7 +84,8 @@ export default function Navbar() {
         <div className="flex md:hidden items-center">
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="p-2 text-gray-600 hover:text-primary-navy transition-colors"
+            className="p-2 text-white/80 hover:text-white transition-colors focus:outline-none"
+            aria-label="Toggle menu"
           >
             {isMobileMenuOpen ? (
               <X className="w-6 h-6" />
@@ -99,30 +100,34 @@ export default function Navbar() {
       <AnimatePresence>
         {isMobileMenuOpen && (
           <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.2 }}
-            className="md:hidden absolute top-[80px] left-6 right-6 bg-white rounded-3xl border border-gray-100 shadow-xl overflow-hidden"
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="md:hidden absolute top-[76px] left-4 right-4 bg-gradient-to-b from-[#022B5B] to-[#004285] rounded-3xl border border-white/10 shadow-2xl overflow-hidden backdrop-blur-xl z-40"
           >
-            <div className="px-4 pt-4 pb-6 space-y-4">
-              <nav className="flex flex-col space-y-3">
+            <div className="px-5 pt-5 pb-7 space-y-4">
+              <nav className="flex flex-col space-y-2">
                 {NAV_LINKS.map((link) => (
                   <Link
                     key={link.name}
                     href={link.href}
-                    className="block px-3 py-2 text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-primary-blue rounded-md"
+                    className={`block px-4 py-3 text-base font-medium rounded-xl transition-all duration-200 ${
+                      link.name === "Home"
+                        ? "text-[#60A5FA] bg-white/10 border border-white/5"
+                        : "text-white/80 hover:bg-white/5 hover:text-white"
+                    }`}
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     {link.name}
                   </Link>
                 ))}
               </nav>
-              <div className="flex flex-col space-y-3 px-3 pt-4 border-t border-gray-100">
-                <button className="w-full justify-center text-[14px] font-medium text-gray-700 py-2">
+              <div className="flex flex-col space-y-4 px-4 pt-5 border-t border-white/10">
+                <button className="w-full justify-center text-base font-medium text-white/80 hover:text-white py-2 transition-colors">
                   Sign in
                 </button>
-                <button className="w-full justify-center bg-primary-navy text-white rounded-full px-5 py-3 text-sm font-medium">
+                <button className="w-full justify-center bg-white/10 backdrop-blur-md border border-white/20 text-white rounded-full px-6 py-3.5 text-base font-semibold shadow-lg hover:bg-white/20 hover:shadow-xl transition-all active:scale-95">
                   Open Account
                 </button>
               </div>

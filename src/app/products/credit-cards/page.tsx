@@ -87,7 +87,7 @@ export default function CreditCardsPage() {
               </div>
               <h1 className="text-4xl font-bold md:text-6xl leading-tight">Cards Designed for Your Ambition.</h1>
               <p className="mt-6 text-lg text-white/70 leading-relaxed">
-                Whether you&apos;re looking for premium travel rewards, everyday cashback, or institutional-grade credit limits, North Union has the perfect card for your financial journey.
+                Whether you&apos;re looking for premium travel rewards, everyday cashback, or institutional-grade credit limits, CDNT has the perfect card for your financial journey.
               </p>
             </div>
           </div>

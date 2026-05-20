@@ -42,7 +42,7 @@ export default function SecuritySection() {
     <section className="bg-white py-20 lg:py-28 relative">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
-        <div className="mx-auto max-w-3xl text-center mb-16 md:mb-20">
+        <div className="max-w-3xl mb-16 md:mb-20">
           <motion.p 
             initial={{ opacity: 0, y: 10 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -68,7 +68,7 @@ export default function SecuritySection() {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="mt-4 text-base leading-relaxed text-slate-500"
           >
-            North Union is built on institutional stability and strict regulatory adherence, ensuring complete safety for your funds.
+            CDNT is built on institutional stability and strict regulatory adherence, ensuring complete safety for your funds.
           </motion.p>
         </div>
 

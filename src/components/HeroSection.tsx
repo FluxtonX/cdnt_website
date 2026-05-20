@@ -112,7 +112,7 @@ export default function HeroSection() {
         {/* Right Column - Floating Cards */}
         <div className="flex-1 relative min-h-[480px] w-full mt-12 lg:mt-0">
           
-          {/* Card 1: North Union Bank Card */}
+          {/* Card 1: Canadian Digital National Trust Bank Card */}
           <motion.div
             className="absolute top-8 left-0 sm:left-8 w-[300px] h-[180px] rounded-3xl shadow-2xl p-6 text-white z-10"
             style={{ background: "linear-gradient(135deg, #1A3FBB 0%, #0A0F2C 100%)" }}
@@ -120,7 +120,7 @@ export default function HeroSection() {
             transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
           >
             <div className="flex justify-between items-start">
-              <span className="text-xs font-semibold tracking-widest">NORTH UNION</span>
+              <span className="text-xs font-semibold tracking-widest">CDNT</span>
               <div className="w-6 h-6 border border-white/40 rounded flex items-center justify-center opacity-80">
                 <div className="w-3 h-3 bg-white/80 rounded-sm" />
               </div>

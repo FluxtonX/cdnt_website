@@ -37,7 +37,7 @@ export default function ContactPage() {
           <div className="rounded-3xl border border-banking-border bg-white p-10 shadow-2xl">
             <h2 className="text-2xl font-bold text-banking-text">Submit a Support Ticket</h2>
             <p className="mt-3 text-sm leading-7 text-banking-muted">
-              For account-specific issues, please use the email address associated with your North Union account.
+              For account-specific issues, please use the email address associated with your CDNT account.
             </p>
             
             <form className="mt-8 grid gap-5" onSubmit={(e) => e.preventDefault()}>
@@ -79,7 +79,7 @@ export default function ContactPage() {
                 <div className="flex gap-5">
                   <MapPin className="h-6 w-6 text-banking-gold shrink-0" />
                   <div>
-                    <p className="font-bold text-banking-text">North Union HQ (Canada)</p>
+                    <p className="font-bold text-banking-text">CDNT HQ (Canada)</p>
                     <p className="mt-1 text-sm text-banking-muted leading-relaxed">
                       1200 Bay Street, 15th Floor<br />
                       Toronto, ON M5R 2A5, Canada

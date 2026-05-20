@@ -44,7 +44,7 @@ export default function RiskDisclosurePage() {
                 </div>
                 <div className="rounded-xl border border-banking-border p-6 bg-white">
                   <h3 className="font-bold mb-2">Blockchain Congestion</h3>
-                  <p className="text-sm text-banking-muted leading-relaxed">Network congestion may result in delayed transaction confirmations and significantly higher network fees (gas fees), which are beyond the control of North Union.</p>
+                  <p className="text-sm text-banking-muted leading-relaxed">Network congestion may result in delayed transaction confirmations and significantly higher network fees (gas fees), which are beyond the control of CDNT.</p>
                 </div>
               </div>
             </section>
@@ -55,7 +55,7 @@ export default function RiskDisclosurePage() {
                 3. Custody & Security Risks
               </h2>
               <p className="text-banking-muted leading-relaxed">
-                While North Union employs institutional-grade security, no system is entirely immune to cyber-attacks, software bugs, or technical failures. Unauthorized access to your account (e.g., through a compromised 2FA device) could result in the loss of your assets.
+                While CDNT employs institutional-grade security, no system is entirely immune to cyber-attacks, software bugs, or technical failures. Unauthorized access to your account (e.g., through a compromised 2FA device) could result in the loss of your assets.
               </p>
             </section>
 
@@ -65,7 +65,7 @@ export default function RiskDisclosurePage() {
                 4. Regulatory Risks
               </h2>
               <p className="text-banking-muted leading-relaxed">
-                The regulatory environment for digital assets is evolving. Future legislative or regulatory changes may adversely affect the use, transfer, exchange, and value of digital assets. North Union may be required to restrict services in certain jurisdictions to comply with local laws.
+                The regulatory environment for digital assets is evolving. Future legislative or regulatory changes may adversely affect the use, transfer, exchange, and value of digital assets. CDNT may be required to restrict services in certain jurisdictions to comply with local laws.
               </p>
             </section>
 
@@ -73,7 +73,7 @@ export default function RiskDisclosurePage() {
               <AlertTriangle className="mx-auto h-12 w-12 text-red-600 mb-6" />
               <h2 className="text-2xl font-bold text-red-900 mb-4">No Financial Advice</h2>
               <p className="text-sm leading-7 text-red-900/70 max-w-2xl mx-auto">
-                All content on the North Union platform is for informational purposes only and does not constitute financial, investment, or legal advice. You should consult with a qualified professional before making any financial decisions.
+                All content on the CDNT platform is for informational purposes only and does not constitute financial, investment, or legal advice. You should consult with a qualified professional before making any financial decisions.
               </p>
             </div>
           </div>

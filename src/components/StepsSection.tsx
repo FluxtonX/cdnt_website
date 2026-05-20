@@ -26,7 +26,7 @@ export default function StepsSection() {
     <section className="bg-slate-50/50 py-20 lg:py-28">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
-        <div className="mx-auto max-w-3xl text-center mb-16 lg:mb-20">
+        <div className="max-w-3xl mb-16 lg:mb-20">
           <motion.p 
             initial={{ opacity: 0, y: 10 }}
             whileInView={{ opacity: 1, y: 0 }}

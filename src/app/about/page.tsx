@@ -23,7 +23,7 @@ export default function AboutPage() {
                   <span className="text-banking-gold italic">Next Century.</span>
                 </h1>
                 <p className="mt-8 text-lg leading-relaxed text-white/60 font-medium">
-                  North Union (NUB) stands as a beacon of stability in the digital era. 
+                  CDNT (NUB) stands as a beacon of stability in the digital era. 
                   Modeled after the world's most resilient financial institutions, we 
                   combine century-old trust with millisecond technology.
                 </p>
@@ -40,13 +40,13 @@ export default function AboutPage() {
                 <div className="rounded-[2.5rem] border border-white/10 bg-white/5 p-4 backdrop-blur-xl shadow-2xl relative z-10 overflow-hidden group">
                    <img 
                     src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=2070" 
-                    alt="North Union Headquarters" 
+                    alt="CDNT Headquarters" 
                     className="h-[450px] w-full object-cover rounded-[2rem] brightness-90 group-hover:scale-105 transition-transform duration-1000"
                    />
                    <div className="absolute inset-0 bg-gradient-to-t from-banking-navy/80 via-transparent to-transparent opacity-60" />
                    <div className="absolute bottom-10 left-10">
                       <p className="text-xs font-bold uppercase tracking-widest text-banking-gold">Operational Base</p>
-                      <p className="text-2xl font-bold">North Union Global HQ</p>
+                      <p className="text-2xl font-bold">CDNT Global HQ</p>
                    </div>
                 </div>
               </div>
@@ -171,7 +171,7 @@ export default function AboutPage() {
           <div className="mx-auto max-w-4xl px-5 text-center">
             <h2 className="text-4xl font-bold italic">Ready to Secure Your Future?</h2>
             <p className="mt-6 text-lg text-white/60 font-medium leading-relaxed">
-              Join thousands of institutional and private investors who trust North Union 
+              Join thousands of institutional and private investors who trust CDNT 
               with their most valuable assets.
             </p>
             <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">

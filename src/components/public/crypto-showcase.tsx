@@ -319,7 +319,7 @@ export function CryptoShowcase() {
             <span className="text-banking-gold">All in One Platform.</span>
           </h2>
           <p className="mt-5 max-w-2xl mx-auto text-base text-white/50 leading-relaxed">
-            Institutional-grade crypto transaction tools — the same standard used by Coinbase and Binance, now inside your North Union account.
+            Institutional-grade crypto transaction tools — the same standard used by Coinbase and Binance, now inside your CDNT account.
           </p>
         </div>
 

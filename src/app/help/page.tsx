@@ -18,7 +18,7 @@ const faqs = [
   { q: "What are the daily withdrawal limits?", href: "/support" },
   { q: "How long do Interac e-Transfers take?", href: "/support" },
   { q: "How do I reset my 2FA device?", href: "/support" },
-  { q: "Is North Union CDIC insured?", href: "/support" },
+  { q: "Is CDNT CDIC insured?", href: "/support" },
 ];
 
 export default function HelpPage() {

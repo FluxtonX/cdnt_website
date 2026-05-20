@@ -32,22 +32,22 @@ const FOOTER_LINKS = {
 export default function Footer() {
   return (
     <footer className="bg-primary-navy pt-20 pb-10">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-6">
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-12 lg:gap-8 mb-16">
           
           {/* Logo and Tagline */}
           <div className="lg:col-span-2">
-            <Link href="/" className="inline-block mb-6">
+            <Link href="/" className="inline-block mb-6 group">
               <Image
-                src="/assets/logo.png"
-                alt="North Union Bank"
-                width={480}
-                height={160}
+                src="/cdnt-logo.png"
+                alt="Canadian Digital National Trust Bank"
+                width={300}
+                height={100}
                 quality={100}
                 priority
                 unoptimized={true}
-                className="h-10 w-auto object-contain brightness-0 invert"
+                className="h-10 md:h-12 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
               />
             </Link>
             <p className="text-gray-400 leading-relaxed max-w-sm">
@@ -81,7 +81,7 @@ export default function Footer() {
         {/* Bottom Bar */}
         <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-gray-500 text-sm">
-            © 2025 North Union Bank. All rights reserved.
+            © 2025 Canadian Digital National Trust Bank. All rights reserved.
           </p>
           
           <div className="flex items-center space-x-6">

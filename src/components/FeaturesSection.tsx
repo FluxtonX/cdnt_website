@@ -45,7 +45,7 @@ const FEATURES = [
 export default function FeaturesSection() {
   return (
     <section className="py-16 md:py-24 bg-white border-t border-gray-100 overflow-hidden">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-6">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 lg:gap-12">
           
           {/* Left Column (Sticky Heading) */}
@@ -103,7 +103,7 @@ export default function FeaturesSection() {
                   And much more
                 </h3>
                 <p className="text-text-secondary text-[15px] mb-4">
-                  Discover the full power of North Union.
+                  Discover the full power of CDNT.
                 </p>
                 <Button variant="primary" size="sm">
                   Get Started

@@ -11,7 +11,7 @@ export default function MaintenancePage() {
           Maintenance in progress
         </h1>
         <p className="mt-3 leading-7 text-white/74">
-          North Union is temporarily unavailable while system maintenance is completed.
+          CDNT is temporarily unavailable while system maintenance is completed.
         </p>
       </section>
     </main>

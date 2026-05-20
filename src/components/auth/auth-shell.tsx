@@ -25,7 +25,7 @@ export function AuthShell({
             <div className="h-12 w-auto min-w-[160px]">
               <img 
                 src="/logo.png" 
-                alt="North Union Logo" 
+                alt="CDNT Logo" 
                 className="h-full w-auto object-contain" 
               />
             </div>

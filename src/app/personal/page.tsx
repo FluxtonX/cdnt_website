@@ -380,7 +380,7 @@ export default function PersonalBankingPage() {
             <h2 className="text-xs font-bold uppercase tracking-[0.4em] text-banking-blue mb-4">Mobile Experience</h2>
             <h3 className="text-4xl font-bold text-banking-ink">Your Bank, In Your Pocket.</h3>
             <p className="mt-6 text-lg text-banking-muted font-medium max-w-2xl mx-auto">
-              Download the North Union app for the most powerful personal banking 
+              Download the CDNT app for the most powerful personal banking 
               experience on earth. Secure, fast, and remarkably intuitive.
             </p>
             

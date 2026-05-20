@@ -18,7 +18,7 @@ export function UserShell({ children }: { children: React.ReactNode }) {
             <Link href="/" className="h-10 w-auto min-w-[140px]">
               <img 
                 src="/logo.png" 
-                alt="North Union" 
+                alt="CDNT" 
                 className="h-full w-auto object-contain" 
               />
             </Link>
@@ -59,7 +59,7 @@ export function UserShell({ children }: { children: React.ReactNode }) {
               <div className="h-8 w-auto min-w-[120px]">
                 <img 
                   src="/logo.png" 
-                  alt="North Union" 
+                  alt="CDNT" 
                   className="h-full w-auto object-contain" 
                 />
               </div>

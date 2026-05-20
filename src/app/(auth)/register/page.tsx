@@ -6,7 +6,7 @@ export default function RegisterPage() {
   return (
     <AuthShell
       eyebrow="Start verified onboarding"
-      title="Create your North Union account."
+      title="Create your CDNT account."
       description="Register with secure identity checks, risk consent, and a protected onboarding path built for financial workflows."
     >
       <AuthCard title="Create account" subtitle="Your details should match the identity documents used during KYC.">

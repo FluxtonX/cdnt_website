@@ -13,7 +13,7 @@ const BENEFITS = [
 export default function AppPreviewSection() {
   return (
     <section className="py-16 md:py-24 bg-bg-light overflow-hidden">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-6">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-12 items-center">
           
           {/* Left Column */}
@@ -62,7 +62,7 @@ export default function AppPreviewSection() {
             >
               <Image
                 src="/assets/phone-light.png"
-                alt="North Union Bank App Interface"
+                alt="Canadian Digital National Trust Bank App Interface"
                 width={300}
                 height={600}
                 className="w-full h-auto drop-shadow-2xl rounded-[2.5rem]"
@@ -78,7 +78,7 @@ export default function AppPreviewSection() {
             >
               <Image
                 src="/assets/phone-dark.png"
-                alt="North Union Crypto Portfolio Interface"
+                alt="CDNT Crypto Portfolio Interface"
                 width={300}
                 height={600}
                 className="w-full h-auto drop-shadow-2xl rounded-[2.5rem]"

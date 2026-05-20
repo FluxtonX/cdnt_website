@@ -46,33 +46,9 @@ const FEATURES = [
 export default function TrustSection() {
   return (
     <section className="py-16 md:py-24 bg-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-6">
         
-        {/* Header */}
-        <div className="text-center max-w-3xl mx-auto mb-16">
-          <p className="text-accent-gold font-semibold tracking-widest text-sm uppercase mb-4">
-            Built On Trust
-          </p>
-          <h2 className="text-4xl md:text-[42px] font-bold text-text-primary leading-tight mb-6">
-            Regulated. Insured. <br />
-            Engineered for safety.
-          </h2>
-          <p className="text-lg text-text-secondary leading-relaxed">
-            We operate under strict FINTRAC registration and employ state-of-the-art cryptographic 
-            safeguards to ensure your money and digital assets are always protected.
-          </p>
-        </div>
 
-        {/* Stats Row */}
-        <div className="border-y border-gray-100 py-8 mb-16 hidden md:block">
-          <div className="flex items-center justify-between divide-x divide-gray-100">
-            {STATS.map((stat, idx) => (
-              <div key={idx} className="flex-1 text-center px-4">
-                <span className="text-base font-semibold text-text-primary">{stat}</span>
-              </div>
-            ))}
-          </div>
-        </div>
 
         {/* Features Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

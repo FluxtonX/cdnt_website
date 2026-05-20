@@ -71,7 +71,7 @@ export default function SecurityPage() {
             <SectionHeader
               eyebrow="Audit & Compliance"
               title="Built for the Future of Finance"
-              description="North Union undergoes regular third-party security audits, penetration testing, and compliance reviews to ensure our platform exceeds the expectations of institutional regulators."
+              description="CDNT undergoes regular third-party security audits, penetration testing, and compliance reviews to ensure our platform exceeds the expectations of institutional regulators."
             />
             <div className="mt-10 flex flex-wrap gap-8 opacity-40 grayscale items-center justify-center lg:justify-start">
               <span className="font-black text-2xl">SOC2 TYPE II</span>

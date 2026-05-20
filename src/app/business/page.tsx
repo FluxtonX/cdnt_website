@@ -39,7 +39,7 @@ export default function BusinessBankingPage() {
                   <span className="text-banking-gold italic">Global Ambition.</span>
                 </h1>
                 <p className="mt-8 text-xl leading-relaxed text-white/60">
-                  North Union provides the capital, liquidity, and intelligence to scale 
+                  CDNT provides the capital, liquidity, and intelligence to scale 
                   your business from local startup to global enterprise.
                 </p>
                 <div className="mt-10 flex flex-wrap gap-4">
@@ -224,7 +224,7 @@ export default function BusinessBankingPage() {
               <div className="relative z-10 max-w-3xl mx-auto">
                 <h2 className="text-4xl font-bold md:text-6xl">Ready to Expand?</h2>
                 <p className="mt-8 text-xl text-white/70 font-medium">
-                  Join the world's most ambitious businesses. Open your North Union 
+                  Join the world's most ambitious businesses. Open your CDNT 
                   Business account today and unlock global growth.
                 </p>
                 <div className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-4">

@@ -18,7 +18,7 @@ export default function PrivacyPage() {
             <div>
               <h2 className="text-lg font-bold text-banking-blue mb-2">Our Commitment to Privacy</h2>
               <p className="text-sm leading-relaxed text-blue-900/70">
-                At North Union, we understand that your financial privacy is paramount. This policy outlines how we collect, protect, and use your personal information and digital asset data.
+                At CDNT, we understand that your financial privacy is paramount. This policy outlines how we collect, protect, and use your personal information and digital asset data.
               </p>
             </div>
           </div>
@@ -68,7 +68,7 @@ export default function PrivacyPage() {
                 3. Data Security Measures
               </h2>
               <p className="text-banking-muted leading-relaxed mb-6">
-                North Union employs multi-layered security protocols to safeguard your data:
+                CDNT employs multi-layered security protocols to safeguard your data:
               </p>
               <div className="space-y-4">
                 <div className="flex gap-4 p-4 rounded-xl bg-banking-offWhite border border-banking-border">
@@ -93,7 +93,7 @@ export default function PrivacyPage() {
               </p>
               <div className="rounded-2xl border border-banking-border bg-white p-8">
                 <p className="font-bold text-banking-text">Privacy & Data Protection Office</p>
-                <p className="text-sm text-banking-muted mt-1">North Union Financial Services Inc.</p>
+                <p className="text-sm text-banking-muted mt-1">CDNT Financial Services Inc.</p>
                 <p className="text-sm text-banking-muted">privacy@northunion.io</p>
                 <p className="text-sm text-banking-muted mt-4">1200 Bay St, Toronto, ON M5R 2A5, Canada</p>
               </div>

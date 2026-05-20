@@ -18,7 +18,7 @@ export default function TermsPage() {
             <div>
               <h2 className="text-lg font-bold text-amber-900 mb-2">Legal Agreement</h2>
               <p className="text-sm leading-relaxed text-amber-900/70">
-                By accessing or using the North Union platform, you agree to be bound by these Terms of Service. Please read them carefully as they contain important information regarding your legal rights, remedies, and obligations.
+                By accessing or using the CDNT platform, you agree to be bound by these Terms of Service. Please read them carefully as they contain important information regarding your legal rights, remedies, and obligations.
               </p>
             </div>
           </div>
@@ -27,7 +27,7 @@ export default function TermsPage() {
             <section>
               <h2 className="text-2xl font-bold text-banking-text mb-4">1. Eligibility & Registration</h2>
               <p className="text-banking-muted leading-relaxed mb-4">
-                To use North Union, you must be at least 18 years of age and a resident of an authorized jurisdiction. You agree to provide accurate, current, and complete information during the registration process and to keep your account information updated.
+                To use CDNT, you must be at least 18 years of age and a resident of an authorized jurisdiction. You agree to provide accurate, current, and complete information during the registration process and to keep your account information updated.
               </p>
               <div className="rounded-xl bg-banking-offWhite p-6 border border-banking-border">
                 <p className="text-sm font-bold text-banking-text mb-3">Key Requirements:</p>
@@ -42,7 +42,7 @@ export default function TermsPage() {
             <section>
               <h2 className="text-2xl font-bold text-banking-text mb-4">2. Digital Asset Services</h2>
               <p className="text-banking-muted leading-relaxed">
-                North Union provides interfaces for managing digital assets (crypto). We do not guarantee the value of any digital asset. You acknowledge that digital assets are volatile and carry significant risk. All transactions are final once broadcast to the blockchain.
+                CDNT provides interfaces for managing digital assets (crypto). We do not guarantee the value of any digital asset. You acknowledge that digital assets are volatile and carry significant risk. All transactions are final once broadcast to the blockchain.
               </p>
             </section>
 
@@ -60,7 +60,7 @@ export default function TermsPage() {
             <section>
               <h2 className="text-2xl font-bold text-banking-text mb-4">4. Fees & Payments</h2>
               <p className="text-banking-muted leading-relaxed">
-                Service fees are outlined in our <a href="/pricing" className="text-banking-blue font-bold hover:underline">Pricing Schedule</a>. North Union reserves the right to adjust fees with 30 days' notice. You are responsible for all network/gas fees associated with blockchain transactions.
+                Service fees are outlined in our <a href="/pricing" className="text-banking-blue font-bold hover:underline">Pricing Schedule</a>. CDNT reserves the right to adjust fees with 30 days' notice. You are responsible for all network/gas fees associated with blockchain transactions.
               </p>
             </section>
 

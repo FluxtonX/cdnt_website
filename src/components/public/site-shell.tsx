@@ -138,13 +138,13 @@ export function SiteHeader() {
               <div className="relative h-12 w-auto">
                 <img 
                   src="/logo.png" 
-                  alt="North Union" 
+                  alt="CDNT" 
                   className="h-full w-auto object-contain" 
                   onError={(e) => {
                     // Fallback to text if image fails
                     e.currentTarget.style.display = 'none';
                     e.currentTarget.parentElement?.classList.add('flex', 'items-center', 'font-bold', 'text-white', 'text-2xl');
-                    if(e.currentTarget.parentElement) e.currentTarget.parentElement.innerText = 'NORTH UNION';
+                    if(e.currentTarget.parentElement) e.currentTarget.parentElement.innerText = 'CDNT';
                   }}
                 />
               </div>
@@ -356,7 +356,7 @@ export function SiteFooter() {
             <Link href="/" className="inline-flex items-center gap-2 group">
               <div className="h-10 w-auto flex items-center font-bold text-white text-2xl tracking-tight">
                 <span className="inline-block h-6 w-6 rounded-full bg-gradient-to-tr from-[#3061EF] to-sky-400 mr-2 shadow-lg shadow-blue-500/30" />
-                North Union
+                CDNT
               </div>
             </Link>
 
@@ -432,7 +432,7 @@ export function SiteFooter() {
                 All digital asset representations and transactions are simulated for platform evaluation purposes.
               </p>
               <p>
-                &copy; {new Date().getFullYear()} North Union Financial Services Inc. All rights reserved. 
+                &copy; {new Date().getFullYear()} CDNT Financial Services Inc. All rights reserved. 
                 Member CDIC (Simulated protection applies to fiat-equivalent deposits).
               </p>
             </div>

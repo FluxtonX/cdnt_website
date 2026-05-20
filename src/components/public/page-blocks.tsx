@@ -75,7 +75,7 @@ export function ProductPreview() {
       <div className="overflow-hidden rounded-md bg-auth-radial text-white shadow-glow">
         <div className="flex items-center justify-between border-b border-white/12 px-5 py-4">
           <div>
-            <p className="text-sm text-white/66">North Union dashboard</p>
+            <p className="text-sm text-white/66">CDNT dashboard</p>
             <p className="mt-1 font-semibold">Verified client workspace</p>
           </div>
           <span className="rounded-full bg-emerald-400/18 px-2.5 py-1 text-xs font-semibold text-emerald-100">
@@ -120,7 +120,7 @@ export function SectionHeader({
   description?: string;
 }) {
   return (
-    <div className="mx-auto max-w-3xl text-center">
+    <div className="max-w-3xl">
       <p className="text-sm font-semibold uppercase tracking-[0.18em] text-banking-blue">
         {eyebrow}
       </p>

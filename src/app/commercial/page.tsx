@@ -40,7 +40,7 @@ export default function CommercialBankingPage() {
                   <span className="text-banking-gold italic">Global Leaders.</span>
                 </h1>
                 <p className="mt-8 text-xl leading-relaxed text-white/50 font-medium">
-                  North Union Commercial provides the sophisticated financial engineering 
+                  CDNT Commercial provides the sophisticated financial engineering 
                   and liquidity required to navigate complex global markets.
                 </p>
                 <div className="mt-10 flex flex-wrap gap-4">

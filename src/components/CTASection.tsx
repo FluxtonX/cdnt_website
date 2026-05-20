@@ -2,7 +2,7 @@ import { Button } from "./ui/Button";
 
 export default function CTASection() {
   return (
-    <section className="py-16 md:py-24 bg-white px-4 sm:px-6 lg:px-8">
+    <section className="py-16 md:py-24 bg-white px-6">
       <div className="max-w-7xl mx-auto">
         <div className="relative bg-primary-navy rounded-[2.5rem] py-20 px-8 md:px-16 text-center overflow-hidden shadow-2xl">
           

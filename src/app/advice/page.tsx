@@ -126,7 +126,7 @@ export default function AdvicePage() {
           <div className="relative mx-auto grid min-h-[680px] max-w-7xl items-center gap-12 px-5 py-24 lg:grid-cols-[0.95fr_1.05fr]">
             <div>
               <div className="inline-flex items-center gap-2 rounded-full border border-banking-gold/25 bg-banking-gold/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-banking-gold">
-                North Union Advice
+                CDNT Advice
               </div>
               <h1 className="mt-7 text-5xl font-semibold leading-tight tracking-normal md:text-6xl">
                 Advice for money, markets, and digital assets.
@@ -262,7 +262,7 @@ export default function AdvicePage() {
                   Choose the advice path that matches the decision.
                 </h2>
                 <p className="mt-5 text-base font-medium leading-8 text-white/62">
-                  North Union blends classic planning discipline with modern portfolio visibility,
+                  CDNT blends classic planning discipline with modern portfolio visibility,
                   so your advisor can discuss both bank accounts and digital asset behavior in context.
                 </p>
               </div>
@@ -420,7 +420,7 @@ export default function AdvicePage() {
               <Landmark className="h-8 w-8" />
             </div>
             <h2 className="mt-8 text-4xl font-semibold tracking-normal md:text-5xl">
-              Bring your next decision to North Union.
+              Bring your next decision to CDNT.
             </h2>
             <p className="mx-auto mt-6 max-w-2xl text-base font-medium leading-8 text-white/62">
               Whether you are opening your first account, adjusting your portfolio,

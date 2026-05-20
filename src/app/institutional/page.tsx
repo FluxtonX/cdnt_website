@@ -62,7 +62,7 @@ export default function InstitutionalPage() {
                 Institutional strength for complex financial organizations.
               </h1>
               <p className="mt-8 max-w-3xl text-xl font-medium leading-relaxed text-white/58">
-                North Union Institutional supports asset managers, family offices,
+                CDNT Institutional supports asset managers, family offices,
                 corporations, and foundations with secure treasury, reporting,
                 liquidity, and risk-control experiences.
               </p>

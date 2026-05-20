@@ -97,7 +97,7 @@ export default function PricingPage() {
               <h4 className="font-bold text-banking-text">Important Disclosures</h4>
               <p className="text-sm leading-7 text-banking-muted">
                 Fees are subject to change with 30 days notice. Crypto network fees are determined by blockchain congestion 
-                and are not controlled by North Union. Interac e-Transfer® is a registered trademark of Interac Corp. 
+                and are not controlled by CDNT. Interac e-Transfer® is a registered trademark of Interac Corp. 
                 Full list of service charges and specific transaction limits can be found in our Account Agreement.
               </p>
             </div>
