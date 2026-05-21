@@ -24,7 +24,7 @@ export function AuthShell({
           <Link href="/" className="inline-flex w-fit items-center gap-3">
             <div className="h-12 w-auto min-w-[160px]">
               <img 
-                src="/logo.png" 
+                src="/cdnt-logo.png" 
                 alt="CDNT Logo" 
                 className="h-full w-auto object-contain" 
               />

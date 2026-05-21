@@ -27,17 +27,19 @@ export default function TwoFactorPage() {
 
       {/* Header */}
       <div className="flex flex-col items-center mb-8">
-        <div className="bg-white p-4 rounded-2xl shadow-lg mb-6">
+        <div className="mb-6 flex justify-center">
           <Image 
             src="/cdnt-logo.png" 
-            alt="Logo" 
-            width={180} 
-            height={60} 
-            className="h-12 w-auto object-contain"
+            alt="CDNT Bank Logo" 
+            width={240} 
+            height={80} 
+            className="h-16 w-auto object-contain"
+            priority
+            unoptimized={true}
           />
         </div>
         <h1 className="text-white text-3xl font-bold mb-3">Welcome Back</h1>
-        <p className="text-blue-100 text-[15px]">Sign in to your North Union account</p>
+        <p className="text-blue-100 text-[15px]">Sign in to your CDNT account</p>
       </div>
 
       {/* 2FA Card */}
