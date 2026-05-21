@@ -2,111 +2,113 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, Landmark, LogOut, Search } from "lucide-react";
-import { userNav } from "@/data/mock";
+import Image from "next/image";
+import { 
+  Bell, 
+  ChevronDown,
+  LayoutDashboard, 
+  Wallet, 
+  ArrowRightLeft, 
+  Settings, 
+  HelpCircle,
+  LogOut
+} from "lucide-react";
 import { cn } from "@/lib/utils";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
+
+const sidebarNav = [
+  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { label: "Wallets", href: "/wallets", icon: Wallet },
+  { label: "Transactions", href: "/transactions", icon: ArrowRightLeft },
+  { label: "Settings", href: "/settings", icon: Settings },
+  { label: "Help & Support", href: "/support", icon: HelpCircle },
+];
 
 export function UserShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   return (
-    <div className="min-h-screen bg-banking-offWhite text-banking-text lg:grid lg:grid-cols-[280px_1fr]">
-      <aside className="hidden border-r border-banking-border bg-white lg:block">
+    <div className="min-h-screen bg-[#F8F9FA] text-[#0A0F2C] lg:grid lg:grid-cols-[240px_1fr]">
+      {/* Sidebar */}
+      <aside className="hidden border-r border-gray-100 bg-white lg:block">
         <div className="sticky top-0 flex h-screen flex-col">
-          <div className="flex h-20 items-center gap-3 border-b border-banking-border px-5">
-            <Link href="/" className="h-10 w-auto min-w-[140px]">
-              <img 
-                src="/logo.png" 
+          <div className="flex items-center justify-center pt-[18px] pb-0 px-6 mb-0 bg-white">
+            <Link href="/" className="flex items-center justify-center w-full">
+              <Image 
+                src="/cdnt-logo.png" 
                 alt="CDNT" 
-                className="h-full w-auto object-contain" 
+                width={100}
+                height={40}
+                className="w-[100px] h-auto object-contain brightness-0"
+                priority
+                unoptimized
               />
             </Link>
           </div>
-          <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-            {userNav.map((item) => {
-              const active =
-                pathname === item.href || pathname.startsWith(`${item.href}/`);
+          
+          {/* Nav Links */}
+          <nav className="flex-1 space-y-1.5 px-4">
+            {sidebarNav.map((item) => {
+              const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
               const Icon = item.icon;
               return (
                 <Link
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-banking-muted transition hover:bg-blue-50 hover:text-banking-blue",
-                    active && "bg-blue-50 text-banking-blue",
+                    "flex items-center gap-3.5 rounded-xl px-4 py-3 text-[14px] font-medium transition-colors",
+                    active 
+                      ? "bg-[#113285] text-white shadow-md shadow-blue-900/10" 
+                      : "text-[#4A5568] hover:bg-gray-50 hover:text-[#0A0F2C]"
                   )}
                 >
-                  <Icon className="h-4 w-4" />
+                  <Icon className="h-[18px] w-[18px]" strokeWidth={active ? 2.5 : 2} />
                   {item.label}
                 </Link>
               );
             })}
           </nav>
-          <div className="border-t border-banking-border p-4">
-            <button className="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm font-semibold text-banking-muted hover:bg-slate-50">
-              <LogOut className="h-4 w-4" />
-              Sign out
+          
+          {/* Sign Out */}
+          <div className="p-4 mb-4">
+            <button className="flex w-full items-center gap-3.5 rounded-xl px-4 py-3 text-[14px] font-medium text-[#E53E3E] hover:bg-red-50 transition-colors">
+              <LogOut className="h-[18px] w-[18px]" strokeWidth={2} />
+              Sign Out
             </button>
           </div>
         </div>
       </aside>
 
+      {/* Main Content Area */}
       <div className="min-w-0 pb-20 lg:pb-0">
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-banking-border bg-white/92 px-4 backdrop-blur md:px-6">
-          <div className="flex items-center gap-3">
-            <Link href="/dashboard" className="flex items-center gap-3 lg:hidden">
-              <div className="h-8 w-auto min-w-[120px]">
-                <img 
-                  src="/logo.png" 
-                  alt="CDNT" 
-                  className="h-full w-auto object-contain" 
-                />
-              </div>
-            </Link>
-            <div className="hidden h-10 min-w-[280px] items-center gap-2 rounded-md border border-banking-border bg-banking-offWhite px-3 text-sm text-banking-muted md:flex">
-              <Search className="h-4 w-4" />
-              Search transactions, tickets, assets
-            </div>
+        {/* Top Header */}
+        <header className="sticky top-0 z-30 flex h-[88px] items-center justify-between border-b border-gray-100 bg-white px-4 md:px-8">
+          <div className="flex flex-col justify-center">
+            <h1 className="text-[20px] font-bold text-[#0A0F2C]">Welcome back, Sarah</h1>
+            <p className="text-[13px] text-[#718096] mt-0.5">Here's what's happening with your portfolio today</p>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="hidden sm:block">
-              <ThemeToggle />
-            </div>
-            <Link
-              href="/notifications"
-              className="grid h-10 w-10 place-items-center rounded-md border border-banking-border text-banking-muted hover:text-banking-blue"
-            >
-              <Bell className="h-5 w-5" />
-            </Link>
-            <div className="h-10 w-10 rounded-full bg-banking-blue text-center text-sm font-semibold leading-10 text-white">
-              NU
-            </div>
+          
+          <div className="flex items-center gap-6">
+            <button className="relative text-[#4A5568] hover:text-[#0A0F2C] transition-colors">
+              <Bell className="h-5 w-5" strokeWidth={2} />
+              <span className="absolute top-0 right-0 block h-2 w-2 -translate-y-0.5 translate-x-0.5 rounded-full bg-[#E53E3E] ring-2 ring-white" />
+            </button>
+            
+            <div className="h-6 w-px bg-gray-200" />
+            
+            <button className="flex items-center gap-3 hover:bg-gray-50 px-2 py-1.5 rounded-lg transition-colors border border-transparent hover:border-gray-100">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#113285] text-[13px] font-bold text-white">
+                S
+              </div>
+              <span className="text-[14px] font-medium text-[#0A0F2C] hidden sm:block">Sarah Chen</span>
+              <ChevronDown className="h-4 w-4 text-[#718096]" />
+            </button>
           </div>
         </header>
-        <main className="mx-auto w-full max-w-7xl px-4 py-6 md:px-6">
+
+        {/* Page Content */}
+        <main className="mx-auto w-full p-4 md:p-8">
           {children}
         </main>
-        <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-banking-border bg-white px-2 py-2 shadow-2xl shadow-black/10 lg:hidden">
-          {userNav.slice(0, 5).map((item) => {
-            const active =
-              pathname === item.href || pathname.startsWith(`${item.href}/`);
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "flex flex-col items-center gap-1 rounded-md px-1 py-2 text-[11px] font-semibold text-banking-muted",
-                  active && "bg-blue-50 text-banking-blue",
-                )}
-              >
-                <Icon className="h-4 w-4" />
-                <span className="max-w-full truncate">{item.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
       </div>
     </div>
   );

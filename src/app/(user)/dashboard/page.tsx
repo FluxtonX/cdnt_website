@@ -1,303 +1,305 @@
 "use client";
 
 import React, { useState } from "react";
-import Link from "next/link";
-import { Eye, EyeOff, ArrowDownLeft, ArrowUpRight, TrendingUp } from "lucide-react";
-import {
-  PageTitle,
-  Panel,
-  PerformanceChart,
-  TransactionTable,
-} from "@/components/dashboard/blocks";
-import { MarketStrip } from "@/components/dashboard/market-strip";
-import { QuickActions } from "@/components/dashboard/quick-actions";
-import { portfolioAssets, transactions } from "@/data/mock";
-import { cn } from "@/lib/utils";
+import { 
+  Eye, 
+  ArrowDownLeft, 
+  ArrowUpRight, 
+  TrendingUp,
+  Bitcoin,
+  ChevronRight
+} from "lucide-react";
+import { 
+  LineChart, 
+  Line, 
+  XAxis, 
+  YAxis, 
+  ResponsiveContainer, 
+  Tooltip, 
+  PieChart, 
+  Pie, 
+  Cell 
+} from "recharts";
+
+const performanceData = [
+  { name: "Mon", value: 49000 },
+  { name: "Tue", value: 15500 },
+  { name: "Wed", value: 49000 },
+  { name: "Thu", value: 29000 },
+  { name: "Fri", value: 52000 },
+  { name: "Sat", value: 5000 },
+  { name: "Sun", value: 52000 },
+];
+
+const allocationData = [
+  { name: "Bitcoin", value: 25000, color: "#1E40AF" },
+  { name: "Ethereum", value: 18750, color: "#2563EB" },
+  { name: "USDT", value: 8000, color: "#F5A623" },
+];
 
 export default function DashboardPage() {
   const [hideBalance, setHideBalance] = useState(false);
-  const [activeAsset, setActiveAsset] = useState<string | null>(null);
-
-  // Hardcoded values from user's mockup image
-  const totalPortfolioValue = "$51,750.00";
-  const cadBalance = "$8,000.00";
-  
-  const portfolioValueVisible = hideBalance ? "$••,•••.••" : totalPortfolioValue;
-  const cadBalanceVisible = hideBalance ? "$••,•••.••" : cadBalance;
-
-  // Let's compute overall assets sum dynamically for the donut center
-  const totalAssetsSum = portfolioAssets.reduce((sum, asset) => {
-    const val = parseFloat(asset.value.replace(/[$,]/g, ""));
-    return sum + (isNaN(val) ? 0 : val);
-  }, 0);
-
-  // Colors mapping for top assets
-  const assetColors: Record<string, { stroke: string; bg: string }> = {
-    BTC: { stroke: "#F5A623", bg: "bg-[#F5A623]" },
-    ETH: { stroke: "#3B82F6", bg: "bg-[#3B82F6]" },
-    USDT: { stroke: "#10B981", bg: "bg-[#10B981]" },
-    BNB: { stroke: "#F0B90B", bg: "bg-[#F0B90B]" },
-    SOL: { stroke: "#14F195", bg: "bg-[#14F195]" },
-    XRP: { stroke: "#64748B", bg: "bg-[#64748B]" },
-    ADA: { stroke: "#4F46E5", bg: "bg-[#4F46E5]" },
-    DOGE: { stroke: "#EC4899", bg: "bg-[#EC4899]" },
-  };
-
-  // SVG Donut Calculations
-  const radius = 45;
-  const circumference = 2 * Math.PI * radius; // ~282.74
-  
-  // Let's prepare donut segments based on allocations
-  let accumulatedPercent = 0;
-  const donutSegments = portfolioAssets.map((asset) => {
-    const strokeLength = circumference * (asset.allocation / 100);
-    const strokeOffset = -circumference * (accumulatedPercent / 100);
-    accumulatedPercent += asset.allocation;
-    const colors = assetColors[asset.symbol] || { stroke: "#94A3B8", bg: "bg-[#94A3B8]" };
-    return {
-      symbol: asset.symbol,
-      strokeDasharray: `${strokeLength} ${circumference}`,
-      strokeDashoffset: strokeOffset,
-      stroke: colors.stroke,
-    };
-  });
-
-  const activeAssetData = activeAsset 
-    ? portfolioAssets.find(a => a.symbol === activeAsset) 
-    : null;
 
   return (
-    <>
-      {/* 1. Header Greeting Section */}
-      <PageTitle
-        title="Welcome back, Sarah"
-        description="Here's what's happening with your portfolio today"
-      />
-
-      {/* 2. Top Blue Hero Card */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#0B2F8F] via-[#014EA1] to-[#003B7A] p-6 md:p-8 text-white shadow-xl shadow-banking-blue/20 mb-8 border border-white/10">
-        <div className="flex flex-col justify-between gap-6 md:flex-row md:items-start">
-          {/* Left Block */}
+    <div className="space-y-6">
+      
+      {/* 1. Main Balance Card */}
+      <div className="bg-[#1855C0] rounded-2xl p-8 text-white shadow-lg">
+        <div className="flex flex-col md:flex-row justify-between items-start gap-6">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-black uppercase tracking-widest text-white/70">
-                Total Portfolio Value
-              </span>
-              <button
-                onClick={() => setHideBalance(!hideBalance)}
-                className="rounded p-1 hover:bg-white/10 transition-colors"
-                title={hideBalance ? "Show balance" : "Hide balance"}
-              >
-                {hideBalance ? (
-                  <EyeOff className="h-4.5 w-4.5 text-white/70 hover:text-white" />
-                ) : (
-                  <Eye className="h-4.5 w-4.5 text-white/70 hover:text-white" />
-                )}
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-[13px] text-blue-100/90 font-medium">Total Portfolio Value</span>
+              <button onClick={() => setHideBalance(!hideBalance)} className="hover:text-white text-blue-100/80 transition-colors">
+                <Eye className="w-4 h-4" />
               </button>
             </div>
-            
-            <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight mt-1 tabular-nums text-white">
-              {portfolioValueVisible}
-            </h2>
-            
-            <div className="text-emerald-300 text-xs md:text-sm font-bold flex items-center gap-1.5 mt-2 bg-white/5 py-1 px-2.5 rounded-full w-fit">
-              <TrendingUp className="h-4 w-4" />
-              <span>+$3,250 (6.7%) this month</span>
+            <h1 className="text-4xl md:text-[44px] font-bold tracking-tight mb-2">
+              {hideBalance ? "$••,•••.••" : "$51,750.00"}
+            </h1>
+            <div className="flex items-center gap-1.5 text-[14px]">
+              <TrendingUp className="w-4 h-4 text-[#FFD166]" />
+              <span className="text-[#FFD166] font-semibold">+$3,250 (6.7%)</span>
+              <span className="text-blue-200/80">this month</span>
             </div>
           </div>
-
-          {/* Right Block */}
           <div className="md:text-right">
-            <span className="text-[10px] font-black uppercase tracking-widest text-white/70 block">
-              CAD Balance
-            </span>
-            <span className="text-xl md:text-3xl font-extrabold mt-1 block tabular-nums text-white">
-              {cadBalanceVisible}
-            </span>
+            <span className="text-[13px] text-blue-100/90 font-medium">CAD Balance</span>
+            <div className="text-xl md:text-2xl font-bold mt-1">
+              {hideBalance ? "$•,•••.••" : "$8,000.00"}
+            </div>
           </div>
         </div>
 
-        {/* Buttons Row */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8">
-          <Link
-            href="/deposit"
-            className="flex items-center justify-center gap-2 rounded-xl bg-banking-gold text-banking-ink py-4 px-6 font-black text-xs uppercase tracking-widest hover:bg-amber-400 transition-all shadow-md active:scale-98"
-          >
-            <ArrowDownLeft className="h-4.5 w-4.5 stroke-[3px]" />
+          <button className="flex items-center justify-center gap-2 bg-[#FFC107] hover:bg-[#FFD166] text-[#0A0F2C] rounded-xl py-3.5 font-bold text-[14px] transition-colors shadow-sm">
+            <ArrowDownLeft className="w-4 h-4" strokeWidth={2.5} />
             Deposit
-          </Link>
-          <Link
-            href="/withdraw"
-            className="flex items-center justify-center gap-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white py-4 px-6 font-black text-xs uppercase tracking-widest transition-all shadow-sm active:scale-98"
-          >
-            <ArrowUpRight className="h-4.5 w-4.5 stroke-[3px]" />
+          </button>
+          <button className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white rounded-xl py-3.5 font-bold text-[14px] transition-colors shadow-sm">
+            <ArrowUpRight className="w-4 h-4" strokeWidth={2.5} />
             Withdraw
-          </Link>
+          </button>
         </div>
       </div>
 
-      {/* 3. MarketStrip section (Premium tickers) */}
-      <MarketStrip />
+      {/* 2. Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
+        
+        {/* Line Chart */}
+        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+          <h2 className="text-[15px] font-bold text-[#0A0F2C] mb-6">Portfolio Performance</h2>
+          <div className="h-[240px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={performanceData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <XAxis 
+                  dataKey="name" 
+                  axisLine={true} 
+                  tickLine={false} 
+                  tick={{ fontSize: 11, fill: '#A0AEC0' }} 
+                  dy={10} 
+                />
+                <YAxis 
+                  axisLine={true} 
+                  tickLine={false} 
+                  tick={{ fontSize: 11, fill: '#A0AEC0' }} 
+                  ticks={[0, 15000, 30000, 45000, 60000]}
+                />
+                <Tooltip 
+                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  labelStyle={{ display: 'none' }}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="value" 
+                  stroke="#113285" 
+                  strokeWidth={3} 
+                  dot={{ r: 4, fill: "#113285", strokeWidth: 0 }} 
+                  activeDot={{ r: 6, fill: "#113285" }} 
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
 
-      {/* 4. Portfolio Performance Spline Graph (Full Width) */}
-      <div className="mt-8">
-        <Panel title="Portfolio Performance">
-          <PerformanceChart />
-        </Panel>
+        {/* Donut Chart */}
+        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex flex-col">
+          <h2 className="text-[15px] font-bold text-[#0A0F2C] mb-4">Asset Allocation</h2>
+          <div className="flex-1 flex flex-col justify-between">
+            <div className="h-[180px] w-full relative">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={allocationData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={55}
+                    outerRadius={75}
+                    paddingAngle={5}
+                    dataKey="value"
+                    stroke="none"
+                  >
+                    {allocationData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            
+            <div className="space-y-3 mt-4">
+              {allocationData.map((item) => (
+                <div key={item.name} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                    <span className="text-[13px] text-[#4A5568]">{item.name}</span>
+                  </div>
+                  <span className="text-[13px] font-bold text-[#0A0F2C]">
+                    ${item.value.toLocaleString()}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* 5. Asset Allocation & Distribution (Row Form) */}
-      <div className="mt-8">
-        <Panel title="Asset Allocation & Distribution">
-          <div className="grid grid-cols-1 lg:grid-cols-[180px_1fr] gap-8 items-center">
-            {/* Left: SVG Donut Chart */}
-            <div className="flex flex-col items-center justify-center border-b lg:border-b-0 lg:border-r border-banking-border/50 pb-6 lg:pb-0 lg:pr-8 shrink-0">
-              <div className="relative w-36 h-36">
-                <svg
-                  viewBox="0 0 120 120"
-                  className="w-full h-full transform -rotate-90 overflow-visible"
-                >
-                  <circle
-                    cx="60"
-                    cy="60"
-                    r={radius}
-                    fill="transparent"
-                    stroke="#F1F5F9"
-                    strokeWidth="10"
-                  />
-                  {donutSegments.map((segment) => {
-                    const isActive = activeAsset === segment.symbol;
-                    return (
-                      <circle
-                        key={segment.symbol}
-                        cx="60"
-                        cy="60"
-                        r={radius}
-                        fill="transparent"
-                        stroke={segment.stroke}
-                        strokeWidth={isActive ? 14 : 10}
-                        strokeDasharray={segment.strokeDasharray}
-                        strokeDashoffset={segment.strokeDashoffset}
-                        strokeLinecap="butt"
-                        className="transition-all duration-300 cursor-pointer"
-                        onMouseEnter={() => setActiveAsset(segment.symbol)}
-                        onMouseLeave={() => setActiveAsset(null)}
-                        onClick={() => setActiveAsset(activeAsset === segment.symbol ? null : segment.symbol)}
-                      />
-                    );
-                  })}
-                </svg>
-                {/* Center Text inside Donut */}
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-2 select-none pointer-events-none">
-                  {activeAssetData ? (
-                    <>
-                      <span 
-                        className="text-xs font-black uppercase tracking-wider leading-none"
-                        style={{ color: assetColors[activeAssetData.symbol]?.stroke || "#000" }}
-                      >
-                        {activeAssetData.symbol}
-                      </span>
-                      <span className="text-[10px] font-black text-banking-muted mt-1.5 leading-none">
-                        {activeAssetData.allocation}%
-                      </span>
-                      <span className="text-[9px] font-extrabold text-banking-ink mt-1 leading-none truncate max-w-[80px]">
-                        {hideBalance ? "$••••••" : activeAssetData.value.split(".")[0]}
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="text-[9px] font-black tracking-widest text-banking-muted uppercase leading-none">
-                        Portfolio
-                      </span>
-                      <span className="text-sm font-extrabold text-banking-ink mt-1.5 leading-none">
-                        ${(totalAssetsSum / 1000).toFixed(1)}k
-                      </span>
-                    </>
-                  )}
-                </div>
+      {/* 3. Balances Row */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        
+        {/* Bitcoin Card */}
+        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex flex-col">
+          <div className="flex items-start justify-between mb-4">
+            <div className="w-10 h-10 rounded-full bg-[#F3F4F6] flex items-center justify-center text-[#4A5568] font-bold font-serif text-lg">
+              ₿
+            </div>
+            <div className="bg-green-50 text-[#10B981] px-2 py-0.5 rounded text-[11px] font-bold border border-green-100">
+              +12.3%
+            </div>
+          </div>
+          <h3 className="text-[15px] font-bold text-[#0A0F2C] mb-1">Bitcoin</h3>
+          <div className="text-[20px] font-bold text-[#0A0F2C] mb-0.5">${(25000).toLocaleString()}</div>
+          <div className="text-[11px] text-[#A0AEC0] font-medium">0.45823 BTC</div>
+        </div>
+
+        {/* Ethereum Card */}
+        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex flex-col">
+          <div className="flex items-start justify-between mb-4">
+            <div className="w-10 h-10 rounded-full bg-[#F3F4F6] flex items-center justify-center text-[#4A5568] font-bold text-lg">
+              Ξ
+            </div>
+            <div className="bg-green-50 text-[#10B981] px-2 py-0.5 rounded text-[11px] font-bold border border-green-100">
+              +8.37%
+            </div>
+          </div>
+          <h3 className="text-[15px] font-bold text-[#0A0F2C] mb-1">Ethereum</h3>
+          <div className="text-[20px] font-bold text-[#0A0F2C] mb-0.5">${(18750).toLocaleString()}</div>
+          <div className="text-[11px] text-[#A0AEC0] font-medium">7.8234 ETH</div>
+        </div>
+
+        {/* Tether Card */}
+        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex flex-col">
+          <div className="flex items-start justify-between mb-4">
+            <div className="w-10 h-10 rounded-full bg-[#FFFBEB] flex items-center justify-center text-[#F5A623] font-bold text-lg border border-[#FEFCBF]">
+              ₮
+            </div>
+            <div className="bg-gray-100 text-[#718096] px-2 py-0.5 rounded text-[11px] font-bold">
+              0.0%
+            </div>
+          </div>
+          <h3 className="text-[15px] font-bold text-[#0A0F2C] mb-1">Tether</h3>
+          <div className="text-[20px] font-bold text-[#0A0F2C] mb-0.5">${(8000).toLocaleString()}</div>
+          <div className="text-[11px] text-[#A0AEC0] font-medium">8,000 USDT</div>
+        </div>
+      </div>
+
+      {/* 4. Recent Transactions */}
+      <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-[15px] font-bold text-[#0A0F2C]">Recent Transactions</h2>
+          <button className="text-[12px] font-bold text-[#4A5568] hover:text-[#0A0F2C] transition-colors">
+            View All
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          
+          {/* TX 1 */}
+          <div className="flex items-center justify-between py-2">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center">
+                <ArrowDownLeft className="w-5 h-5 text-[#10B981]" strokeWidth={2.5} />
+              </div>
+              <div>
+                <div className="text-[14px] font-bold text-[#0A0F2C]">Deposit</div>
+                <div className="text-[12px] text-[#718096]">BTC</div>
               </div>
             </div>
-
-            {/* Right: Horizontal Grid of Mini Asset Cards */}
-            <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-4 w-full">
-              {portfolioAssets.map((asset) => {
-                const colors = assetColors[asset.symbol] || { stroke: "#94A3B8", bg: "bg-[#94A3B8]" };
-                const isHovered = activeAsset === asset.symbol;
-                return (
-                  <div
-                    key={asset.symbol}
-                    onMouseEnter={() => setActiveAsset(asset.symbol)}
-                    onMouseLeave={() => setActiveAsset(null)}
-                    onClick={() => setActiveAsset(activeAsset === asset.symbol ? null : asset.symbol)}
-                    className={cn(
-                      "rounded-xl border border-banking-border bg-banking-offWhite/30 p-4 transition-all border-b-2 border-r-2 cursor-pointer select-none",
-                      isHovered 
-                        ? "bg-white shadow-lg border-b-4 border-r-4 -translate-y-0.5 scale-[1.02]" 
-                        : "hover:bg-white hover:border-banking-blue/20"
-                    )}
-                    style={{
-                      borderColor: isHovered ? colors.stroke : undefined,
-                    }}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-1.5">
-                        <span className={cn("h-2.5 w-2.5 rounded-full shrink-0", colors.bg)} />
-                        <span className="font-extrabold text-xs text-banking-ink">
-                          {asset.symbol}
-                        </span>
-                      </div>
-                      <span className="text-[9px] font-black text-banking-blue bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100">
-                        {asset.allocation}%
-                      </span>
-                    </div>
-
-                    <div className="mt-3.5">
-                      <p className="text-xs font-black text-banking-ink leading-none">
-                        {hideBalance ? "$••••••" : asset.value}
-                      </p>
-                      <p className="text-[10px] font-bold text-banking-muted uppercase tracking-tight mt-1 leading-none">
-                        {asset.balance} {asset.symbol}
-                      </p>
-                    </div>
-
-                    {/* Progress Bar */}
-                    <div className="h-1 rounded-full bg-slate-100 overflow-hidden border border-banking-border/30 mt-3.5">
-                      <div
-                        className={cn("h-full rounded-full transition-all duration-500", colors.bg)}
-                        style={{ width: `${asset.allocation}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
+            <div className="text-right">
+              <div className="text-[14px] font-bold text-[#10B981]">+5,000 CAD</div>
+              <div className="text-[12px] text-[#A0AEC0]">2 hours ago</div>
             </div>
           </div>
-        </Panel>
+
+          <div className="h-px bg-gray-100 w-full" />
+
+          {/* TX 2 */}
+          <div className="flex items-center justify-between py-2">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
+                <ArrowUpRight className="w-5 h-5 text-[#113285]" strokeWidth={2.5} />
+              </div>
+              <div>
+                <div className="text-[14px] font-bold text-[#0A0F2C]">Withdrawal</div>
+                <div className="text-[12px] text-[#718096]">ETH</div>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-[14px] font-bold text-[#0A0F2C]">-1,250 CAD</div>
+              <div className="text-[12px] text-[#A0AEC0]">5 hours ago</div>
+            </div>
+          </div>
+
+          <div className="h-px bg-gray-100 w-full" />
+
+          {/* TX 3 */}
+          <div className="flex items-center justify-between py-2">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center">
+                <ArrowDownLeft className="w-5 h-5 text-[#10B981]" strokeWidth={2.5} />
+              </div>
+              <div>
+                <div className="text-[14px] font-bold text-[#0A0F2C]">Deposit</div>
+                <div className="text-[12px] text-[#718096]">USDT</div>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-[14px] font-bold text-[#10B981]">+3,000 CAD</div>
+              <div className="text-[12px] text-[#A0AEC0]">1 day ago</div>
+            </div>
+          </div>
+
+          <div className="h-px bg-gray-100 w-full" />
+
+          {/* TX 4 */}
+          <div className="flex items-center justify-between py-2">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
+                <ArrowUpRight className="w-5 h-5 text-[#113285]" strokeWidth={2.5} />
+              </div>
+              <div>
+                <div className="text-[14px] font-bold text-[#0A0F2C]">Withdrawal</div>
+                <div className="text-[12px] text-[#718096]">BTC</div>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-[14px] font-bold text-[#0A0F2C]">-500 CAD</div>
+              <div className="text-[12px] text-[#A0AEC0]">2 days ago</div>
+            </div>
+          </div>
+
+        </div>
       </div>
 
-      {/* 6. Recent Activity (Full Width Row) */}
-      <div className="mt-8">
-        <Panel
-          title="Recent Activity"
-          action={
-            <Link
-              href="/transactions"
-              className="text-[10px] font-black uppercase tracking-widest text-banking-blue hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-colors border border-transparent hover:border-blue-100"
-            >
-              Transaction Ledger
-            </Link>
-          }
-        >
-          <TransactionTable rows={transactions.slice(0, 5)} />
-        </Panel>
-      </div>
-
-      {/* 7. Quick Shortcuts Horizontal Block */}
-      <div className="mt-8">
-        <Panel title="Quick Navigation Shortcuts">
-          <QuickActions />
-        </Panel>
-      </div>
-    </>
+    </div>
   );
 }

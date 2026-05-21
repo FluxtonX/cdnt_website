@@ -26,42 +26,42 @@ export default function LoginPage() {
       </Link>
 
       {/* Header */}
-      <div className="flex flex-col items-center mb-8">
-        <div className="mb-6 flex justify-center">
+      <div className="flex flex-col items-center mb-6">
+        <div className="mb-4 flex justify-center">
           <Image 
             src="/cdnt-logo.png" 
             alt="CDNT Bank Logo" 
             width={240} 
             height={80} 
-            className="h-16 w-auto object-contain"
+            className="h-12 w-auto object-contain"
             priority
             unoptimized={true}
           />
         </div>
-        <h1 className="text-white text-3xl font-bold mb-3">Welcome Back</h1>
-        <p className="text-blue-100 text-[15px]">Sign in to your CDNT account</p>
+        <h1 className="text-white text-2xl font-bold mb-1">Welcome Back</h1>
+        <p className="text-blue-100 text-[14px]">Sign in to your CDNT account</p>
       </div>
 
       {/* Login Card */}
-      <div className="bg-white w-full max-w-[420px] rounded-[24px] p-8 md:p-10 shadow-2xl shadow-black/20">
-        <form className="space-y-6" onSubmit={handleLogin}>
+      <div className="bg-white w-full max-w-[420px] rounded-[20px] p-6 md:p-8 shadow-2xl shadow-black/20">
+        <form className="space-y-5" onSubmit={handleLogin}>
           
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <label className="block text-[13px] font-bold text-[#0A0F2C]">Email Address</label>
             <input 
               type="email" 
               placeholder="your@email.com" 
-              className="w-full px-4 py-3.5 rounded-xl border border-gray-200 text-[15px] focus:outline-none focus:ring-2 focus:ring-[#1A3FBB] focus:border-transparent transition-all placeholder:text-gray-400"
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 text-[15px] focus:outline-none focus:ring-2 focus:ring-[#1A3FBB] focus:border-transparent transition-all placeholder:text-gray-400"
               required
             />
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <label className="block text-[13px] font-bold text-[#0A0F2C]">Password</label>
             <input 
               type="password" 
               placeholder="Enter your password" 
-              className="w-full px-4 py-3.5 rounded-xl border border-gray-200 text-[15px] focus:outline-none focus:ring-2 focus:ring-[#1A3FBB] focus:border-transparent transition-all placeholder:text-gray-400"
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 text-[15px] focus:outline-none focus:ring-2 focus:ring-[#1A3FBB] focus:border-transparent transition-all placeholder:text-gray-400"
               required
             />
           </div>
@@ -81,21 +81,21 @@ export default function LoginPage() {
 
           <button 
             type="submit"
-            className="w-full bg-[#113285] hover:bg-[#0D266A] text-white font-bold text-[15px] py-4 rounded-xl transition-colors shadow-md mt-2"
+            className="w-full bg-[#113285] hover:bg-[#0D266A] text-white font-bold text-[15px] py-3.5 rounded-xl transition-colors shadow-md mt-2"
           >
             Continue
           </button>
         </form>
 
-        <div className="mt-8 pt-6 border-t border-gray-100 text-center">
-          <p className="text-[14px] text-gray-500">
+        <div className="mt-6 pt-5 border-t border-gray-100 text-center">
+          <p className="text-[13px] text-gray-500">
             Don't have an account? <Link href="/register" className="text-[#113285] font-bold hover:underline">Sign up now</Link>
           </p>
         </div>
       </div>
 
       {/* Footer text */}
-      <p className="text-blue-200/70 text-sm mt-8">
+      <p className="text-blue-200/70 text-xs mt-6">
         Protected by bank-grade encryption and security
       </p>
 
