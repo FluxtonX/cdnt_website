@@ -3,20 +3,22 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X } from "lucide-react";
 
 export const CONTAINER = "max-w-7xl w-full mx-auto px-6";
 
 const NAV_LINKS = [
-  { name: "Home", href: "#" },
-  { name: "About", href: "#" },
-  { name: "Pricing", href: "#" },
-  { name: "Security", href: "#" },
-  { name: "Help", href: "#" },
+  { name: "Home", href: "/" },
+  { name: "About", href: "/about" },
+  { name: "Pricing", href: "/pricing" },
+  { name: "Security", href: "/security" },
+  { name: "Help", href: "/help" },
 ];
 
 export default function Navbar() {
+  const pathname = usePathname();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -60,7 +62,7 @@ export default function Navbar() {
               key={link.name}
               href={link.href}
               className={`text-[15px] transition-all duration-300 tracking-wide ${
-                link.name === "Home"
+                pathname === link.href || (pathname === '/' && link.href === '/') || (pathname !== '/' && link.href !== '/' && pathname.startsWith(link.href))
                   ? "text-[#60A5FA] font-semibold"
                   : "font-medium text-white/80 hover:text-white"
               }`}
@@ -113,7 +115,7 @@ export default function Navbar() {
                     key={link.name}
                     href={link.href}
                     className={`block px-4 py-3 text-base font-medium rounded-xl transition-all duration-200 ${
-                      link.name === "Home"
+                      pathname === link.href || (pathname === '/' && link.href === '/') || (pathname !== '/' && link.href !== '/' && pathname.startsWith(link.href))
                         ? "text-[#60A5FA] bg-white/10 border border-white/5"
                         : "text-white/80 hover:bg-white/5 hover:text-white"
                     }`}
