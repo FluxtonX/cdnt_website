@@ -74,12 +74,12 @@ export default function Navbar() {
 
         {/* CTA Buttons */}
         <div className="hidden md:flex items-center space-x-6">
-          <button className="text-[15px] font-medium text-white/80 hover:text-white transition-all duration-300 tracking-wide">
+          <Link href="/login" className="text-[15px] font-medium text-white/80 hover:text-white transition-all duration-300 tracking-wide">
             Sign in
-          </button>
-          <button className="relative overflow-hidden bg-white/10 backdrop-blur-md border border-white/20 text-white rounded-full px-7 py-2.5 text-[15px] font-medium shadow-[0_4px_14px_0_rgba(255,255,255,0.1)] hover:bg-white/20 hover:shadow-[0_6px_20px_rgba(255,255,255,0.2)] hover:-translate-y-0.5 transition-all duration-300">
+          </Link>
+          <Link href="/register" className="relative overflow-hidden bg-white/10 backdrop-blur-md border border-white/20 text-white rounded-full px-7 py-2.5 text-[15px] font-medium shadow-[0_4px_14px_0_rgba(255,255,255,0.1)] hover:bg-white/20 hover:shadow-[0_6px_20px_rgba(255,255,255,0.2)] hover:-translate-y-0.5 transition-all duration-300 inline-block text-center">
             Open Account
-          </button>
+          </Link>
         </div>
 
         {/* Mobile Menu Button */}
@@ -126,12 +126,12 @@ export default function Navbar() {
                 ))}
               </nav>
               <div className="flex flex-col space-y-4 px-4 pt-5 border-t border-white/10">
-                <button className="w-full justify-center text-base font-medium text-white/80 hover:text-white py-2 transition-colors">
+                <Link href="/login" onClick={() => setIsMobileMenuOpen(false)} className="w-full text-center text-base font-medium text-white/80 hover:text-white py-2 transition-colors">
                   Sign in
-                </button>
-                <button className="w-full justify-center bg-white/10 backdrop-blur-md border border-white/20 text-white rounded-full px-6 py-3.5 text-base font-semibold shadow-lg hover:bg-white/20 hover:shadow-xl transition-all active:scale-95">
+                </Link>
+                <Link href="/register" onClick={() => setIsMobileMenuOpen(false)} className="w-full text-center bg-white/10 backdrop-blur-md border border-white/20 text-white rounded-full px-6 py-3.5 text-base font-semibold shadow-lg hover:bg-white/20 hover:shadow-xl transition-all active:scale-95 inline-block">
                   Open Account
-                </button>
+                </Link>
               </div>
             </div>
           </motion.div>
