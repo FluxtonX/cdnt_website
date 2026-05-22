@@ -11,9 +11,14 @@ import {
   ArrowRightLeft, 
   Settings, 
   HelpCircle,
-  LogOut
+  LogOut,
+  User,
+  Shield,
+  FileCheck,
+  AlertCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useState, useRef, useEffect } from "react";
 
 const sidebarNav = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -25,6 +30,21 @@ const sidebarNav = [
 
 export function UserShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  
+  // Hardcoded for demo
+  const isKycVerified = false; 
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] text-[#0A0F2C] lg:grid lg:grid-cols-[240px_1fr]">
@@ -95,18 +115,75 @@ export function UserShell({ children }: { children: React.ReactNode }) {
             
             <div className="h-6 w-px bg-gray-200" />
             
-            <button className="flex items-center gap-3 hover:bg-gray-50 px-2 py-1.5 rounded-lg transition-colors border border-transparent hover:border-gray-100">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#113285] text-[13px] font-bold text-white">
-                S
-              </div>
-              <span className="text-[14px] font-medium text-[#0A0F2C] hidden sm:block">Sarah Chen</span>
-              <ChevronDown className="h-4 w-4 text-[#718096]" />
-            </button>
+            <div className="relative" ref={dropdownRef}>
+              <button 
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className={cn(
+                  "flex items-center gap-3 px-2 py-1.5 rounded-lg transition-colors border",
+                  isDropdownOpen ? "bg-gray-50 border-gray-100" : "border-transparent hover:bg-gray-50 hover:border-gray-100"
+                )}
+              >
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#113285] text-[13px] font-bold text-white">
+                  S
+                </div>
+                <span className="text-[14px] font-medium text-[#0A0F2C] hidden sm:block">Sarah Chen</span>
+                <ChevronDown className={cn("h-4 w-4 text-[#718096] transition-transform", isDropdownOpen && "rotate-180")} />
+              </button>
+
+              {isDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-56 origin-top-right rounded-xl bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none divide-y divide-gray-100 py-1">
+                  <div className="px-4 py-3">
+                    <p className="text-[13px] font-medium text-[#0A0F2C] truncate">Sarah Chen</p>
+                    <p className="text-[12px] text-[#718096] truncate">sarah.chen@example.com</p>
+                  </div>
+                  <div className="py-1">
+                    <Link href="/settings" className="group flex items-center px-4 py-2 text-[13px] text-[#4A5568] hover:bg-gray-50 hover:text-[#0A0F2C]">
+                      <User className="mr-3 h-4 w-4 text-[#718096] group-hover:text-[#113285]" />
+                      Profile
+                    </Link>
+                    <Link href="/settings/security" className="group flex items-center px-4 py-2 text-[13px] text-[#4A5568] hover:bg-gray-50 hover:text-[#0A0F2C]">
+                      <Shield className="mr-3 h-4 w-4 text-[#718096] group-hover:text-[#113285]" />
+                      Security
+                    </Link>
+                    <Link href="/kyc" className="group flex items-center px-4 py-2 text-[13px] text-[#4A5568] hover:bg-gray-50 hover:text-[#0A0F2C]">
+                      <FileCheck className="mr-3 h-4 w-4 text-[#718096] group-hover:text-[#113285]" />
+                      Verification/KYC
+                    </Link>
+                  </div>
+                  <div className="py-1">
+                    <button className="group flex w-full items-center px-4 py-2 text-[13px] text-[#E53E3E] hover:bg-red-50">
+                      <LogOut className="mr-3 h-4 w-4 text-[#E53E3E]" />
+                      Logout
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </header>
 
         {/* Page Content */}
         <main className="mx-auto w-full p-4 md:p-8">
+          {!isKycVerified && (
+            <div className="mb-6 rounded-xl bg-amber-50 border border-amber-200 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
+              <div className="flex items-start sm:items-center gap-3">
+                <div className="mt-0.5 sm:mt-0 flex-shrink-0">
+                  <AlertCircle className="h-5 w-5 text-amber-500" strokeWidth={2.5} />
+                </div>
+                <div>
+                  <h3 className="text-[14px] font-bold text-amber-900">Verification Incomplete</h3>
+                  <p className="text-[13px] text-amber-700 mt-0.5">Please complete your KYC verification to unlock full account features and higher limits.</p>
+                </div>
+              </div>
+              <Link 
+                href="/kyc"
+                className="whitespace-nowrap rounded-lg bg-amber-500 px-4 py-2 text-[13px] font-bold text-white shadow-sm hover:bg-amber-600 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 flex-shrink-0"
+              >
+                Complete Verification
+              </Link>
+            </div>
+          )}
+
           {children}
         </main>
       </div>
