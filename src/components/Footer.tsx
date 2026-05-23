@@ -1,13 +1,13 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Twitter, Linkedin, Instagram } from "lucide-react";
+import { Twitter, Linkedin, Instagram, GitBranch } from "lucide-react";
 
 const FOOTER_LINKS = {
   COMPANY: [
     { name: "About", href: "#" },
     { name: "Careers", href: "#" },
-    { name: "Blog", href: "#" },
     { name: "Press", href: "#" },
+    { name: "Blog", href: "#" },
   ],
   PRODUCTS: [
     { name: "Banking", href: "#" },
@@ -16,50 +16,69 @@ const FOOTER_LINKS = {
     { name: "Cards", href: "#" },
   ],
   LEGAL: [
-    { name: "Privacy", href: "#" },
     { name: "Terms", href: "#" },
-    { name: "Compliance", href: "#" },
-    { name: "Security", href: "#" },
+    { name: "Privacy", href: "#" },
+    { name: "Cookies", href: "#" },
+    { name: "Disclosures", href: "#" },
   ],
-  SUPPORT: [
-    { name: "Help Center", href: "#" },
-    { name: "Contact", href: "#" },
+  SECURITY: [
+    { name: "Trust center", href: "#" },
+    { name: "Vulnerability", href: "#" },
     { name: "Status", href: "#" },
-    { name: "FAQ", href: "#" },
+    { name: "Audits", href: "#" },
   ],
 };
 
 export default function Footer() {
   return (
-    <footer className="bg-primary-navy pt-20 pb-10">
+    <footer className="bg-white pt-20 pb-10 border-t border-gray-100">
       <div className="max-w-7xl mx-auto px-6">
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-12 lg:gap-8 mb-16">
           
           {/* Logo and Tagline */}
           <div className="lg:col-span-2">
-            <Link href="/" className="inline-block mb-6 group">
+            <Link href="/" className="inline-flex items-center gap-4 mb-6 group">
               <Image
-                src="/cdnt-logo.png"
-                alt="Canadian Digital National Trust Bank"
-                width={300}
-                height={100}
+                src="/logo.png"
+                alt="North Union Bank Logo"
+                width={120}
+                height={40}
                 quality={100}
                 priority
                 unoptimized={true}
-                className="h-10 md:h-12 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
+                className="h-12 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
               />
+              <span className="font-bold text-xl text-[#0f172a]">North Union Bank</span>
             </Link>
-            <p className="text-gray-400 leading-relaxed max-w-sm">
-              A regulated Canadian digital bank with a built-in crypto engine. 
-              Banking meets crypto intelligence.
+            <p className="text-[#64748b] leading-relaxed max-w-sm mb-8 text-[15px]">
+              A modern Canadian digital bank uniting<br />
+              traditional finance with regulated digital assets.
             </p>
+            <div className="flex items-center space-x-3">
+              <Link href="#" className="flex items-center justify-center w-10 h-10 rounded-full border border-gray-200 text-gray-500 hover:text-gray-900 hover:border-gray-300 transition-colors">
+                <span className="sr-only">Twitter</span>
+                <Twitter className="w-4 h-4" />
+              </Link>
+              <Link href="#" className="flex items-center justify-center w-10 h-10 rounded-full border border-gray-200 text-gray-500 hover:text-gray-900 hover:border-gray-300 transition-colors">
+                <span className="sr-only">LinkedIn</span>
+                <Linkedin className="w-4 h-4" />
+              </Link>
+              <Link href="#" className="flex items-center justify-center w-10 h-10 rounded-full border border-gray-200 text-gray-500 hover:text-gray-900 hover:border-gray-300 transition-colors">
+                <span className="sr-only">Instagram</span>
+                <Instagram className="w-4 h-4" />
+              </Link>
+              <Link href="#" className="flex items-center justify-center w-10 h-10 rounded-full border border-gray-200 text-gray-500 hover:text-gray-900 hover:border-gray-300 transition-colors">
+                <span className="sr-only">Branch</span>
+                <GitBranch className="w-4 h-4" />
+              </Link>
+            </div>
           </div>
 
           {/* Links Columns */}
           {Object.entries(FOOTER_LINKS).map(([title, links]) => (
             <div key={title} className="lg:col-span-1">
-              <h4 className="text-white font-semibold text-sm tracking-wider mb-6 uppercase">
+              <h4 className="text-[#0f172a] font-bold text-xs tracking-[0.1em] mb-6 uppercase">
                 {title}
               </h4>
               <ul className="space-y-4">
@@ -67,7 +86,7 @@ export default function Footer() {
                   <li key={link.name}>
                     <Link 
                       href={link.href}
-                      className="text-gray-400 hover:text-white transition-colors text-[15px]"
+                      className="text-[#64748b] hover:text-[#0f172a] transition-colors text-[15px]"
                     >
                       {link.name}
                     </Link>
@@ -79,25 +98,13 @@ export default function Footer() {
         </div>
 
         {/* Bottom Bar */}
-        <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-gray-500 text-sm">
-            © 2025 Canadian Digital National Trust Bank. All rights reserved.
+        <div className="border-t border-gray-100 pt-8 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 lg:gap-12">
+          <p className="text-[#64748b] text-xs shrink-0">
+            © 2026 North Union Bank, Inc. All rights reserved.
           </p>
-          
-          <div className="flex items-center space-x-6">
-            <Link href="#" className="text-gray-500 hover:text-white transition-colors">
-              <span className="sr-only">Twitter</span>
-              <Twitter className="w-5 h-5" />
-            </Link>
-            <Link href="#" className="text-gray-500 hover:text-white transition-colors">
-              <span className="sr-only">LinkedIn</span>
-              <Linkedin className="w-5 h-5" />
-            </Link>
-            <Link href="#" className="text-gray-500 hover:text-white transition-colors">
-              <span className="sr-only">Instagram</span>
-              <Instagram className="w-5 h-5" />
-            </Link>
-          </div>
+          <p className="text-[#94a3b8] text-xs leading-relaxed lg:text-right max-w-3xl">
+            North Union Bank is a federally regulated Canadian financial institution. FINTRAC #M24-0042001. Deposits insured up to $100,000 CAD under CDIC-style coverage. Crypto assets are not insured by the CDIC and may lose value.
+          </p>
         </div>
 
       </div>
