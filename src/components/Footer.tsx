@@ -38,10 +38,11 @@ export default function Footer() {
           
           {/* Logo and Tagline */}
           <div className="lg:col-span-2">
-            <Link href="/" className="inline-flex items-center gap-4 mb-6 group">
+            <Link href="/" className="inline-flex items-center gap-4 mb-6 group ">
+            <span className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-[#022B5B]/95 to-[#0054A6]/95 backdrop-blur shadow-[0_8px_30px_rgb(0,0,0,0.12)] border-white/10">
               <Image
-                src="/logo.png"
-                alt="North Union Bank Logo"
+                src="/cdnt-logo.png"
+                alt="Canadian Digital National Trust Bank Logo"
                 width={120}
                 height={40}
                 quality={100}
@@ -49,7 +50,8 @@ export default function Footer() {
                 unoptimized={true}
                 className="h-12 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
               />
-              <span className="font-bold text-xl text-[#0f172a]">North Union Bank</span>
+              </span>
+              <span className="font-bold text-sm text-[#0f172a]">Canadian Digital National Trust Bank</span>
             </Link>
             <p className="text-[#64748b] leading-relaxed max-w-sm mb-8 text-[15px]">
               A modern Canadian digital bank uniting<br />
@@ -100,10 +102,10 @@ export default function Footer() {
         {/* Bottom Bar */}
         <div className="border-t border-gray-100 pt-8 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 lg:gap-12">
           <p className="text-[#64748b] text-xs shrink-0">
-            © 2026 North Union Bank, Inc. All rights reserved.
+            © 2026 Canadian Digital National Trust Bank, Inc. All rights reserved.
           </p>
           <p className="text-[#94a3b8] text-xs leading-relaxed lg:text-right max-w-3xl">
-            North Union Bank is a federally regulated Canadian financial institution. FINTRAC #M24-0042001. Deposits insured up to $100,000 CAD under CDIC-style coverage. Crypto assets are not insured by the CDIC and may lose value.
+            Canadian Digital National Trust Bank is a federally regulated Canadian financial institution. FINTRAC #M24-0042001. Deposits insured up to $100,000 CAD under CDIC-style coverage. Crypto assets are not insured by the CDIC and may lose value.
           </p>
         </div>
 

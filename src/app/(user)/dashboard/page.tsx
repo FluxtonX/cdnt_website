@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { 
   Eye, 
   ArrowDownLeft, 
@@ -71,14 +72,14 @@ export default function DashboardPage() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8">
-          <button className="flex items-center justify-center gap-2 bg-[#FFC107] hover:bg-[#FFD166] text-[#0A0F2C] rounded-xl py-3.5 font-bold text-[14px] transition-colors shadow-sm">
+          <Link href="/deposit" className="flex items-center justify-center gap-2 bg-[#FFC107] hover:bg-[#FFD166] text-[#0A0F2C] rounded-xl py-3.5 font-bold text-[14px] transition-colors shadow-sm">
             <ArrowDownLeft className="w-4 h-4" strokeWidth={2.5} />
             Deposit
-          </button>
-          <button className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white rounded-xl py-3.5 font-bold text-[14px] transition-colors shadow-sm">
+          </Link>
+          <Link href="/withdraw" className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white rounded-xl py-3.5 font-bold text-[14px] transition-colors shadow-sm">
             <ArrowUpRight className="w-4 h-4" strokeWidth={2.5} />
             Withdraw
-          </button>
+          </Link>
         </div>
       </div>
 

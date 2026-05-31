@@ -1,224 +1,202 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { AlertTriangle, CheckCircle2, Copy, ShieldAlert } from "lucide-react";
-import { Panel } from "@/components/dashboard/blocks";
-import { useToast } from "@/components/ui/toast";
-import { portfolioAssets } from "@/data/mock";
+import { useState } from "react";
+import { AlertTriangle, Copy, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 
-const networks: Record<string, string[]> = {
-  BTC: ["Bitcoin"],
-  ETH: ["ERC-20"],
-  USDT: ["ERC-20", "TRC-20"],
-  BNB: ["BEP-20", "BEP-2"],
-  SOL: ["Solana"],
-  XRP: ["Ripple"],
-  ADA: ["Cardano"],
-  DOGE: ["Dogecoin"],
-};
+import QRCode from "react-qr-code";
 
-const minimums: Record<string, string> = {
-  BTC: "0.0005 BTC",
-  ETH: "0.01 ETH",
-  USDT: "10 USDT",
-  BNB: "0.01 BNB",
-  SOL: "0.1 SOL",
-  XRP: "1 XRP",
-  ADA: "10 ADA",
-  DOGE: "100 DOGE",
-};
-
-const confirmations: Record<string, string> = {
-  BTC: "2 confirmations",
-  ETH: "12 confirmations",
-  USDT: "12 / 20 confirmations",
-  BNB: "15 confirmations",
-  SOL: "1 confirmation",
-  XRP: "1 confirmation",
-  ADA: "10 confirmations",
-  DOGE: "50 confirmations",
-};
-
-const arrivalTime: Record<string, string> = {
-  BTC: "~30–60 min",
-  ETH: "~5–10 min",
-  USDT: "~3–10 min",
-  BNB: "~1–3 min",
-  SOL: "< 1 min",
-  XRP: "< 1 min",
-  ADA: "~5–10 min",
-  DOGE: "~5–10 min",
-};
+const assets = [
+  {
+    symbol: "BTC",
+    name: "Bitcoin",
+    network: "BTC",
+    address: "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
+    minDeposit: "0.001 BTC",
+    confirmations: "3",
+    arrivalTime: "30 mins",
+  },
+  {
+    symbol: "ETH",
+    name: "Ethereum",
+    network: "ETH",
+    address: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
+    minDeposit: "0.001 ETH",
+    confirmations: "3",
+    arrivalTime: "30 mins",
+  },
+  {
+    symbol: "USDT",
+    name: "Tether",
+    network: "USDT",
+    address: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
+    minDeposit: "0.001 USDT",
+    confirmations: "3",
+    arrivalTime: "30 mins",
+  },
+];
 
 export function DepositWorkspace() {
   const [assetSymbol, setAssetSymbol] = useState("BTC");
-  const [network, setNetwork] = useState("Bitcoin");
-  const { notify } = useToast();
 
-  const asset = useMemo(
-    () => portfolioAssets.find((item) => item.symbol === assetSymbol) ?? portfolioAssets[0],
-    [assetSymbol],
-  );
+  const asset = assets.find((a) => a.symbol === assetSymbol) || assets[0];
 
-  function selectAsset(symbol: string) {
-    setAssetSymbol(symbol);
-    const nets = networks[symbol] || ["Mainnet"];
-    setNetwork(nets[0]);
-  }
+  const handleCopy = () => {
+    navigator.clipboard.writeText(asset.address);
+  };
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
-      {/* Left Column */}
-      <div className="space-y-4">
-        {/* Asset Select */}
-        <Panel title="Select Asset">
-          <div className="max-h-[400px] overflow-y-auto pr-2 space-y-2 custom-scrollbar">
-            {portfolioAssets.map((item) => {
+    <div className="mx-auto w-full max-w-[1024px]">
+      <div className="mb-8 flex items-center gap-4">
+        <Link 
+          href="/wallets" 
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 transition-colors shadow-sm"
+        >
+          <ArrowLeft className="h-[20px] w-[20px]" strokeWidth={2} />
+        </Link>
+        <div>
+          <h1 className="text-[22px] font-bold tracking-tight text-[#0A0F2C]">Deposit Cryptocurrency</h1>
+          <p className="text-[14px] text-[#718096]">Add funds to your wallet</p>
+        </div>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
+        {/* Left Column */}
+        <div className="sticky top-[112px] self-start rounded-[20px] border border-gray-100 bg-white p-6 shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
+          <h2 className="mb-5 text-[15px] font-bold text-[#0A0F2C]">Select Cryptocurrency</h2>
+          <div className="space-y-2.5">
+            {assets.map((item) => {
+              const isActive = assetSymbol === item.symbol;
               return (
                 <button
                   key={item.symbol}
-                  onClick={() => selectAsset(item.symbol)}
+                  onClick={() => setAssetSymbol(item.symbol)}
                   className={cn(
-                    "flex w-full items-center gap-3 rounded-xl border-2 p-3 text-left transition-all hover:shadow-md",
-                    assetSymbol === item.symbol
-                      ? "border-banking-blue bg-blue-50"
-                      : "border-banking-border bg-white hover:border-banking-blue/40",
+                    "flex w-full items-center gap-3.5 rounded-[14px] p-3.5 text-left transition-all",
+                    isActive
+                      ? "bg-[#113285] shadow-[0_4px_12px_rgba(17,50,133,0.2)]"
+                      : "bg-[#F1F5F9] hover:bg-gray-200/50"
                   )}
                 >
-                  {/* Coin Icon */}
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white shadow-sm border border-banking-border">
-                    <img src={item.image} alt={item.symbol} className="h-full w-full object-contain p-1" />
+                  <div className={cn(
+                    "flex h-[24px] w-[24px] shrink-0 items-center justify-center",
+                    isActive ? "text-white" : "text-[#0A0F2C]"
+                  )}>
+                    {item.symbol === "BTC" && (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-full w-full">
+                        <path d="M11.767 19.089c4.924.869 6.176-6.07 4.213-7.154 4.04-1.792 3.106-7.925-1.415-8.731V1.19h-2.272v1.944h-1.583V1.19H8.441v1.993H5.321v2.548h1.233c1.47 0 1.62.906 1.579 1.815v7.697c.05.908-.109 1.815-1.58 1.815H5.321v2.548h3.12v2.028h2.269v-2.028h1.583v2.028h2.271v-2.028h-.116z" />
+                        <path d="M10.155 5.682h2.272c2.053 0 2.053 3.12 0 3.12h-2.272v-3.12z" />
+                        <path d="M10.155 11.237h2.556c2.43 0 2.43 3.497 0 3.497h-2.556v-3.497z" />
+                      </svg>
+                    )}
+                    {item.symbol === "ETH" && (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-full w-full">
+                        <path d="M11.999 1.125L5.25 12l6.749 4.125L18.75 12l-6.751-10.875z" />
+                        <path d="M11.999 17.625L5.25 13.5l6.749 9 6.751-9-6.751 4.125z" />
+                      </svg>
+                    )}
+                    {item.symbol === "USDT" && (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-full w-full">
+                        <path d="M12 13c3.866 0 7-1.343 7-3s-3.134-3-7-3-7 1.343-7 3 3.134 3 7 3z" />
+                        <path d="M12 13v9" />
+                        <path d="M8 7h8" />
+                      </svg>
+                    )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-bold text-banking-text">{item.symbol}</p>
-                    <p className="text-[11px] text-banking-muted truncate">{item.name}</p>
-                  </div>
-                  <div className="text-right shrink-0">
-                    {assetSymbol === item.symbol && (
-                      <CheckCircle2 className="h-4 w-4 text-banking-blue ml-auto" />
-                    )}
+                    <p className={cn("text-[14px] font-bold leading-tight", isActive ? "text-white" : "text-[#0A0F2C]")}>{item.name}</p>
+                    <p className={cn("text-[12px] font-medium mt-[1px]", isActive ? "text-blue-100" : "text-[#718096]")}>{item.symbol}</p>
                   </div>
                 </button>
               );
             })}
           </div>
-        </Panel>
-
-        {/* Network Select */}
-        <Panel title="Select Network">
-          <div className="space-y-2">
-            {networks[assetSymbol].map((net) => (
-              <button
-                key={net}
-                onClick={() => setNetwork(net)}
-                className={cn(
-                  "flex w-full items-center justify-between rounded-xl border-2 p-3 text-left transition-all",
-                  network === net
-                    ? "border-banking-blue bg-blue-50"
-                    : "border-banking-border bg-white hover:border-banking-blue/40",
-                )}
-              >
-                <div className="min-w-0">
-                  <p className="text-sm font-bold text-banking-text">{net}</p>
-                  <p className="text-xs text-banking-muted">Min: {minimums[assetSymbol]}</p>
-                </div>
-                {network === net && <CheckCircle2 className="h-4 w-4 text-banking-blue shrink-0" />}
-              </button>
-            ))}
-          </div>
-        </Panel>
-      </div>
-
-      {/* Right Column — Address Panel */}
-      <Panel title={`${asset.symbol} Deposit Address`}>
-        {/* Warning */}
-        <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3">
-          <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
-          <p className="text-xs font-medium text-amber-800 leading-relaxed">
-            Only send <strong>{asset.symbol}</strong> using the <strong>{network}</strong> network.
-            Wrong network transfers may be <strong>unrecoverable</strong>.
-          </p>
         </div>
 
-        {/* QR + Address */}
-        <div className="mt-4 grid gap-4 sm:grid-cols-[160px_1fr]">
-          {/* QR Placeholder */}
-          <div className="flex aspect-square items-center justify-center rounded-xl border-2 border-banking-border bg-white shadow-inner">
-            <div className="text-center">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border border-banking-border bg-white p-2 mb-3 shadow-sm">
-                <img src={asset.image} alt={asset.symbol} className="h-full w-full object-contain" />
+        {/* Right Column */}
+        <div className="rounded-[20px] border border-gray-100 bg-white p-6 sm:p-8 shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
+          <div className="mb-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <h2 className="text-[18px] font-bold text-[#0A0F2C]">Deposit {asset.name}</h2>
+            <div className="inline-flex rounded-full bg-[#FFF9EA] px-3 py-1 border border-[#FFEDCC]">
+              <p className="text-[12px] font-bold tracking-wide text-[#F5A524]">Network: {asset.network}</p>
+            </div>
+          </div>
+
+          {/* QR Code container */}
+          <div className="mb-10 flex justify-center">
+            <QRCode 
+              value={asset.address}
+              size={240}
+              style={{ height: "auto", maxWidth: "100%", width: "240px" }}
+              viewBox={`0 0 256 256`}
+            />
+          </div>
+
+          {/* Wallet Address section */}
+          <div className="mb-8">
+            <p className="mb-3 text-[14px] font-bold text-[#0A0F2C]">Wallet Address</p>
+            <div className="flex gap-3">
+              <div className="flex-1 rounded-[12px] border border-gray-100 bg-[#F8F9FA] px-4 py-3.5">
+                <p className="text-[13px] font-mono font-medium text-[#4A5568] break-all">
+                  {asset.address}
+                </p>
               </div>
-              <p className="text-[10px] font-bold text-banking-muted">Scan QR Code</p>
+              <button 
+                onClick={handleCopy}
+                className="flex h-[48px] w-[48px] shrink-0 items-center justify-center rounded-[12px] border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 transition-colors shadow-sm"
+                title="Copy Address"
+              >
+                <Copy className="h-[18px] w-[18px] text-[#4A5568]" strokeWidth={2} />
+              </button>
             </div>
           </div>
 
-          {/* Details */}
-          <div className="min-w-0">
-            {/* Info chips */}
-            <div className="flex flex-wrap gap-2 mb-3">
+          {/* Important Instructions */}
+          <div className="mb-8 rounded-[16px] bg-[#FFF9EA] p-5 sm:p-6 border border-[#FFEDCC]">
+            <h3 className="mb-4 flex items-center gap-2.5 text-[15px] font-bold text-[#F5A524]">
+              <AlertTriangle className="h-[18px] w-[18px]" strokeWidth={2.5} />
+              Important Instructions
+            </h3>
+            <ul className="space-y-3.5">
               {[
-                { label: "Asset", value: asset.symbol },
-                { label: "Network", value: network },
-                { label: "Confirms", value: confirmations[assetSymbol] },
-                { label: "Arrival", value: arrivalTime[assetSymbol] },
-              ].map(({ label, value }) => (
-                <div key={label} className="rounded-lg bg-banking-offWhite border border-banking-border px-3 py-1.5">
-                  <p className="text-[9px] font-bold uppercase tracking-widest text-banking-muted">{label}</p>
-                  <p className="text-xs font-bold text-banking-text mt-0.5">{value}</p>
-                </div>
+                `Send only ${asset.name} (${asset.symbol}) to this address`,
+                `Minimum deposit: ${asset.minDeposit}`,
+                `Requires ${asset.confirmations} network confirmations`,
+                `Funds typically arrive within ${asset.arrivalTime}`,
+                `Always verify the address before sending`
+              ].map((text, i) => (
+                <li key={i} className="flex items-start gap-3 text-[14px] font-medium text-[#718096]">
+                  <span className="mt-[7px] h-[5px] w-[5px] shrink-0 rounded-full bg-[#A0AEC0]"></span>
+                  <span className="leading-relaxed text-[#4A5568]">{text}</span>
+                </li>
               ))}
-            </div>
-
-            {/* Address */}
-            <p className="text-[10px] font-bold uppercase tracking-widest text-banking-muted mb-1">Your deposit address</p>
-            <div className="flex items-center gap-2 rounded-xl border border-banking-border bg-white p-3">
-              <p className="flex-1 break-all text-xs font-mono text-banking-text leading-relaxed">
-                {asset.address}
-              </p>
-            </div>
-
-            <button
-              onClick={() => notify({
-                title: "Address copied",
-                description: `${asset.symbol} ${network} deposit address copied.`,
-              })}
-              className="mt-3 flex items-center gap-2 rounded-lg bg-banking-blue px-4 py-2 text-xs font-bold text-white hover:bg-banking-navy transition-all"
-            >
-              <Copy className="h-3.5 w-3.5" />
-              Copy Address
-            </button>
+            </ul>
           </div>
-        </div>
 
-        {/* Status Tracker */}
-        <div className="mt-5 grid grid-cols-3 gap-3">
-          {[
-            { label: "Address Generated", active: true },
-            { label: "Awaiting Deposit", active: false },
-            { label: "Confirming", active: false },
-          ].map(({ label, active }) => (
-            <div
-              key={label}
-              className={cn(
-                "rounded-xl border p-3 text-center transition-all",
-                active ? "border-emerald-200 bg-emerald-50" : "border-banking-border bg-white",
-              )}
-            >
-              <span className={cn("inline-block h-2 w-2 rounded-full mb-2", active ? "bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.6)]" : "bg-slate-200")} />
-              <p className={cn("text-[10px] font-bold leading-tight", active ? "text-emerald-700" : "text-banking-muted")}>{label}</p>
+          {/* Deposit Status */}
+          <div className="rounded-[16px] bg-[#F8F9FA] p-5 sm:p-6">
+            <h3 className="mb-5 text-[15px] font-bold text-[#0A0F2C]">Deposit Status</h3>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <p className="text-[14px] font-medium text-[#718096]">Network</p>
+                <div className="rounded-full bg-[#E6F8EF] px-3 py-1">
+                  <p className="text-[12px] font-bold tracking-wide text-[#22C55E]">Active</p>
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <p className="text-[14px] font-medium text-[#718096]">Confirmations Required</p>
+                <p className="text-[15px] font-bold text-[#0A0F2C]">{asset.confirmations}</p>
+              </div>
+              <div className="flex items-center justify-between">
+                <p className="text-[14px] font-medium text-[#718096]">Estimated Time</p>
+                <p className="text-[15px] font-bold text-[#0A0F2C]">~{asset.arrivalTime}</p>
+              </div>
             </div>
-          ))}
-        </div>
+          </div>
 
-        {/* Bottom Notice */}
-        <div className="mt-4 flex items-start gap-2 rounded-xl bg-blue-50 border border-blue-100 p-3">
-          <ShieldAlert className="h-4 w-4 text-banking-blue shrink-0 mt-0.5" />
-          <p className="text-xs text-banking-blue font-medium leading-relaxed">
-            Deposits are credited only after required confirmations and risk checks complete.
-          </p>
         </div>
-      </Panel>
+      </div>
     </div>
   );
 }
