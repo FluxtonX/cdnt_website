@@ -187,6 +187,48 @@ export function UserShell({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
+
+      {/* Mobile Bottom Navigation */}
+      <nav 
+        className="fixed bottom-0 left-0 right-0 z-50 flex h-20 items-center border-t border-gray-200 bg-white px-2 shadow-[0_-4px_15px_rgba(0,0,0,0.03)] lg:hidden"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
+        <div className="flex w-full items-center justify-between overflow-x-auto gap-1 no-scrollbar sm:px-4">
+          {sidebarNav.map((item) => {
+            const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+            const Icon = item.icon;
+            
+            // Shorten label for mobile if needed
+            const shortLabel = item.label === "Help & Support" ? "Support" : item.label;
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "flex flex-1 min-w-[64px] flex-col items-center justify-center gap-1 rounded-xl p-1 transition-colors",
+                  active 
+                    ? "text-[#113285]" 
+                    : "text-[#718096] hover:bg-gray-50 hover:text-[#0A0F2C]"
+                )}
+              >
+                <div className={cn(
+                  "flex h-8 w-14 items-center justify-center rounded-full transition-all duration-300",
+                  active ? "bg-blue-50/80" : "bg-transparent"
+                )}>
+                  <Icon className={cn("h-[20px] w-[20px] transition-transform", active ? "scale-110" : "")} strokeWidth={active ? 2.5 : 2} />
+                </div>
+                <span className={cn(
+                  "text-[10px] font-medium leading-tight text-center tracking-tight",
+                  active ? "font-bold text-[#113285]" : ""
+                )}>
+                  {shortLabel}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
     </div>
   );
 }
