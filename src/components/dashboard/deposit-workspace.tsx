@@ -63,9 +63,9 @@ export function DepositWorkspace() {
 
       <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
         {/* Left Column */}
-        <div className="sticky top-[112px] self-start rounded-[20px] border border-gray-100 bg-white p-6 shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
-          <h2 className="mb-5 text-[15px] font-bold text-[#0A0F2C]">Select Cryptocurrency</h2>
-          <div className="space-y-2.5">
+        <div className="sticky top-[112px] self-start rounded-[20px] border border-gray-100 bg-white p-5 sm:p-6 shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
+          <h2 className="mb-4 lg:mb-5 text-[15px] font-bold text-[#0A0F2C]">Select Cryptocurrency</h2>
+          <div className="flex flex-row lg:flex-col overflow-x-auto lg:overflow-visible gap-3 lg:gap-2.5 pb-2 lg:pb-0 no-scrollbar -mx-5 px-5 lg:mx-0 lg:px-0">
             {assets.map((item) => {
               const isActive = assetSymbol === item.symbol;
               return (
@@ -73,14 +73,14 @@ export function DepositWorkspace() {
                   key={item.symbol}
                   onClick={() => setAssetSymbol(item.symbol)}
                   className={cn(
-                    "flex w-full items-center gap-3.5 rounded-[14px] p-3.5 text-left transition-all",
+                    "flex shrink-0 flex-col lg:flex-row items-start lg:items-center gap-3 lg:gap-3.5 rounded-[16px] lg:rounded-[14px] p-4 lg:p-3.5 text-left transition-all w-[120px] sm:w-[140px] lg:w-full",
                     isActive
-                      ? "bg-[#113285] shadow-[0_4px_12px_rgba(17,50,133,0.2)]"
-                      : "bg-[#F1F5F9] hover:bg-gray-200/50"
+                      ? "bg-[#113285] shadow-[0_4px_12px_rgba(17,50,133,0.2)] border border-transparent"
+                      : "bg-[#F8F9FA] lg:bg-[#F1F5F9] border border-gray-100 lg:border-transparent hover:bg-gray-100"
                   )}
                 >
                   <div className={cn(
-                    "flex h-[24px] w-[24px] shrink-0 items-center justify-center",
+                    "flex h-[28px] w-[28px] lg:h-[24px] lg:w-[24px] shrink-0 items-center justify-center",
                     isActive ? "text-white" : "text-[#0A0F2C]"
                   )}>
                     {item.symbol === "BTC" && (
@@ -106,7 +106,7 @@ export function DepositWorkspace() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className={cn("text-[14px] font-bold leading-tight", isActive ? "text-white" : "text-[#0A0F2C]")}>{item.name}</p>
-                    <p className={cn("text-[12px] font-medium mt-[1px]", isActive ? "text-blue-100" : "text-[#718096]")}>{item.symbol}</p>
+                    <p className={cn("text-[12px] font-medium mt-[2px] lg:mt-[1px]", isActive ? "text-blue-100" : "text-[#718096]")}>{item.symbol}</p>
                   </div>
                 </button>
               );
