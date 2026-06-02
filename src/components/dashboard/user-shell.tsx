@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import Image from "next/image";
 import { 
   Bell, 
@@ -30,11 +31,41 @@ const sidebarNav = [
 
 export function UserShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const supabase = createClient();
   
-  // Hardcoded for demo
-  const isKycVerified = false; 
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    router.push("/login");
+  };
+  
+  const [userProfile, setUserProfile] = useState<{ email: string, fullName: string, initials: string } | null>(null);
+
+  useEffect(() => {
+    async function loadUser() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .single();
+        
+      const fullName = profile?.full_name || 'User';
+      const initials = fullName.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase();
+      
+      setUserProfile({
+        email: user.email || '',
+        fullName,
+        initials
+      });
+    }
+    loadUser();
+  }, [supabase]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -90,7 +121,10 @@ export function UserShell({ children }: { children: React.ReactNode }) {
           
           {/* Sign Out */}
           <div className="p-4 mb-4">
-            <button className="flex w-full items-center gap-3.5 rounded-xl px-4 py-3 text-[14px] font-medium text-[#E53E3E] hover:bg-red-50 transition-colors">
+            <button 
+              onClick={handleSignOut}
+              className="flex w-full items-center gap-3.5 rounded-xl px-4 py-3 text-[14px] font-medium text-[#E53E3E] hover:bg-red-50 transition-colors"
+            >
               <LogOut className="h-[18px] w-[18px]" strokeWidth={2} />
               Sign Out
             </button>
@@ -103,7 +137,7 @@ export function UserShell({ children }: { children: React.ReactNode }) {
         {/* Top Header */}
         <header className="sticky top-0 z-30 flex h-[88px] items-center justify-between border-b border-gray-100 bg-white px-4 md:px-8">
           <div className="flex flex-col justify-center">
-            <h1 className="text-[20px] font-bold text-[#0A0F2C]">Welcome back, Sarah</h1>
+            <h1 className="text-[20px] font-bold text-[#0A0F2C]">Welcome back, {userProfile?.fullName.split(' ')[0] || 'User'}</h1>
             <p className="text-[13px] text-[#718096] mt-0.5">Here's what's happening with your portfolio today</p>
           </div>
           
@@ -124,17 +158,19 @@ export function UserShell({ children }: { children: React.ReactNode }) {
                 )}
               >
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#113285] text-[13px] font-bold text-white">
-                  S
+                  {userProfile?.initials || 'U'}
                 </div>
-                <span className="text-[14px] font-medium text-[#0A0F2C] hidden sm:block">Sarah Chen</span>
+                <span className="text-[14px] font-medium text-[#0A0F2C] hidden sm:block">
+                  {userProfile?.fullName || 'Loading...'}
+                </span>
                 <ChevronDown className={cn("h-4 w-4 text-[#718096] transition-transform", isDropdownOpen && "rotate-180")} />
               </button>
 
               {isDropdownOpen && (
                 <div className="absolute right-0 mt-2 w-56 origin-top-right rounded-xl bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none divide-y divide-gray-100 py-1">
                   <div className="px-4 py-3">
-                    <p className="text-[13px] font-medium text-[#0A0F2C] truncate">Sarah Chen</p>
-                    <p className="text-[12px] text-[#718096] truncate">sarah.chen@example.com</p>
+                    <p className="text-[13px] font-medium text-[#0A0F2C] truncate">{userProfile?.fullName || 'User'}</p>
+                    <p className="text-[12px] text-[#718096] truncate">{userProfile?.email || 'Loading...'}</p>
                   </div>
                   <div className="py-1">
                     <Link href="/settings" className="group flex items-center px-4 py-2 text-[13px] text-[#4A5568] hover:bg-gray-50 hover:text-[#0A0F2C]">
@@ -151,7 +187,10 @@ export function UserShell({ children }: { children: React.ReactNode }) {
                     </Link>
                   </div>
                   <div className="py-1">
-                    <button className="group flex w-full items-center px-4 py-2 text-[13px] text-[#E53E3E] hover:bg-red-50">
+                    <button 
+                      onClick={handleSignOut}
+                      className="group flex w-full items-center px-4 py-2 text-[13px] text-[#E53E3E] hover:bg-red-50"
+                    >
                       <LogOut className="mr-3 h-4 w-4 text-[#E53E3E]" />
                       Logout
                     </button>

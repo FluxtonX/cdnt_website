@@ -4,13 +4,33 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
   const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const supabase = createClient();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    router.push("/two-factor");
+    setIsLoading(true);
+    setError(null);
+
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (signInError) {
+      setError(signInError.message);
+      setIsLoading(false);
+    } else {
+      router.push("/dashboard");
+    }
   };
 
   return (
@@ -51,6 +71,8 @@ export default function LoginPage() {
             <input 
               type="email" 
               placeholder="your@email.com" 
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               className="w-full px-4 py-3 rounded-xl border border-gray-200 text-[15px] focus:outline-none focus:ring-2 focus:ring-[#1A3FBB] focus:border-transparent transition-all placeholder:text-gray-400"
               required
             />
@@ -61,10 +83,18 @@ export default function LoginPage() {
             <input 
               type="password" 
               placeholder="Enter your password" 
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               className="w-full px-4 py-3 rounded-xl border border-gray-200 text-[15px] focus:outline-none focus:ring-2 focus:ring-[#1A3FBB] focus:border-transparent transition-all placeholder:text-gray-400"
               required
             />
           </div>
+
+          {error && (
+            <div className="bg-red-50 text-red-600 p-3 rounded-xl text-sm font-medium border border-red-100 text-center">
+              {error}
+            </div>
+          )}
 
           <div className="flex items-center justify-between pt-1">
             <label className="flex items-center gap-2 cursor-pointer">
@@ -81,9 +111,14 @@ export default function LoginPage() {
 
           <button 
             type="submit"
-            className="w-full bg-[#113285] hover:bg-[#0D266A] text-white font-bold text-[15px] py-3.5 rounded-xl transition-colors shadow-md mt-2"
+            disabled={isLoading}
+            className="w-full bg-[#113285] hover:bg-[#0D266A] disabled:opacity-60 disabled:hover:bg-[#113285] text-white font-bold text-[15px] py-3.5 rounded-xl transition-colors shadow-md mt-2 flex justify-center items-center"
           >
-            Continue
+            {isLoading ? (
+              <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+            ) : (
+              "Continue"
+            )}
           </button>
         </form>
 

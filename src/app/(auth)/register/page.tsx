@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, Check, CheckCircle2, Circle } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -22,6 +23,10 @@ export default function RegisterPage() {
   // States for step 3
   const [agreeTos, setAgreeTos] = useState(false);
 
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const supabase = createClient();
+
   // Validation
   const hasMinLength = password.length >= 8;
   const hasUppercase = /[A-Z]/.test(password);
@@ -38,10 +43,42 @@ export default function RegisterPage() {
     if (step > 1) setStep(step - 1);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (agreeTos) {
-      router.push("/dashboard");
+    if (!agreeTos) return;
+    
+    setIsLoading(true);
+    setError(null);
+    
+    const { data, error: signUpError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: fullName,
+          phone: phone,
+        },
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+
+    if (signUpError) {
+      setError(signUpError.message);
+      setIsLoading(false);
+    } else {
+      // Call send-otp API
+      try {
+        await fetch("/api/auth/send-otp", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        });
+      } catch (err) {
+        console.error("Failed to send initial OTP", err);
+      }
+      
+      // Success, redirect to verify-email
+      router.push(`/verify-email?email=${encodeURIComponent(email)}`);
     }
   };
 
@@ -238,6 +275,12 @@ export default function RegisterPage() {
                 </div>
               </div>
 
+              {error && (
+                <div className="bg-red-50 text-red-600 p-3 rounded-xl text-sm mt-4 font-medium border border-red-100 text-center">
+                  {error}
+                </div>
+              )}
+
               <label className="flex items-start gap-3 cursor-pointer mt-4">
                 <input 
                   type="checkbox" 
@@ -261,10 +304,14 @@ export default function RegisterPage() {
                 </button>
                 <button 
                   type="submit"
-                  disabled={!agreeTos}
-                  className="w-1/2 bg-[#113285] hover:bg-[#0D266A] disabled:opacity-60 disabled:hover:bg-[#113285] text-white font-bold text-[15px] py-3.5 rounded-xl transition-colors shadow-md"
+                  disabled={!agreeTos || isLoading}
+                  className="w-1/2 bg-[#113285] hover:bg-[#0D266A] disabled:opacity-60 disabled:hover:bg-[#113285] text-white font-bold text-[15px] py-3.5 rounded-xl transition-colors shadow-md flex items-center justify-center"
                 >
-                  Create Account
+                  {isLoading ? (
+                    <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                  ) : (
+                    "Create Account"
+                  )}
                 </button>
               </div>
             </form>

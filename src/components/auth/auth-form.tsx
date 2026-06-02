@@ -9,9 +9,12 @@ type FieldProps = {
   label: string;
   type?: string;
   placeholder: string;
+  value?: string;
+  onChange?: React.ChangeEventHandler<HTMLInputElement>;
+  required?: boolean;
 };
 
-export function Field({ label, type = "text", placeholder }: FieldProps) {
+export function Field({ label, type = "text", placeholder, value, onChange, required }: FieldProps) {
   return (
     <label className="block">
       <span className="mb-2 block text-sm font-medium text-banking-text">
@@ -20,6 +23,9 @@ export function Field({ label, type = "text", placeholder }: FieldProps) {
       <input
         type={type}
         placeholder={placeholder}
+        value={value}
+        onChange={onChange}
+        required={required}
         className="h-12 w-full rounded-md border border-banking-border bg-white px-4 text-sm text-banking-text outline-none transition placeholder:text-slate-400 focus:border-banking-blue focus:ring-4 focus:ring-banking-blue/12"
       />
     </label>
@@ -29,14 +35,17 @@ export function Field({ label, type = "text", placeholder }: FieldProps) {
 type PrimaryButtonProps = {
   children: React.ReactNode;
   className?: string;
+  type?: "button" | "submit" | "reset";
+  disabled?: boolean;
 };
 
-export function PrimaryButton({ children, className }: PrimaryButtonProps) {
+export function PrimaryButton({ children, className, type = "button", disabled }: PrimaryButtonProps) {
   return (
     <button
-      type="button"
+      type={type}
+      disabled={disabled}
       className={cn(
-        "inline-flex h-12 w-full items-center justify-center gap-2 rounded-md bg-banking-blue px-4 text-sm font-semibold text-white shadow-glow transition hover:bg-banking-navy focus:outline-none focus:ring-4 focus:ring-banking-blue/20",
+        "inline-flex h-12 w-full items-center justify-center gap-2 rounded-md bg-banking-blue px-4 text-sm font-semibold text-white shadow-glow transition hover:bg-banking-navy focus:outline-none focus:ring-4 focus:ring-banking-blue/20 disabled:opacity-60",
         className,
       )}
     >
