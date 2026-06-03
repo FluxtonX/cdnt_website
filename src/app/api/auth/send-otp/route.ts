@@ -1,9 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { Resend } from "resend";
-
-// Resend client will be instantiated per request
-
+import * as SibApiV3Sdk from '@getbrevo/brevo';
 export async function POST(req: Request) {
   try {
     const { email } = await req.json();
@@ -39,19 +36,22 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: `Failed to store OTP: ${dbError.message}` }, { status: 500 });
     }
 
-    // Validate Resend API key and instantiate client per request
-    if (!process.env.RESEND_API_KEY) {
-      console.error('Missing RESEND_API_KEY');
-      return NextResponse.json({ error: 'Server configuration error: missing RESEND_API_KEY' }, { status: 500 });
+    // Validate Brevo API key and instantiate client per request
+    if (!process.env.BREVO_API_KEY) {
+      console.error('Missing BREVO_API_KEY');
+      return NextResponse.json({ error: 'Server configuration error: missing BREVO_API_KEY' }, { status: 500 });
     }
-    const resend = new Resend(process.env.RESEND_API_KEY);
+    
+    const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
+    apiInstance.setApiKey(SibApiV3Sdk.TransactionalEmailsApiApiKeys.apiKey, process.env.BREVO_API_KEY);
+
     try {
-      // Use Resend API to send email
-      const { data, error: resendError } = await resend.emails.send({
-        from: "Canadian Digital National Trust Bank <noreply@resend.dev>", // replace with verified domain if applicable
-        to: email,
-        subject: "Your Verification Code",
-        html: `
+      // Use Brevo API to send email
+      await apiInstance.sendTransacEmail({
+        sender: { email: 'noreply@cdntbank.com', name: 'Canadian Digital National Trust Bank' },
+        to: [{ email }],
+        subject: 'Your Verification Code',
+        htmlContent: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; text-align: center; border: 1px solid #E2E8F0; border-radius: 10px;">
             <h1 style="color: #113285;">Canadian Digital National Trust Bank</h1>
             <p style="color: #4A5568; font-size: 16px;">Please use the verification code below to complete your sign in process.</p>
@@ -60,14 +60,8 @@ export async function POST(req: Request) {
             </div>
             <p style="color: #718096; font-size: 14px;">This code will expire in 10 minutes. Do not share this code with anyone.</p>
           </div>
-        `,
+        `
       });
-
-      if (resendError) {
-        console.error("Resend API error:", resendError);
-        // Fallback to console log
-        console.log(`[FALLBACK] OTP for ${email} is: ${code}`);
-      }
     } catch (emailError) {
       console.error("Failed to send email:", emailError);
       // Fallback to console log
