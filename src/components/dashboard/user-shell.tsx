@@ -100,11 +100,11 @@ export function UserShell({ children }: { children: React.ReactNode }) {
           <div className="flex items-center justify-center h-[88px] px-6 bg-white">
             <Link href="/" className="flex items-center justify-center w-full">
               <Image 
-                src="/cdnt-logo.png" 
+                src="/bluelogo.png" 
                 alt="CDNT" 
                 width={100}
                 height={40}
-                className="w-[100px] h-auto object-contain brightness-0"
+                className=" h-auto "
                 priority
                 unoptimized
               />
