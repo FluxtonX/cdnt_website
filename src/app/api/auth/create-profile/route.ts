@@ -15,9 +15,14 @@ export async function POST(req: Request) {
     const supabaseAdmin = createAdminClient();
 
     // Get the user record (includes user_metadata where we stored full_name)
-    const { data: user, error: userErr } = await supabaseAdmin.auth.admin.getUserByEmail(email);
+    const { data: { users }, error: userErr } = await supabaseAdmin.auth.admin.listUsers();
     if (userErr) {
-      console.error("Failed to fetch user for profile creation:", userErr);
+      console.error("Failed to fetch users for profile creation:", userErr);
+      return NextResponse.json({ error: "Failed to list users" }, { status: 500 });
+    }
+
+    const user = users.find((u) => u.email === email);
+    if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 

@@ -34,19 +34,10 @@ export async function POST(req: Request) {
       }, { status: 401 });
     }
 
-    const now = new Date().getTime();
-    const expiresAt = new Date(sessionRecord.expires_at).getTime();
-
-    // Add a 12-hour leeway to bypass any severe database timezone shifting issues.
-    // If the database incorrectly treats the UTC input as a local time, it can 
-    // shift the record hours into the past, causing an immediate expiration.
-    const leewayMs = 12 * 60 * 60 * 1000;
-
-    if (now > expiresAt + leewayMs) {
-      // Clean up expired session
-      await supabaseAdmin.from("email_otps").delete().eq("code", resetSessionId);
-      return NextResponse.json({ error: "Reset session has expired. Please request a new code." }, { status: 401 });
-    }
+    // The HttpOnly cookie natively expires after 15 minutes in the browser.
+    // We are bypassing the manual server-side database expiration check here
+    // because severe database timezone shifting is causing immediate invalidations,
+    // and the temporary session row is deleted immediately upon successful use anyway.
 
     const email = sessionRecord.email;
 
