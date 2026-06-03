@@ -1,14 +1,106 @@
 "use client";
 
-import React, { useState } from "react";
-import { Check, Upload, CheckCircle2, Clock } from "lucide-react";
+import React, { useState, useRef } from "react";
+import { Check, Upload, CheckCircle2, Clock, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
 
 export default function KYCPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const router = useRouter();
+  const supabase = createClient();
+  const idFrontRef = useRef<HTMLInputElement>(null);
+  const idBackRef = useRef<HTMLInputElement>(null);
+  const selfieRef = useRef<HTMLInputElement>(null);
+
+  const [formData, setFormData] = useState({
+    fullName: "",
+    dob: "",
+    sin: "",
+    occupation: "",
+    streetAddress: "",
+    city: "",
+    province: "",
+    postalCode: "",
+    country: ""
+  });
+
+  const [files, setFiles] = useState({
+    idFront: null as File | null,
+    idBack: null as File | null,
+    selfie: null as File | null
+  });
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, field: keyof typeof files) => {
+    if (e.target.files && e.target.files[0]) {
+      setFiles({ ...files, [field]: e.target.files[0] });
+    }
+  };
+
+  const submitKyc = async () => {
+    if (!files.idFront || !files.idBack || !files.selfie) {
+      alert("Please upload all required documents");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const uploadFile = async (file: File, filename: string) => {
+        const filePath = `${user.id}/${filename}`;
+        const { error: uploadError } = await supabase.storage
+          .from('kyc-documents')
+          .upload(filePath, file, { upsert: true });
+        
+        if (uploadError) throw uploadError;
+        
+        const { data } = supabase.storage.from('kyc-documents').getPublicUrl(filePath);
+        return data.publicUrl;
+      };
+
+      const idFrontUrl = await uploadFile(files.idFront, 'id-front.jpg');
+      const idBackUrl = await uploadFile(files.idBack, 'id-back.jpg');
+      const selfieUrl = await uploadFile(files.selfie, 'selfie.jpg');
+
+      const { error: insertError } = await supabase
+        .from('kyc_submissions')
+        .insert({
+          user_id: user.id,
+          full_name: formData.fullName,
+          date_of_birth: formData.dob,
+          sin: formData.sin,
+          occupation: formData.occupation,
+          street_address: formData.streetAddress,
+          city: formData.city,
+          province: formData.province,
+          postal_code: formData.postalCode,
+          country: formData.country,
+          id_front_url: idFrontUrl,
+          id_back_url: idBackUrl,
+          selfie_url: selfieUrl,
+          status: 'pending'
+        });
+
+      if (insertError) throw insertError;
+
+      setCurrentStep(5);
+    } catch (error: any) {
+      console.error("KYC submission error:", error);
+      alert(error.message || "An error occurred while submitting KYC. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const totalSteps = 5;
 
@@ -88,6 +180,9 @@ export default function KYCPage() {
                 <label className="block text-[12px] font-bold text-[#0A0F2C] mb-1">Legal Full Name</label>
                 <input 
                   type="text" 
+                  name="fullName"
+                  value={formData.fullName}
+                  onChange={handleInputChange}
                   placeholder="John Michael Smith" 
                   className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-[14px] text-[#0A0F2C] focus:outline-none focus:ring-2 focus:ring-[#113285]/20 focus:border-[#113285] transition-all"
                 />
@@ -98,6 +193,9 @@ export default function KYCPage() {
                   <label className="block text-[12px] font-bold text-[#0A0F2C] mb-1">Date of Birth</label>
                   <input 
                     type="text" 
+                    name="dob"
+                    value={formData.dob}
+                    onChange={handleInputChange}
                     placeholder="dd/mm/yy" 
                     className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-[14px] text-[#0A0F2C] focus:outline-none focus:ring-2 focus:ring-[#113285]/20 focus:border-[#113285] transition-all"
                   />
@@ -106,6 +204,9 @@ export default function KYCPage() {
                   <label className="block text-[12px] font-bold text-[#0A0F2C] mb-1">Social Insurance Number (SIN)</label>
                   <input 
                     type="text" 
+                    name="sin"
+                    value={formData.sin}
+                    onChange={handleInputChange}
                     placeholder="000-000-000" 
                     className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-[14px] text-[#0A0F2C] focus:outline-none focus:ring-2 focus:ring-[#113285]/20 focus:border-[#113285] transition-all"
                   />
@@ -116,6 +217,9 @@ export default function KYCPage() {
                 <label className="block text-[12px] font-bold text-[#0A0F2C] mb-1">Occupation</label>
                 <input 
                   type="text" 
+                  name="occupation"
+                  value={formData.occupation}
+                  onChange={handleInputChange}
                   placeholder="Software Engineer" 
                   className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-[14px] text-[#0A0F2C] focus:outline-none focus:ring-2 focus:ring-[#113285]/20 focus:border-[#113285] transition-all"
                 />
@@ -144,6 +248,9 @@ export default function KYCPage() {
                 <label className="block text-[12px] font-bold text-[#0A0F2C] mb-1">Street Address</label>
                 <input 
                   type="text" 
+                  name="streetAddress"
+                  value={formData.streetAddress}
+                  onChange={handleInputChange}
                   placeholder="123 Main Street" 
                   className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-[14px] text-[#0A0F2C] focus:outline-none focus:ring-2 focus:ring-[#113285]/20 focus:border-[#113285] transition-all"
                 />
@@ -154,6 +261,9 @@ export default function KYCPage() {
                   <label className="block text-[12px] font-bold text-[#0A0F2C] mb-1">City</label>
                   <input 
                     type="text" 
+                    name="city"
+                    value={formData.city}
+                    onChange={handleInputChange}
                     placeholder="Toronto" 
                     className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-[14px] text-[#0A0F2C] focus:outline-none focus:ring-2 focus:ring-[#113285]/20 focus:border-[#113285] transition-all"
                   />
@@ -162,6 +272,9 @@ export default function KYCPage() {
                   <label className="block text-[12px] font-bold text-[#0A0F2C] mb-1">Province</label>
                   <input 
                     type="text" 
+                    name="province"
+                    value={formData.province}
+                    onChange={handleInputChange}
                     placeholder="Ontario" 
                     className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-[14px] text-[#0A0F2C] focus:outline-none focus:ring-2 focus:ring-[#113285]/20 focus:border-[#113285] transition-all"
                   />
@@ -173,6 +286,9 @@ export default function KYCPage() {
                   <label className="block text-[12px] font-bold text-[#0A0F2C] mb-1">Postal Code</label>
                   <input 
                     type="text" 
+                    name="postalCode"
+                    value={formData.postalCode}
+                    onChange={handleInputChange}
                     placeholder="M5A 1A1" 
                     className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-[14px] text-[#0A0F2C] focus:outline-none focus:ring-2 focus:ring-[#113285]/20 focus:border-[#113285] transition-all"
                   />
@@ -181,6 +297,9 @@ export default function KYCPage() {
                   <label className="block text-[12px] font-bold text-[#0A0F2C] mb-1">Country</label>
                   <input 
                     type="text" 
+                    name="country"
+                    value={formData.country}
+                    onChange={handleInputChange}
                     placeholder="Canada" 
                     className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-[14px] text-[#0A0F2C] focus:outline-none focus:ring-2 focus:ring-[#113285]/20 focus:border-[#113285] transition-all"
                   />
@@ -215,20 +334,22 @@ export default function KYCPage() {
             
             <div className="space-y-3">
               {/* Upload Front */}
-              <button className="w-full flex flex-col items-center justify-center p-6 border-2 border-dashed border-gray-200 rounded-2xl hover:border-[#113285]/50 hover:bg-[#113285]/5 transition-all group">
+              <input type="file" accept="image/*,.pdf" className="hidden" ref={idFrontRef} onChange={(e) => handleFileChange(e, 'idFront')} />
+              <button onClick={() => idFrontRef.current?.click()} className="w-full flex flex-col items-center justify-center p-6 border-2 border-dashed border-gray-200 rounded-2xl hover:border-[#113285]/50 hover:bg-[#113285]/5 transition-all group">
                 <div className="w-10 h-10 mb-2 text-[#4A5568] group-hover:text-[#113285]">
-                  <Upload className="w-full h-full" strokeWidth={1.5} />
+                  {files.idFront ? <CheckCircle2 className="w-full h-full text-green-500" strokeWidth={1.5} /> : <Upload className="w-full h-full" strokeWidth={1.5} />}
                 </div>
-                <div className="text-[14px] font-bold text-[#0A0F2C] mb-1">Upload Front of ID</div>
+                <div className="text-[14px] font-bold text-[#0A0F2C] mb-1">{files.idFront ? files.idFront.name : "Upload Front of ID"}</div>
                 <div className="text-[12px] text-[#718096]">Driver's License, Passport, or Government ID</div>
               </button>
 
               {/* Upload Back */}
-              <button className="w-full flex flex-col items-center justify-center p-6 border-2 border-dashed border-gray-200 rounded-2xl hover:border-[#113285]/50 hover:bg-[#113285]/5 transition-all group">
+              <input type="file" accept="image/*,.pdf" className="hidden" ref={idBackRef} onChange={(e) => handleFileChange(e, 'idBack')} />
+              <button onClick={() => idBackRef.current?.click()} className="w-full flex flex-col items-center justify-center p-6 border-2 border-dashed border-gray-200 rounded-2xl hover:border-[#113285]/50 hover:bg-[#113285]/5 transition-all group">
                 <div className="w-10 h-10 mb-2 text-[#4A5568] group-hover:text-[#113285]">
-                  <Upload className="w-full h-full" strokeWidth={1.5} />
+                  {files.idBack ? <CheckCircle2 className="w-full h-full text-green-500" strokeWidth={1.5} /> : <Upload className="w-full h-full" strokeWidth={1.5} />}
                 </div>
-                <div className="text-[14px] font-bold text-[#0A0F2C] mb-1">Upload Back of ID</div>
+                <div className="text-[14px] font-bold text-[#0A0F2C] mb-1">{files.idBack ? files.idBack.name : "Upload Back of ID"}</div>
                 <div className="text-[12px] text-[#718096]">Clear, well-lit photo</div>
               </button>
             </div>
@@ -282,11 +403,12 @@ export default function KYCPage() {
                 </ul>
               </div>
 
-              <button className="w-full flex flex-col items-center justify-center p-6 border-2 border-dashed border-gray-200 rounded-2xl hover:border-[#113285]/50 hover:bg-[#113285]/5 transition-all group">
+              <input type="file" accept="image/*" className="hidden" ref={selfieRef} onChange={(e) => handleFileChange(e, 'selfie')} />
+              <button onClick={() => selfieRef.current?.click()} className="w-full flex flex-col items-center justify-center p-6 border-2 border-dashed border-gray-200 rounded-2xl hover:border-[#113285]/50 hover:bg-[#113285]/5 transition-all group">
                 <div className="w-10 h-10 mb-2 text-[#4A5568] group-hover:text-[#113285]">
-                  <Upload className="w-full h-full" strokeWidth={1.5} />
+                  {files.selfie ? <CheckCircle2 className="w-full h-full text-green-500" strokeWidth={1.5} /> : <Upload className="w-full h-full" strokeWidth={1.5} />}
                 </div>
-                <div className="text-[14px] font-bold text-[#0A0F2C] mb-1">Upload Selfie</div>
+                <div className="text-[14px] font-bold text-[#0A0F2C] mb-1">{files.selfie ? files.selfie.name : "Upload Selfie"}</div>
                 <div className="text-[12px] text-[#718096]">JPG or PNG, max 10MB</div>
               </button>
 
@@ -300,10 +422,18 @@ export default function KYCPage() {
                 Back
               </button>
               <button 
-                onClick={nextStep}
-                className="w-full bg-[#113285] hover:bg-[#0D2665] text-white font-bold text-[14px] py-3 rounded-xl transition-colors"
+                onClick={submitKyc}
+                disabled={isSubmitting}
+                className="w-full flex items-center justify-center bg-[#113285] hover:bg-[#0D2665] disabled:bg-[#113285]/70 text-white font-bold text-[14px] py-3 rounded-xl transition-colors"
               >
-                Submit for Review
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  "Submit for Review"
+                )}
               </button>
             </div>
           </div>
