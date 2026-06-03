@@ -41,22 +41,24 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Reset code has expired" }, { status: 400 });
     }
 
-    // 3. Generate a temporary reset session token
-    const resetSessionId = crypto.randomUUID();
+    // 3. Generate a temporary reset session token (6 characters to fit any potential column length constraints)
+    const resetSessionId = crypto.randomBytes(3).toString('hex'); // 6 hex characters
     const newExpiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 mins
 
-    // 4. Update the email_otps record to act as a temporary session
-    const { error: updateError } = await supabaseAdmin
+    // 4. Replace the email_otps record to act as a temporary session
+    await supabaseAdmin.from("email_otps").delete().eq("email", email);
+
+    const { error: insertError } = await supabaseAdmin
       .from("email_otps")
-      .update({
+      .insert({
+        email,
         code: resetSessionId,
         verified: true,
         expires_at: newExpiresAt,
-      })
-      .eq("email", email);
+      });
 
-    if (updateError) {
-      console.error("Error creating reset session:", updateError);
+    if (insertError) {
+      console.error("Error creating reset session:", insertError);
       return NextResponse.json({ error: "Failed to create reset session" }, { status: 500 });
     }
 

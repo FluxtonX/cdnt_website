@@ -87,7 +87,7 @@ export default function ResetPasswordPage() {
             {error}
             <div className="mt-2">
               <Link href="/forgot-password" className="text-[#113285] font-bold hover:underline">
-                Request a new link
+                Request a new code
               </Link>
             </div>
           </div>

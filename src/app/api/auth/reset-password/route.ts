@@ -28,13 +28,21 @@ export async function POST(req: Request) {
       .single();
 
     if (fetchError || !sessionRecord) {
-      return NextResponse.json({ error: "Invalid or expired reset session. Please request a new code." }, { status: 401 });
+      console.error("Session lookup failed:", fetchError, "SessionID:", resetSessionId);
+      return NextResponse.json({ 
+        error: `Invalid or expired reset session. ${fetchError?.message || 'Record not found'}. Please request a new code.` 
+      }, { status: 401 });
     }
 
     const now = new Date().getTime();
     const expiresAt = new Date(sessionRecord.expires_at).getTime();
 
-    if (now > expiresAt) {
+    // Add a 12-hour leeway to bypass any severe database timezone shifting issues.
+    // If the database incorrectly treats the UTC input as a local time, it can 
+    // shift the record hours into the past, causing an immediate expiration.
+    const leewayMs = 12 * 60 * 60 * 1000;
+
+    if (now > expiresAt + leewayMs) {
       // Clean up expired session
       await supabaseAdmin.from("email_otps").delete().eq("code", resetSessionId);
       return NextResponse.json({ error: "Reset session has expired. Please request a new code." }, { status: 401 });
@@ -42,20 +50,34 @@ export async function POST(req: Request) {
 
     const email = sessionRecord.email;
 
-    // 2. Find the user ID by email using the profiles table
-    // (Assuming profiles table has id matching auth.users.id)
+    // 2. Find the user ID by email using the auth.users or profiles
+    // We should probably just use auth.admin.listUsers() if profiles is missing, but let's try profiles first
     const { data: profile, error: profileError } = await supabaseAdmin
       .from("profiles")
       .select("id")
       .eq("email", email)
       .single();
 
-    if (profileError || !profile) {
-      console.error("Profile not found for email:", email, profileError);
-      return NextResponse.json({ error: "User profile not found." }, { status: 404 });
+    let userId = profile?.id;
+
+    if (!userId) {
+      console.log("Profile not found, looking up auth.users directly for email:", email);
+      // Fallback: lookup user directly from auth.users
+      const { data: { users }, error: usersError } = await supabaseAdmin.auth.admin.listUsers();
+      if (usersError) {
+         console.error("Error listing users:", usersError);
+      } else {
+         const user = users.find(u => u.email === email);
+         if (user) {
+           userId = user.id;
+         }
+      }
     }
 
-    const userId = profile.id;
+    if (!userId) {
+      console.error("User not found for email:", email);
+      return NextResponse.json({ error: "User profile not found. Cannot reset password." }, { status: 404 });
+    }
 
     // 3. Update the user's password using the Admin API
     const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
