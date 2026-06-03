@@ -5,32 +5,37 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, KeyRound } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const supabase = createClient();
 
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setMessage(null);
     setError(null);
 
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
+    try {
+      const response = await fetch("/api/auth/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
 
-    if (resetError) {
-      setError(resetError.message);
-    } else {
-      setMessage("Check your email for the password reset link.");
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to send reset code.");
+      }
+
+      // Success, redirect to verify-otp
+      router.push(`/forgot-password/verify-otp?email=${encodeURIComponent(email)}`);
+    } catch (err: any) {
+      setError(err.message);
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   return (
@@ -93,11 +98,6 @@ export default function ForgotPasswordPage() {
               {error}
             </div>
           )}
-          {message && (
-            <div className="bg-green-50 text-green-600 p-3 rounded-xl text-sm font-medium border border-green-100 text-center">
-              {message}
-            </div>
-          )}
 
           <div className="flex gap-4 pt-2">
             <button 
@@ -115,7 +115,7 @@ export default function ForgotPasswordPage() {
               {isLoading ? (
                 <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
               ) : (
-                "Send Reset Link"
+                "Send Reset Code"
               )}
             </button>
           </div>

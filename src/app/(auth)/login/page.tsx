@@ -3,22 +3,32 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
 import { createClient } from "@/lib/supabase/client";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const supabase = createClient();
+
+  useEffect(() => {
+    const msg = searchParams.get("message");
+    if (msg) {
+      setMessage(msg.replace(/\+/g, " "));
+    }
+  }, [searchParams]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
+    setMessage(null);
 
     const { error: signInError } = await supabase.auth.signInWithPassword({
       email,
@@ -64,6 +74,19 @@ export default function LoginPage() {
 
       {/* Login Card */}
       <div className="bg-white w-full max-w-[420px] rounded-[20px] p-6 md:p-8 shadow-2xl shadow-black/20">
+        
+        {message && (
+          <div className="bg-green-50 text-green-600 p-4 rounded-xl text-[14px] font-medium border border-green-100 text-center mb-5">
+            {message}
+          </div>
+        )}
+
+        {error && (
+          <div className="bg-red-50 text-red-600 p-4 rounded-xl text-[14px] font-medium border border-red-100 text-center mb-5">
+            {error}
+          </div>
+        )}
+
         <form className="space-y-5" onSubmit={handleLogin}>
           
           <div className="space-y-1.5">
@@ -89,12 +112,6 @@ export default function LoginPage() {
               required
             />
           </div>
-
-          {error && (
-            <div className="bg-red-50 text-red-600 p-3 rounded-xl text-sm font-medium border border-red-100 text-center">
-              {error}
-            </div>
-          )}
 
           <div className="flex items-center justify-between pt-1">
             <label className="flex items-center gap-2 cursor-pointer">
@@ -135,5 +152,13 @@ export default function LoginPage() {
       </p>
 
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#1855C0] flex items-center justify-center text-white">Loading...</div>}>
+      <LoginForm />
+    </Suspense>
   );
 }
