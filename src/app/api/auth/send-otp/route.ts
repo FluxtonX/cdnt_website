@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Resend client will be instantiated per request
 
 export async function POST(req: Request) {
   try {
@@ -39,13 +39,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: `Failed to store OTP: ${dbError.message}` }, { status: 500 });
     }
 
+    // Validate Resend API key and instantiate client per request
+    if (!process.env.RESEND_API_KEY) {
+      console.error('Missing RESEND_API_KEY');
+      return NextResponse.json({ error: 'Server configuration error: missing RESEND_API_KEY' }, { status: 500 });
+    }
+    const resend = new Resend(process.env.RESEND_API_KEY);
     try {
-      // Use Resend API to send email
-      const { data, error: resendError } = await resend.emails.send({
-        from: "Canadian Digital National Trust Bank <noreply@resend.dev>", // replace with verified domain if applicable
-        to: email,
-        subject: "Your Verification Code",
-        html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; text-align: center; border: 1px solid #E2E8F0; border-radius: 10px;">
             <h1 style="color: #113285;">Canadian Digital National Trust Bank</h1>
             <p style="color: #4A5568; font-size: 16px;">Please use the verification code below to complete your sign in process.</p>
