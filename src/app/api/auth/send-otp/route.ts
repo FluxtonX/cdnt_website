@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import * as SibApiV3Sdk from '@getbrevo/brevo';
+import { TransactionalEmailsApi, TransactionalEmailsApiApiKeys, SendSmtpEmail } from '@getbrevo/brevo';
 export async function POST(req: Request) {
   try {
     const { email } = await req.json();
@@ -42,16 +42,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Server configuration error: missing BREVO_API_KEY' }, { status: 500 });
     }
     
-    const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
-    apiInstance.setApiKey(SibApiV3Sdk.TransactionalEmailsApiApiKeys.apiKey, process.env.BREVO_API_KEY);
+    const apiInstance = new TransactionalEmailsApi();
+    apiInstance.setApiKey(TransactionalEmailsApiApiKeys.apiKey, process.env.BREVO_API_KEY);
 
     try {
       // Use Brevo API to send email
-      await apiInstance.sendTransacEmail({
-        sender: { email: 'noreply@cdntbank.com', name: 'Canadian Digital National Trust Bank' },
-        to: [{ email }],
-        subject: 'Your Verification Code',
-        htmlContent: `
+      const sendSmtpEmail = new SendSmtpEmail();
+      sendSmtpEmail.sender = { email: 'noreply@cdntbank.com', name: 'Canadian Digital National Trust Bank' };
+      sendSmtpEmail.to = [{ email }];
+      sendSmtpEmail.subject = 'Your Verification Code';
+      sendSmtpEmail.htmlContent = `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; text-align: center; border: 1px solid #E2E8F0; border-radius: 10px;">
             <h1 style="color: #113285;">Canadian Digital National Trust Bank</h1>
             <p style="color: #4A5568; font-size: 16px;">Please use the verification code below to complete your sign in process.</p>
@@ -60,8 +60,9 @@ export async function POST(req: Request) {
             </div>
             <p style="color: #718096; font-size: 14px;">This code will expire in 10 minutes. Do not share this code with anyone.</p>
           </div>
-        `
-      });
+        `;
+
+      await apiInstance.sendTransacEmail(sendSmtpEmail);
     } catch (emailError) {
       console.error("Failed to send email:", emailError);
       // Fallback to console log
