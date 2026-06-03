@@ -97,7 +97,7 @@ export function UserShell({ children }: { children: React.ReactNode }) {
       {/* Sidebar */}
       <aside className="hidden border-r border-gray-100 bg-white lg:block">
         <div className="sticky top-0 flex h-screen flex-col">
-          <div className="flex items-center justify-center pt-[18px] pb-0 px-6 mb-0 bg-white">
+          <div className="flex items-center justify-center h-[88px] px-6 bg-white">
             <Link href="/" className="flex items-center justify-center w-full">
               <Image 
                 src="/cdnt-logo.png" 
