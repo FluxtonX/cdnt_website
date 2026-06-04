@@ -1,202 +1,348 @@
 "use client";
 
-import { useState } from "react";
-import { AlertTriangle, Copy, ArrowLeft } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { useMemo, useState } from "react";
 import Link from "next/link";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  CheckCircle2,
+  Info,
+  ShieldCheck,
+} from "lucide-react";
+import { CoinLogo } from "@/components/market/CoinLogo";
+import { DepositRequestForm } from "@/components/deposit/DepositRequestForm";
+import { FixedDepositQR } from "@/components/deposit/FixedDepositQR";
+import {
+  type DepositAddressConfig,
+  type DepositAsset,
+  DEPOSIT_ADDRESSES,
+  getDepositConfig,
+  getDepositNetworks,
+} from "@/config/depositAddresses";
+import { cn } from "@/lib/utils";
 
-import QRCode from "react-qr-code";
+const steps = ["Details", "Review", "Transfer"];
+const assetOptions = Array.from(
+  new Map(DEPOSIT_ADDRESSES.map((item) => [item.asset, item])).values(),
+);
 
-const assets = [
-  {
-    symbol: "BTC",
-    name: "Bitcoin",
-    network: "BTC",
-    address: "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
-    minDeposit: "0.001 BTC",
-    confirmations: "3",
-    arrivalTime: "30 mins",
-  },
-  {
-    symbol: "ETH",
-    name: "Ethereum",
-    network: "ETH",
-    address: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
-    minDeposit: "0.001 ETH",
-    confirmations: "3",
-    arrivalTime: "30 mins",
-  },
-  {
-    symbol: "USDT",
-    name: "Tether",
-    network: "USDT",
-    address: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
-    minDeposit: "0.001 USDT",
-    confirmations: "3",
-    arrivalTime: "30 mins",
-  },
-];
+function formatAmount(value: number, symbol: string) {
+  return `${value.toLocaleString(undefined, {
+    maximumFractionDigits: symbol === "USDT" ? 2 : 8,
+  })} ${symbol}`;
+}
 
-export function DepositWorkspace() {
-  const [assetSymbol, setAssetSymbol] = useState("BTC");
+export function DepositWorkspace({ initialAsset }: { initialAsset?: string }) {
+  const initialConfig = getDepositConfig(initialAsset ?? "BTC");
+  const [asset, setAsset] = useState<DepositAsset>(initialConfig.asset);
+  const [network, setNetwork] = useState(initialConfig.network);
+  const [amount, setAmount] = useState("");
+  const [step, setStep] = useState(0);
+  const [reference] = useState(() => `NUD-${Date.now().toString(36).toUpperCase()}`);
 
-  const asset = assets.find((a) => a.symbol === assetSymbol) || assets[0];
+  const networks = getDepositNetworks(asset);
+  const config = useMemo<DepositAddressConfig>(
+    () => getDepositConfig(asset, network),
+    [asset, network],
+  );
+  const numericAmount = Number(amount);
+  const amountIsValid = Number.isFinite(numericAmount) && numericAmount >= config.minAmount;
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(asset.address);
+  const handleAssetChange = (nextAsset: DepositAsset) => {
+    const nextConfig = getDepositConfig(nextAsset);
+    setAsset(nextConfig.asset);
+    setNetwork(nextConfig.network);
+    setAmount("");
+    setStep(0);
   };
 
   return (
-    <div className="mx-auto w-full max-w-[1024px]">
-      <div className="mb-8 flex items-center gap-4">
-        <Link 
-          href="/wallets" 
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 transition-colors shadow-sm"
+    <div className="mx-auto w-full max-w-[1120px]">
+      <div className="mb-6 flex flex-wrap items-center gap-4">
+        <Link
+          href="/wallets"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-600 shadow-sm transition-colors hover:bg-gray-50"
+          title="Back to wallets"
         >
-          <ArrowLeft className="h-[20px] w-[20px]" strokeWidth={2} />
+          <ArrowLeft className="h-5 w-5" />
         </Link>
-        <div>
-          <h1 className="text-[22px] font-bold tracking-tight text-[#0A0F2C]">Deposit Cryptocurrency</h1>
-          <p className="text-[14px] text-[#718096]">Add funds to your wallet</p>
+        <div className="min-w-0">
+          <h1 className="text-[24px] font-bold tracking-tight text-[#0A0F2C]">
+            Deposit Cryptocurrency
+          </h1>
+          <p className="text-sm text-[#718096]">
+            Select an asset, review the network, then scan the company deposit QR.
+          </p>
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
-        {/* Left Column */}
-        <div className="sticky top-[112px] self-start rounded-[20px] border border-gray-100 bg-white p-5 sm:p-6 shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
-          <h2 className="mb-4 lg:mb-5 text-[15px] font-bold text-[#0A0F2C]">Select Cryptocurrency</h2>
-          <div className="flex flex-row lg:flex-col overflow-x-auto lg:overflow-visible gap-3 lg:gap-2.5 pb-2 lg:pb-0 no-scrollbar -mx-5 px-5 lg:mx-0 lg:px-0">
-            {assets.map((item) => {
-              const isActive = assetSymbol === item.symbol;
+      <div className="mb-6 grid gap-3 sm:grid-cols-3">
+        {steps.map((label, index) => (
+          <div
+            key={label}
+            className={cn(
+              "flex items-center gap-3 rounded-2xl border bg-white px-4 py-3 shadow-sm",
+              index <= step ? "border-[#113285]/20" : "border-gray-100",
+            )}
+          >
+            <span
+              className={cn(
+                "grid h-8 w-8 shrink-0 place-items-center rounded-full text-sm font-bold",
+                index < step
+                  ? "bg-emerald-100 text-emerald-700"
+                  : index === step
+                    ? "bg-[#113285] text-white"
+                    : "bg-gray-100 text-gray-500",
+              )}
+            >
+              {index < step ? <CheckCircle2 className="h-4 w-4" /> : index + 1}
+            </span>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                Step {index + 1}
+              </p>
+              <p className="text-sm font-bold text-[#0A0F2C]">{label}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
+        <aside className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm lg:sticky lg:top-[112px] lg:self-start">
+          <h2 className="mb-4 text-sm font-bold uppercase tracking-wide text-[#718096]">
+            Select Asset
+          </h2>
+          <div className="flex gap-3 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible">
+            {assetOptions.map((item) => {
+              const isActive = asset === item.asset;
               return (
                 <button
-                  key={item.symbol}
-                  onClick={() => setAssetSymbol(item.symbol)}
+                  key={item.asset}
+                  onClick={() => handleAssetChange(item.asset)}
                   className={cn(
-                    "flex shrink-0 flex-col lg:flex-row items-start lg:items-center gap-3 lg:gap-3.5 rounded-[16px] lg:rounded-[14px] p-4 lg:p-3.5 text-left transition-all w-[120px] sm:w-[140px] lg:w-full",
+                    "flex min-w-[170px] items-center gap-3 rounded-2xl border p-4 text-left transition-all lg:min-w-0",
                     isActive
-                      ? "bg-[#113285] shadow-[0_4px_12px_rgba(17,50,133,0.2)] border border-transparent"
-                      : "bg-[#F8F9FA] lg:bg-[#F1F5F9] border border-gray-100 lg:border-transparent hover:bg-gray-100"
+                      ? "border-[#113285] bg-[#EEF4FF] shadow-sm"
+                      : "border-gray-100 bg-[#F8FAFC] hover:border-gray-200 hover:bg-white",
                   )}
                 >
-                  <div className={cn(
-                    "flex h-[28px] w-[28px] lg:h-[24px] lg:w-[24px] shrink-0 items-center justify-center",
-                    isActive ? "text-white" : "text-[#0A0F2C]"
-                  )}>
-                    {item.symbol === "BTC" && (
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-full w-full">
-                        <path d="M11.767 19.089c4.924.869 6.176-6.07 4.213-7.154 4.04-1.792 3.106-7.925-1.415-8.731V1.19h-2.272v1.944h-1.583V1.19H8.441v1.993H5.321v2.548h1.233c1.47 0 1.62.906 1.579 1.815v7.697c.05.908-.109 1.815-1.58 1.815H5.321v2.548h3.12v2.028h2.269v-2.028h1.583v2.028h2.271v-2.028h-.116z" />
-                        <path d="M10.155 5.682h2.272c2.053 0 2.053 3.12 0 3.12h-2.272v-3.12z" />
-                        <path d="M10.155 11.237h2.556c2.43 0 2.43 3.497 0 3.497h-2.556v-3.497z" />
-                      </svg>
-                    )}
-                    {item.symbol === "ETH" && (
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-full w-full">
-                        <path d="M11.999 1.125L5.25 12l6.749 4.125L18.75 12l-6.751-10.875z" />
-                        <path d="M11.999 17.625L5.25 13.5l6.749 9 6.751-9-6.751 4.125z" />
-                      </svg>
-                    )}
-                    {item.symbol === "USDT" && (
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-full w-full">
-                        <path d="M12 13c3.866 0 7-1.343 7-3s-3.134-3-7-3-7 1.343-7 3 3.134 3 7 3z" />
-                        <path d="M12 13v9" />
-                        <path d="M8 7h8" />
-                      </svg>
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className={cn("text-[14px] font-bold leading-tight", isActive ? "text-white" : "text-[#0A0F2C]")}>{item.name}</p>
-                    <p className={cn("text-[12px] font-medium mt-[2px] lg:mt-[1px]", isActive ? "text-blue-100" : "text-[#718096]")}>{item.symbol}</p>
-                  </div>
+                  <CoinLogo src={item.logoUrl} symbol={item.asset} className="h-10 w-10 p-1.5" />
+                  <span className="min-w-0">
+                    <span className="block text-sm font-bold text-[#0A0F2C]">{item.asset}</span>
+                    <span className="block truncate text-xs font-medium text-[#718096]">
+                      {item.assetName}
+                    </span>
+                  </span>
                 </button>
               );
             })}
           </div>
-        </div>
+        </aside>
 
-        {/* Right Column */}
-        <div className="rounded-[20px] border border-gray-100 bg-white p-6 sm:p-8 shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
-          <div className="mb-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <h2 className="text-[18px] font-bold text-[#0A0F2C]">Deposit {asset.name}</h2>
-            <div className="inline-flex rounded-full bg-[#FFF9EA] px-3 py-1 border border-[#FFEDCC]">
-              <p className="text-[12px] font-bold tracking-wide text-[#F5A524]">Network: {asset.network}</p>
-            </div>
-          </div>
-
-          {/* QR Code container */}
-          <div className="mb-10 flex justify-center">
-            <QRCode 
-              value={asset.address}
-              size={240}
-              style={{ height: "auto", maxWidth: "100%", width: "240px" }}
-              viewBox={`0 0 256 256`}
-            />
-          </div>
-
-          {/* Wallet Address section */}
-          <div className="mb-8">
-            <p className="mb-3 text-[14px] font-bold text-[#0A0F2C]">Wallet Address</p>
-            <div className="flex gap-3">
-              <div className="flex-1 rounded-[12px] border border-gray-100 bg-[#F8F9FA] px-4 py-3.5">
-                <p className="text-[13px] font-mono font-medium text-[#4A5568] break-all">
-                  {asset.address}
-                </p>
+        <main className="min-w-0 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm sm:p-6 lg:p-8">
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <CoinLogo src={config.logoUrl} symbol={config.asset} className="h-12 w-12 p-2" />
+              <div>
+                <h2 className="text-xl font-bold text-[#0A0F2C]">Deposit {config.assetName}</h2>
+                <p className="text-sm font-medium text-[#718096]">{config.networkName}</p>
               </div>
-              <button 
-                onClick={handleCopy}
-                className="flex h-[48px] w-[48px] shrink-0 items-center justify-center rounded-[12px] border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 transition-colors shadow-sm"
-                title="Copy Address"
-              >
-                <Copy className="h-[18px] w-[18px] text-[#4A5568]" strokeWidth={2} />
-              </button>
+            </div>
+            <div className="rounded-full border border-[#FFEDCC] bg-[#FFF9EA] px-3 py-1 text-xs font-bold text-[#B7791F]">
+              Network: {config.network}
             </div>
           </div>
 
-          {/* Important Instructions */}
-          <div className="mb-8 rounded-[16px] bg-[#FFF9EA] p-5 sm:p-6 border border-[#FFEDCC]">
-            <h3 className="mb-4 flex items-center gap-2.5 text-[15px] font-bold text-[#F5A524]">
-              <AlertTriangle className="h-[18px] w-[18px]" strokeWidth={2.5} />
-              Important Instructions
-            </h3>
-            <ul className="space-y-3.5">
-              {[
-                `Send only ${asset.name} (${asset.symbol}) to this address`,
-                `Minimum deposit: ${asset.minDeposit}`,
-                `Requires ${asset.confirmations} network confirmations`,
-                `Funds typically arrive within ${asset.arrivalTime}`,
-                `Always verify the address before sending`
-              ].map((text, i) => (
-                <li key={i} className="flex items-start gap-3 text-[14px] font-medium text-[#718096]">
-                  <span className="mt-[7px] h-[5px] w-[5px] shrink-0 rounded-full bg-[#A0AEC0]"></span>
-                  <span className="leading-relaxed text-[#4A5568]">{text}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
+          {step === 0 ? (
+            <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
+              <div className="space-y-5">
+                {networks.length > 1 ? (
+                  <div>
+                    <p className="mb-2 text-sm font-bold text-[#0A0F2C]">Select network</p>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {networks.map((item) => (
+                        <button
+                          key={item.network}
+                          onClick={() => setNetwork(item.network)}
+                          className={cn(
+                            "rounded-2xl border px-4 py-3 text-left transition-colors",
+                            network === item.network
+                              ? "border-[#113285] bg-[#EEF4FF]"
+                              : "border-gray-200 bg-white hover:bg-gray-50",
+                          )}
+                        >
+                          <span className="block text-sm font-bold text-[#0A0F2C]">
+                            {item.network}
+                          </span>
+                          <span className="mt-1 block text-xs font-medium text-[#718096]">
+                            {item.networkName}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
 
-          {/* Deposit Status */}
-          <div className="rounded-[16px] bg-[#F8F9FA] p-5 sm:p-6">
-            <h3 className="mb-5 text-[15px] font-bold text-[#0A0F2C]">Deposit Status</h3>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <p className="text-[14px] font-medium text-[#718096]">Network</p>
-                <div className="rounded-full bg-[#E6F8EF] px-3 py-1">
-                  <p className="text-[12px] font-bold tracking-wide text-[#22C55E]">Active</p>
+                <label className="block">
+                  <span className="mb-2 block text-sm font-bold text-[#0A0F2C]">
+                    Expected deposit amount
+                  </span>
+                  <div className="flex overflow-hidden rounded-2xl border border-gray-200 bg-white focus-within:border-[#113285] focus-within:ring-4 focus-within:ring-[#113285]/10">
+                    <input
+                      inputMode="decimal"
+                      value={amount}
+                      onChange={(event) => setAmount(event.target.value.replace(/[^\d.]/g, ""))}
+                      placeholder="0.00"
+                      className="min-w-0 flex-1 px-4 py-4 text-lg font-bold text-[#0A0F2C] outline-none"
+                    />
+                    <span className="grid min-w-20 place-items-center border-l border-gray-100 bg-[#F8FAFC] px-4 text-sm font-bold text-[#113285]">
+                      {config.asset}
+                    </span>
+                  </div>
+                  <span className="mt-2 block text-xs font-medium text-[#718096]">
+                    Minimum deposit is {formatAmount(config.minAmount, config.asset)}.
+                  </span>
+                </label>
+
+                <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-4">
+                  <div className="flex gap-3">
+                    <Info className="mt-0.5 h-5 w-5 shrink-0 text-[#113285]" />
+                    <p className="text-sm leading-6 text-[#4A5568]">
+                      The QR contains the fixed company deposit address for this asset and network.
+                      The address is intentionally not displayed as plain text on this screen.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  disabled={!amountIsValid}
+                  onClick={() => setStep(1)}
+                  className="inline-flex w-full items-center justify-center rounded-2xl bg-[#113285] px-5 py-4 text-sm font-bold text-white transition-colors hover:bg-[#0D2768] disabled:cursor-not-allowed disabled:bg-gray-300 sm:w-auto"
+                >
+                  Continue to review
+                </button>
+              </div>
+
+              <DepositRules config={config} />
+            </section>
+          ) : null}
+
+          {step === 1 ? (
+            <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
+              <div className="rounded-2xl border border-gray-100 bg-[#F8FAFC] p-5">
+                <h3 className="text-base font-bold text-[#0A0F2C]">Review deposit details</h3>
+                <dl className="mt-5 grid gap-4 sm:grid-cols-2">
+                  <ReviewItem label="Asset" value={`${config.assetName} (${config.asset})`} />
+                  <ReviewItem label="Network" value={config.networkName} />
+                  <ReviewItem label="Expected amount" value={formatAmount(numericAmount, config.asset)} />
+                  <ReviewItem label="Deposit reference" value={reference} />
+                  <ReviewItem label="Confirmations" value={`${config.confirmations} required`} />
+                  <ReviewItem label="Estimated arrival" value={`~${config.arrivalTime}`} />
+                </dl>
+              </div>
+
+              <div className="space-y-4">
+                <div className="rounded-2xl border border-amber-200 bg-[#FFF9EA] p-4">
+                  <div className="flex gap-3">
+                    <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-[#B7791F]" />
+                    <p className="text-sm font-semibold leading-6 text-[#7A4B00]">
+                      Sending the wrong asset or network can permanently lose funds.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-3 sm:flex-row xl:flex-col">
+                  <button
+                    onClick={() => setStep(0)}
+                    className="flex-1 rounded-2xl border border-gray-200 bg-white px-5 py-3.5 text-sm font-bold text-[#0A0F2C] hover:bg-gray-50"
+                  >
+                    Edit details
+                  </button>
+                  <button
+                    onClick={() => setStep(2)}
+                    className="flex-1 rounded-2xl bg-[#113285] px-5 py-3.5 text-sm font-bold text-white hover:bg-[#0D2768]"
+                  >
+                    Generate QR
+                  </button>
                 </div>
               </div>
-              <div className="flex items-center justify-between">
-                <p className="text-[14px] font-medium text-[#718096]">Confirmations Required</p>
-                <p className="text-[15px] font-bold text-[#0A0F2C]">{asset.confirmations}</p>
-              </div>
-              <div className="flex items-center justify-between">
-                <p className="text-[14px] font-medium text-[#718096]">Estimated Time</p>
-                <p className="text-[15px] font-bold text-[#0A0F2C]">~{asset.arrivalTime}</p>
-              </div>
-            </div>
-          </div>
+            </section>
+          ) : null}
 
-        </div>
+          {step === 2 ? (
+            <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+              <div className="space-y-5">
+                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                  <div className="flex gap-3">
+                    <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-700" />
+                    <div>
+                      <p className="text-sm font-bold text-emerald-900">Deposit QR ready</p>
+                      <p className="mt-1 text-sm leading-6 text-emerald-800">
+                        Scan the QR from your external wallet and send only on {config.networkName}.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <FixedDepositQR config={config} />
+                <DepositRequestForm config={config} />
+              </div>
+
+              <div className="space-y-5">
+                <DepositRules config={config} />
+                <div className="rounded-2xl bg-[#F8FAFC] p-5">
+                  <h3 className="mb-4 text-sm font-bold text-[#0A0F2C]">Deposit Status</h3>
+                  {[
+                    ["QR generated", "Complete"],
+                    ["Awaiting transfer", "Pending"],
+                    ["Network confirmations", `${config.confirmations} required`],
+                    ["Admin review", "Manual"],
+                  ].map(([label, value], index) => (
+                    <div key={label} className="flex items-center gap-3 border-b border-gray-100 py-3 last:border-b-0">
+                      <span
+                        className={cn(
+                          "h-2.5 w-2.5 rounded-full",
+                          index === 0 ? "bg-emerald-500" : "bg-gray-300",
+                        )}
+                      />
+                      <span className="min-w-0 flex-1 text-sm font-semibold text-[#0A0F2C]">
+                        {label}
+                      </span>
+                      <span className="text-right text-xs font-bold text-[#718096]">{value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+          ) : null}
+        </main>
       </div>
+    </div>
+  );
+}
+
+function ReviewItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="text-xs font-semibold uppercase tracking-wide text-[#718096]">{label}</dt>
+      <dd className="mt-1 break-words text-sm font-bold text-[#0A0F2C]">{value}</dd>
+    </div>
+  );
+}
+
+function DepositRules({ config }: { config: DepositAddressConfig }) {
+  return (
+    <div className="rounded-2xl border border-[#FFEDCC] bg-[#FFF9EA] p-5">
+      <h3 className="mb-4 flex items-center gap-2 text-sm font-bold text-[#B7791F]">
+        <AlertTriangle className="h-4 w-4" />
+        Important instructions
+      </h3>
+      <ul className="space-y-3 text-sm font-medium leading-6 text-[#4A5568]">
+        <li>Send only {config.assetName} ({config.asset}) on {config.networkName}.</li>
+        <li>The QR uses a fixed company deposit address configured by admin.</li>
+        <li>Minimum deposit: {formatAmount(config.minAmount, config.asset)}.</li>
+        <li>Requires {config.confirmations} network confirmations.</li>
+        <li>Funds are reviewed manually before balance credit.</li>
+      </ul>
     </div>
   );
 }

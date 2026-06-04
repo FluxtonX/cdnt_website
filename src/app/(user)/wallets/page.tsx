@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Copy, QrCode, TriangleAlert, ArrowDownLeft, ArrowUpRight } from "lucide-react";
 import { CoinLogo } from "@/components/market/CoinLogo";
 import { getCoinBySymbol } from "@/config/coins";
@@ -139,20 +140,23 @@ export default function WalletsPage() {
             </div>
             <ul className="mt-3 space-y-2 text-sm text-gray-500 list-disc pl-5">
               <li>Only send {selectedWallet.name} to this address</li>
-              <li>Minimum deposit: 0.001 {selectedWallet.symbol === "USDT" ? "USTD" : selectedWallet.symbol}</li>
+              <li>Minimum deposit: 0.001 {selectedWallet.symbol}</li>
               <li>Requires 3 network confirmations</li>
               <li>Always verify the address before sending</li>
             </ul>
           </div>
 
           <div className="mt-6 flex gap-4">
-            <button className="flex-1 bg-primary-blue hover:bg-blue-800 text-white font-semibold rounded-xl py-3.5 flex items-center justify-center gap-2 transition-colors">
+            <Link
+              href={`/deposit?asset=${selectedWallet.symbol}`}
+              className="flex-1 bg-primary-blue hover:bg-blue-800 text-white font-semibold rounded-xl py-3.5 flex items-center justify-center gap-2 transition-colors"
+            >
               <ArrowDownLeft className="w-5 h-5" />
-              Deposit {selectedWallet.symbol === "USDT" ? "USTD" : selectedWallet.symbol}
-            </button>
+              Deposit {selectedWallet.symbol}
+            </Link>
             <button className="flex-1 bg-white border border-gray-200 hover:bg-gray-50 text-gray-900 font-semibold rounded-xl py-3.5 flex items-center justify-center gap-2 transition-colors">
               <ArrowUpRight className="w-5 h-5" />
-              Withdraw {selectedWallet.symbol === "USDT" ? "USTD" : selectedWallet.symbol}
+              Withdraw {selectedWallet.symbol}
             </button>
           </div>
         </div>
