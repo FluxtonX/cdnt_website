@@ -49,9 +49,17 @@ export default function RegisterPage() {
     
     setIsLoading(true);
     setError(null);
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!normalizedEmail || !password) {
+      setError("Please enter a valid email and password.");
+      setIsLoading(false);
+      return;
+    }
     
-    const { data, error: signUpError } = await supabase.auth.signUp({
-      email,
+    const { error: signUpError } = await supabase.auth.signUp({
+      email: normalizedEmail,
       password,
       options: {
         data: {
@@ -71,14 +79,14 @@ export default function RegisterPage() {
         await fetch("/api/auth/send-otp", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email }),
+          body: JSON.stringify({ email: normalizedEmail }),
         });
       } catch (err) {
         console.error("Failed to send initial OTP", err);
       }
       
       // Success, redirect to verify-email
-      router.push(`/verify-email?email=${encodeURIComponent(email)}`);
+      router.push(`/verify-email?email=${encodeURIComponent(normalizedEmail)}`);
     }
   };
 

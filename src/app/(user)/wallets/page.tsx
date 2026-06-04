@@ -1,42 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Copy, QrCode, TriangleAlert, ArrowDownLeft, ArrowUpRight, Bitcoin } from "lucide-react";
-import { useToast } from "@/components/ui/toast";
-
-const EthIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M12 2L4 13L12 18L20 13L12 2Z" />
-    <path d="M12 22L4 14L12 18L20 14L12 22Z" />
-  </svg>
-);
-
-const TetherIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M2 8h20v2h-9v12h-2V10H2z" />
-    <path d="M12 6c-4.418 0-8 1.343-8 3s3.582 3 8 3 8-1.343 8-3-3.582-3-8-3z" />
-  </svg>
-);
+import { Copy, QrCode, TriangleAlert, ArrowDownLeft, ArrowUpRight } from "lucide-react";
+import { CoinLogo } from "@/components/market/CoinLogo";
+import { getCoinBySymbol } from "@/config/coins";
 
 const walletsData = [
   {
@@ -49,7 +16,7 @@ const walletsData = [
     changeType: "positive",
     network: "Bitcoin Network",
     address: "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0w1",
-    icon: <Bitcoin className="w-6 h-6" />,
+    image: getCoinBySymbol("BTCUSDT")?.logoUrl,
     activities: [
       { id: 1, type: "Deposit", time: "2 hours ago", amount: "+0.05 BTC", amountType: "positive", status: "Confirmed" },
       { id: 2, type: "Withdrawal", time: "1 day ago", amount: "-0.02 BTC", amountType: "negative", status: "Confirmed" },
@@ -66,7 +33,7 @@ const walletsData = [
     changeType: "positive",
     network: "Ethereum Mainnet",
     address: "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0w1",
-    icon: <EthIcon />,
+    image: getCoinBySymbol("ETHUSDT")?.logoUrl,
     activities: [
       { id: 1, type: "Deposit", time: "2 hours ago", amount: "+0.05 ETH", amountType: "positive", status: "Confirmed" },
       { id: 2, type: "Withdrawal", time: "1 day ago", amount: "-0.02 ETH", amountType: "negative", status: "Confirmed" },
@@ -83,7 +50,7 @@ const walletsData = [
     changeType: "neutral",
     network: "ERC-20",
     address: "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0w1",
-    icon: <TetherIcon />,
+    image: "https://cryptologos.cc/logos/tether-usdt-logo.png",
     activities: [
       { id: 1, type: "Deposit", time: "2 hours ago", amount: "+0.05 USDT", amountType: "positive", status: "Confirmed" },
       { id: 2, type: "Withdrawal", time: "1 day ago", amount: "-0.02 USDT", amountType: "negative", status: "Confirmed" },
@@ -118,9 +85,7 @@ export default function WalletsPage() {
               }`}
             >
               <div className="flex justify-between items-start mb-6">
-                <div className="text-gray-700">
-                  {wallet.icon}
-                </div>
+                <CoinLogo src={wallet.image} symbol={wallet.symbol} className="h-10 w-10 p-1.5" />
                 <div className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
                   wallet.changeType === "positive" 
                     ? "bg-[#DCFCE7] text-[#16A34A]" 

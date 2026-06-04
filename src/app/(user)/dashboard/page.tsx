@@ -6,9 +6,7 @@ import {
   Eye, 
   ArrowDownLeft, 
   ArrowUpRight, 
-  TrendingUp,
-  Bitcoin,
-  ChevronRight
+  TrendingUp
 } from "lucide-react";
 import { 
   LineChart, 
@@ -21,6 +19,8 @@ import {
   Pie, 
   Cell 
 } from "recharts";
+import { CoinLogo } from "@/components/market/CoinLogo";
+import { getCoinBySymbol } from "@/config/coins";
 
 const performanceData = [
   { name: "Mon", value: 49000 },
@@ -40,6 +40,9 @@ const allocationData = [
 
 export default function DashboardPage() {
   const [hideBalance, setHideBalance] = useState(false);
+  const btcLogo = getCoinBySymbol("BTCUSDT")?.logoUrl;
+  const ethLogo = getCoinBySymbol("ETHUSDT")?.logoUrl;
+  const usdtLogo = "https://cryptologos.cc/logos/tether-usdt-logo.png";
 
   return (
     <div className="space-y-6">
@@ -170,9 +173,7 @@ export default function DashboardPage() {
         {/* Bitcoin Card */}
         <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex flex-col">
           <div className="flex items-start justify-between mb-4">
-            <div className="w-10 h-10 rounded-full bg-[#F3F4F6] flex items-center justify-center text-[#4A5568] font-bold font-serif text-lg">
-              ₿
-            </div>
+            <CoinLogo src={btcLogo} symbol="BTC" className="h-10 w-10 p-1.5" />
             <div className="bg-green-50 text-[#10B981] px-2 py-0.5 rounded text-[11px] font-bold border border-green-100">
               +12.3%
             </div>
@@ -185,9 +186,7 @@ export default function DashboardPage() {
         {/* Ethereum Card */}
         <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex flex-col">
           <div className="flex items-start justify-between mb-4">
-            <div className="w-10 h-10 rounded-full bg-[#F3F4F6] flex items-center justify-center text-[#4A5568] font-bold text-lg">
-              Ξ
-            </div>
+            <CoinLogo src={ethLogo} symbol="ETH" className="h-10 w-10 p-1.5" />
             <div className="bg-green-50 text-[#10B981] px-2 py-0.5 rounded text-[11px] font-bold border border-green-100">
               +8.37%
             </div>
@@ -200,9 +199,7 @@ export default function DashboardPage() {
         {/* Tether Card */}
         <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex flex-col">
           <div className="flex items-start justify-between mb-4">
-            <div className="w-10 h-10 rounded-full bg-[#FFFBEB] flex items-center justify-center text-[#F5A623] font-bold text-lg border border-[#FEFCBF]">
-              ₮
-            </div>
+            <CoinLogo src={usdtLogo} symbol="USDT" className="h-10 w-10 p-1.5" />
             <div className="bg-gray-100 text-[#718096] px-2 py-0.5 rounded text-[11px] font-bold">
               0.0%
             </div>

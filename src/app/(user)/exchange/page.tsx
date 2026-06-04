@@ -1,289 +1,383 @@
 "use client";
 
 import * as React from "react";
-import { ArrowDownUp, ArrowRight, CheckCircle2, ChevronDown, RefreshCw, TrendingUp, Zap } from "lucide-react";
-import { PageTitle, Panel } from "@/components/dashboard/blocks";
+import {
+  ArrowUpRight,
+  CircleDollarSign,
+  PanelRightClose,
+  PanelRightOpen,
+  Search,
+  TrendingDown,
+  TrendingUp,
+  Wallet,
+} from "lucide-react";
+import { COINS } from "@/config/coins";
+import { LiveCryptoChart } from "@/components/market/LiveCryptoChart";
+import { CoinLogo } from "@/components/market/CoinLogo";
 import { cn } from "@/lib/utils";
-import { useToast } from "@/components/ui/toast";
 
-const ASSETS = [
-  { symbol: "BTC", name: "Bitcoin", balance: "0.8421", priceCAD: 92350, image: "https://cryptologos.cc/logos/bitcoin-btc-logo.png" },
-  { symbol: "ETH", name: "Ethereum", balance: "8.2140", priceCAD: 3395, image: "https://cryptologos.cc/logos/ethereum-eth-logo.png" },
-  { symbol: "USDT", name: "Tether", balance: "19430.00", priceCAD: 1.0, image: "https://cryptologos.cc/logos/tether-usdt-logo.png" },
-  { symbol: "BNB", name: "Binance Coin", balance: "45.20", priceCAD: 840, image: "https://cryptologos.cc/logos/bnb-bnb-logo.png" },
-  { symbol: "SOL", name: "Solana", balance: "124.50", priceCAD: 210, image: "https://cryptologos.cc/logos/solana-sol-logo.png" },
-  { symbol: "XRP", name: "Ripple", balance: "12500.00", priceCAD: 0.65, image: "https://cryptologos.cc/logos/xrp-xrp-logo.png" },
-  { symbol: "CAD", name: "Canadian Dollar", balance: "88940.46", priceCAD: 1.0, image: "https://ui-avatars.com/api/?name=CAD&background=004A99&color=fff" },
-];
-
-const RATES: Record<string, Record<string, number>> = {
-  BTC: { ETH: 27.2, USDT: 92350, BNB: 110, SOL: 440, XRP: 142000, CAD: 92350 },
-  ETH: { BTC: 0.0368, USDT: 3395, BNB: 4, SOL: 16, XRP: 5200, CAD: 3395 },
-  USDT: { BTC: 0.0000108, ETH: 0.000295, BNB: 0.0012, SOL: 0.0047, XRP: 1.5, CAD: 1.0 },
-  CAD: { BTC: 0.0000108, ETH: 0.000295, USDT: 1.0, BNB: 0.0012, SOL: 0.0047, XRP: 1.5 },
+type Ticker24h = {
+  symbol: string;
+  lastPrice: number;
+  priceChange: number;
+  priceChangePercent: number;
+  highPrice: number;
+  lowPrice: number;
+  volume: number;
+  quoteVolume: number;
 };
 
-function AssetSelector({
-  value, onChange, exclude,
-}: { value: string; onChange: (s: string) => void; exclude: string }) {
-  const [open, setOpen] = React.useState(false);
-  const asset = ASSETS.find((a) => a.symbol === value)!;
+type Candle = {
+  time: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+};
+
+const DEMO_BALANCES: Record<string, number> = {
+  BTCUSDT: 0.8421,
+  ETHUSDT: 8.214,
+  BNBUSDT: 45.2,
+  SOLUSDT: 124.5,
+  XRPUSDT: 12500,
+  ADAUSDT: 8400,
+};
+
+function formatCurrency(value: number) {
+  return value.toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+export default function ExchangePage() {
+  const [selectedCoin, setSelectedCoin] = React.useState(COINS[0]);
+  const [ticker, setTicker] = React.useState<Ticker24h | null>(null);
+  const [latestCandle, setLatestCandle] = React.useState<Candle | null>(null);
+  const [tickerError, setTickerError] = React.useState<string | null>(null);
+  const [orderPanelOpen, setOrderPanelOpen] = React.useState(true);
+  const [side, setSide] = React.useState<"buy" | "sell">("buy");
+  const [amount, setAmount] = React.useState("");
+
+  React.useEffect(() => {
+    const controller = new AbortController();
+
+    async function loadTicker() {
+      setTickerError(null);
+      try {
+        const response = await fetch(`/api/market/ticker?symbol=${selectedCoin.symbol}`, {
+          signal: controller.signal,
+        });
+        if (!response.ok) {
+          const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+          throw new Error(payload?.error ?? "Failed to load 24h market stats");
+        }
+        const data = (await response.json()) as Ticker24h;
+        setTicker(data);
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          setTickerError(error instanceof Error ? error.message : "Failed to load ticker");
+        }
+      }
+    }
+
+    loadTicker();
+    const timer = window.setInterval(loadTicker, 15000);
+    return () => {
+      controller.abort();
+      window.clearInterval(timer);
+    };
+  }, [selectedCoin]);
+
+  const livePrice = latestCandle?.close ?? ticker?.lastPrice ?? 0;
+  const changePercent = ticker?.priceChangePercent ?? 0;
+  const amountValue = Number(amount) || 0;
+  const assetBalance = DEMO_BALANCES[selectedCoin.symbol] ?? 0;
+  const estimatedCrypto = side === "buy" && amountValue > 0 && livePrice > 0 ? amountValue / livePrice : 0;
+  const estimatedUsd = side === "sell" && amountValue > 0 ? amountValue * livePrice : 0;
+  const fee = side === "buy" ? amountValue * 0.005 : estimatedUsd * 0.004;
+  const total = side === "buy" ? amountValue + fee : Math.max(0, estimatedUsd - fee);
+
+  function switchSide(nextSide: "buy" | "sell") {
+    setSide(nextSide);
+    setAmount("");
+  }
 
   return (
-    <div className="relative">
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-2 rounded-xl border-2 border-banking-border bg-white px-4 py-3 font-bold text-banking-text hover:border-banking-blue transition-all min-w-[150px]"
-      >
-        <div className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white shadow-sm border border-banking-border">
-          <img src={asset.image} alt={asset.symbol} className="h-full w-full object-contain" />
+    <div className="space-y-6">
+      <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-end">
+        <div>
+          <h1 className="text-3xl font-black tracking-normal text-[#0A0F2C]">Buy / Sell</h1>
+          <p className="mt-2 text-sm font-medium text-[#718096]">Live Binance market data for crypto charting and market stats</p>
         </div>
-        {asset.symbol}
-        <ChevronDown className="h-4 w-4 text-banking-muted ml-auto" />
-      </button>
-      {open && (
-        <div className="absolute top-full left-0 mt-1 w-56 rounded-xl border border-banking-border bg-white shadow-2xl z-20 overflow-hidden">
-          <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
-            {ASSETS.filter((a) => a.symbol !== exclude).map((a) => {
+        <div className="grid grid-cols-2 gap-6 text-right">
+          <div>
+            <p className="text-xs font-semibold text-[#718096]">Total Portfolio</p>
+            <p className="text-xl font-black text-[#0A0F2C]">$51,750.00</p>
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-[#718096]">Available USDT</p>
+            <p className="text-xl font-black text-[#F5A400]">$12,450.00</p>
+          </div>
+        </div>
+      </div>
+
+      <div
+        className={cn(
+          "grid gap-4",
+          orderPanelOpen
+            ? "xl:grid-cols-[190px_minmax(0,1fr)_230px] 2xl:grid-cols-[200px_minmax(0,1fr)_240px]"
+            : "xl:grid-cols-[190px_minmax(0,1fr)_48px] 2xl:grid-cols-[200px_minmax(0,1fr)_48px]",
+        )}
+      >
+        <aside className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+          <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+            <Search className="h-4 w-4 text-slate-500" />
+            <input className="w-full bg-transparent text-sm font-medium outline-none placeholder:text-slate-400" placeholder="Search markets" />
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 rounded-lg bg-slate-100 p-1 text-xs font-bold text-slate-500">
+            <button type="button" className="rounded-md bg-white py-2 text-[#113285] shadow-sm">Crypto</button>
+            <button type="button" className="py-2">Stablecoins</button>
+          </div>
+
+          <div className="mt-4 space-y-2">
+            {COINS.map((coin) => {
+              const active = selectedCoin.symbol === coin.symbol;
+              const rowChange = active ? changePercent : 0;
               return (
                 <button
-                  key={a.symbol}
-                  onClick={() => { onChange(a.symbol); setOpen(false); }}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-banking-text hover:bg-banking-offWhite transition-colors"
+                  key={coin.symbol}
+                  type="button"
+                  onClick={() => {
+                    setSelectedCoin(coin);
+                    setAmount("");
+                    setLatestCandle(null);
+                  }}
+                  className={cn(
+                    "flex w-full items-center gap-2 rounded-xl border px-2.5 py-3 text-left transition-all",
+                    active ? "border-[#113285] bg-blue-50" : "border-transparent hover:bg-slate-50",
+                  )}
                 >
-                  <div className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white shadow-sm border border-banking-border">
-                    <img src={a.image} alt={a.symbol} className="h-full w-full object-contain" />
-                  </div>
-                  <span>{a.symbol}</span>
-                  <span className="text-banking-muted ml-auto text-[10px] uppercase">{a.name}</span>
+                  <CoinLogo src={coin.logoUrl} symbol={coin.baseAsset} className="h-7 w-7 p-1" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-black text-[#0A0F2C]">{coin.pairLabel}</span>
+                    <span className="block text-xs font-medium text-[#718096]">{coin.label}</span>
+                  </span>
+                  {active && (
+                    <span className={cn("text-xs font-black", rowChange >= 0 ? "text-emerald-600" : "text-red-500")}>
+                      {rowChange >= 0 ? "+" : ""}{rowChange.toFixed(2)}%
+                    </span>
+                  )}
                 </button>
               );
             })}
           </div>
-        </div>
-      )}
-    </div>
-  );
-}
+        </aside>
 
-export default function ExchangePage() {
-  const { notify } = useToast();
-  const [from, setFrom] = React.useState("USDT");
-  const [to, setTo] = React.useState("BTC");
-  const [amount, setAmount] = React.useState("");
-  const [done, setDone] = React.useState(false);
-  const [loading, setLoading] = React.useState(false);
-
-  const fromAsset = ASSETS.find((a) => a.symbol === from)!;
-  const toAsset = ASSETS.find((a) => a.symbol === to)!;
-  const rate = RATES[from]?.[to] ?? 1;
-  const received = amount && !isNaN(parseFloat(amount)) ? (parseFloat(amount) * rate).toFixed(to === "BTC" ? 8 : to === "ETH" ? 6 : 2) : "—";
-
-  function swap() {
-    const tmp = from;
-    setFrom(to);
-    setTo(tmp);
-    setAmount("");
-  }
-
-  function handleExchange() {
-    if (!amount || parseFloat(amount) <= 0) return;
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      setDone(true);
-      notify({ title: "Exchange Complete", description: `${amount} ${from} → ${received} ${to}` });
-    }, 1800);
-  }
-
-  if (done) {
-    return (
-      <>
-        <PageTitle title="Currency Exchange" description="Instantly convert between crypto assets and CAD." />
-        <Panel title="Exchange Successful">
-          <div className="text-center py-10">
-            <div className="grid h-20 w-20 place-items-center rounded-full bg-emerald-100 mx-auto mb-4">
-              <CheckCircle2 className="h-10 w-10 text-emerald-500" />
-            </div>
-            <h3 className="text-2xl font-bold text-banking-text">Exchange Complete!</h3>
-            <p className="mt-2 text-banking-muted text-sm">Your assets have been converted instantly.</p>
-            <div className="mt-6 inline-flex items-center gap-4 rounded-xl border border-banking-border bg-banking-offWhite px-8 py-4">
-              <div className="text-center">
-                <p className="text-xs text-banking-muted">You Sent</p>
-                <p className="font-bold text-banking-text text-lg">{amount} {from}</p>
-              </div>
-              <ArrowRight className="h-5 w-5 text-banking-gold" />
-              <div className="text-center">
-                <p className="text-xs text-banking-muted">You Got</p>
-                <p className="font-bold text-banking-blue text-lg">{received} {to}</p>
+        <section className="min-w-0 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="mb-4 flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
+            <div className="flex items-center gap-3">
+              <CoinLogo src={selectedCoin.logoUrl} symbol={selectedCoin.baseAsset} className="h-10 w-10 p-1.5" />
+              <div>
+                <h2 className="text-xl font-black text-[#0A0F2C]">{selectedCoin.pairLabel}</h2>
+                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-500">
+                  <span>Open</span>
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  <span>Binance spot market</span>
+                </div>
               </div>
             </div>
-            <button
-              onClick={() => { setDone(false); setAmount(""); }}
-              className="mt-8 rounded-xl bg-banking-blue px-8 py-3 text-sm font-bold text-white hover:bg-banking-navy transition-all"
-            >
-              New Exchange
-            </button>
           </div>
-        </Panel>
-      </>
-    );
-  }
 
-  return (
-    <>
-      <PageTitle
-        title="Currency Exchange"
-        description="Instantly convert between BTC, ETH, USDT, and CAD at live rates — no hidden fees."
-      />
-
-      <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
-        {/* Exchange Form */}
-        <Panel title="Instant Converter">
-          <div className="space-y-4">
-            {/* From */}
-            <div className="rounded-xl border-2 border-banking-border bg-white p-4">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-banking-muted">From</span>
-                <span className="text-xs text-banking-muted">Balance: <span className="font-bold text-banking-text">{fromAsset.balance} {from}</span></span>
-              </div>
-              <div className="flex items-center gap-4">
-                <AssetSelector value={from} onChange={(s) => { setFrom(s); setAmount(""); }} exclude={to} />
-                <div className="flex-1">
-                  <input
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    placeholder="0.00"
-                    type="number"
-                    className="w-full bg-transparent text-right text-2xl font-bold text-banking-text outline-none placeholder:text-banking-muted/30"
-                  />
-                </div>
-              </div>
-              <div className="flex justify-between mt-2">
-                <div className="flex gap-2">
-                  {["25%", "50%", "75%", "MAX"].map((pct) => (
-                    <button
-                      key={pct}
-                      onClick={() => {
-                        const bal = parseFloat(fromAsset.balance.replace(",", ""));
-                        const mult = pct === "MAX" ? 1 : parseFloat(pct) / 100;
-                        setAmount((bal * mult).toFixed(from === "BTC" ? 8 : from === "ETH" ? 6 : 2));
-                      }}
-                      className="rounded-lg bg-banking-offWhite border border-banking-border px-2 py-1 text-[10px] font-bold text-banking-muted hover:border-banking-blue hover:text-banking-blue transition-all"
-                    >
-                      {pct}
-                    </button>
-                  ))}
-                </div>
-                {amount && <p className="text-xs text-banking-muted">≈ ${(parseFloat(amount || "0") * fromAsset.priceCAD).toLocaleString(undefined, { maximumFractionDigits: 2 })} CAD</p>}
-              </div>
+          <div className="mb-4 flex flex-col justify-between gap-3 lg:flex-row lg:items-end">
+            <div className="flex flex-wrap items-baseline gap-2">
+              <span className="text-3xl font-black text-[#0A0F2C]">{livePrice > 0 ? `$${livePrice.toLocaleString("en-US", { maximumFractionDigits: 2 })}` : "--"}</span>
+              <span className={cn("flex items-center gap-1 text-sm font-black", changePercent >= 0 ? "text-emerald-600" : "text-red-500")}>
+                {changePercent >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+                {changePercent >= 0 ? "+" : ""}{changePercent.toFixed(2)}%
+              </span>
+              {tickerError && <span className="text-xs font-bold text-red-500">{tickerError}</span>}
             </div>
-
-            {/* Swap Button */}
-            <div className="flex justify-center">
-              <button
-                onClick={swap}
-                className="grid h-10 w-10 place-items-center rounded-full border-2 border-banking-border bg-white text-banking-muted hover:border-banking-blue hover:text-banking-blue hover:rotate-180 transition-all duration-300"
-              >
-                <ArrowDownUp className="h-4 w-4" />
-              </button>
+            <div className="grid grid-cols-4 gap-3 text-xs font-semibold text-slate-500">
+              <span>O <b className="text-[#0A0F2C]">{latestCandle?.open.toFixed(2) ?? "--"}</b></span>
+              <span>H <b className="text-emerald-600">{latestCandle?.high.toFixed(2) ?? ticker?.highPrice.toFixed(2) ?? "--"}</b></span>
+              <span>L <b className="text-red-500">{latestCandle?.low.toFixed(2) ?? ticker?.lowPrice.toFixed(2) ?? "--"}</b></span>
+              <span>C <b className="text-[#0A0F2C]">{latestCandle?.close.toFixed(2) ?? "--"}</b></span>
             </div>
+          </div>
 
-            {/* To */}
-            <div className="rounded-xl border-2 border-banking-blue/30 bg-blue-50/30 p-4">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-banking-muted">To</span>
-                <span className="text-xs text-banking-muted">Balance: <span className="font-bold text-banking-text">{toAsset.balance} {to}</span></span>
-              </div>
-              <div className="flex items-center gap-4">
-                <AssetSelector value={to} onChange={(s) => setTo(s)} exclude={from} />
-                <div className="flex-1 text-right">
-                  <p className="text-2xl font-bold text-banking-blue">{received}</p>
-                  <p className="text-xs text-banking-muted mt-1">{to}</p>
-                </div>
-              </div>
-            </div>
+          <LiveCryptoChart
+            symbol={selectedCoin.symbol}
+            defaultInterval="1h"
+            onLatestCandleChange={setLatestCandle}
+            onOpenPreview={() => window.location.assign(`/exchange/preview?symbol=${selectedCoin.symbol}`)}
+          />
 
-            {/* Rate + Fee */}
-            {amount && parseFloat(amount) > 0 && (
-              <div className="rounded-xl border border-banking-border bg-banking-offWhite p-4 space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-banking-muted font-semibold">Exchange Rate</span>
-                  <span className="font-bold text-banking-text">1 {from} = {rate.toLocaleString(undefined, { maximumFractionDigits: 8 })} {to}</span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-banking-muted font-semibold">Platform Fee</span>
-                  <span className="font-bold text-emerald-600">0.00% — Free</span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-banking-muted font-semibold">You Receive</span>
-                  <span className="font-bold text-banking-blue">{received} {to}</span>
-                </div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              ["24h High", ticker ? `$${ticker.highPrice.toLocaleString("en-US", { maximumFractionDigits: 2 })}` : "--"],
+              ["24h Low", ticker ? `$${ticker.lowPrice.toLocaleString("en-US", { maximumFractionDigits: 2 })}` : "--"],
+              ["24h Volume", ticker ? ticker.volume.toLocaleString("en-US", { maximumFractionDigits: 2 }) : "--"],
+              ["Quote Volume", ticker ? `$${ticker.quoteVolume.toLocaleString("en-US", { maximumFractionDigits: 0 })}` : "--"],
+              ["Market Status", "Open"],
+              ["Network", selectedCoin.label],
+            ].map(([label, value]) => (
+              <div key={label} className="rounded-lg bg-blue-50 px-4 py-3">
+                <p className="text-xs font-semibold text-[#718096]">{label}</p>
+                <p className="mt-1 text-sm font-black text-[#0A0F2C]">{value}</p>
               </div>
+            ))}
+          </div>
+        </section>
+
+        <aside className={cn("relative rounded-xl border border-slate-200 bg-white shadow-sm transition-all", orderPanelOpen ? "p-3" : "p-2")}>
+          <button
+            type="button"
+            title={orderPanelOpen ? "Hide order panel" : "Show order panel"}
+            aria-label={orderPanelOpen ? "Hide order panel" : "Show order panel"}
+            onClick={() => setOrderPanelOpen((value) => !value)}
+            className={cn(
+              "grid h-9 w-9 place-items-center rounded-lg border border-slate-200 bg-white text-[#113285] shadow-sm transition-colors hover:bg-blue-50",
+              orderPanelOpen ? "absolute -left-3 top-3 z-20" : "mx-auto",
             )}
+          >
+            {orderPanelOpen ? <PanelRightClose className="h-4 w-4" /> : <PanelRightOpen className="h-4 w-4" />}
+          </button>
 
-            <button
-              onClick={handleExchange}
-              disabled={!amount || parseFloat(amount) <= 0 || loading}
-              className={cn(
-                "w-full flex items-center justify-center gap-2 rounded-xl py-4 text-sm font-bold transition-all",
-                amount && parseFloat(amount) > 0 && !loading
-                  ? "bg-banking-gold text-banking-ink hover:bg-amber-400 shadow-lg"
-                  : "bg-slate-100 text-slate-400 cursor-not-allowed"
-              )}
-            >
-              {loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
-              {loading ? "Processing..." : `Convert ${from} → ${to}`}
-            </button>
-          </div>
-        </Panel>
-
-        {/* Right Panel — Live Rates */}
-        <div className="space-y-4">
-          <Panel title="Live Market Rates">
-            <div className="space-y-3">
-              {[
-                { pair: "BTC / CAD", rate: "$92,350", change: "+2.4%", up: true },
-                { pair: "ETH / CAD", rate: "$3,395", change: "+1.1%", up: true },
-                { pair: "USDT / CAD", rate: "$1.00", change: "0.0%", up: true },
-                { pair: "BTC / ETH", rate: "27.2 ETH", change: "+1.2%", up: true },
-              ].map((r) => (
-                <div key={r.pair} className="flex items-center justify-between rounded-xl bg-banking-offWhite border border-banking-border px-4 py-3">
-                  <div>
-                    <p className="text-sm font-bold text-banking-text">{r.pair}</p>
-                    <p className="text-xs text-banking-muted">{r.rate}</p>
-                  </div>
-                  <span className={cn("flex items-center gap-1 text-xs font-bold", r.up ? "text-emerald-600" : "text-red-500")}>
-                    <TrendingUp className="h-3 w-3" />
-                    {r.change}
-                  </span>
-                </div>
-              ))}
+          {!orderPanelOpen && (
+            <div className="mt-4 flex h-[520px] flex-col items-center justify-center gap-4">
+              <span className="grid h-9 w-9 place-items-center rounded-full bg-[#113285] text-white">
+                <Wallet className="h-4 w-4" />
+              </span>
+              <span className="[writing-mode:vertical-rl] rotate-180 text-xs font-black uppercase tracking-widest text-[#113285]">
+                Buy / Sell
+              </span>
             </div>
-          </Panel>
+          )}
 
-          <Panel title="Recent Exchanges">
-            <div className="space-y-3">
-              {[
-                { from: "USDT", to: "BTC", amt: "5,000 USDT", got: "0.0541 BTC", time: "2h ago" },
-                { from: "ETH", to: "USDT", amt: "2.0 ETH", got: "6,790 USDT", time: "1d ago" },
-                { from: "BTC", to: "CAD", amt: "0.1 BTC", got: "$9,235", time: "3d ago" },
-              ].map((r) => (
-                <div key={r.time} className="flex items-center justify-between text-sm border-b border-banking-border pb-3 last:border-0 last:pb-0">
-                  <div>
-                    <p className="font-bold text-banking-text">{r.from} → {r.to}</p>
-                    <p className="text-xs text-banking-muted">{r.amt}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-bold text-banking-blue">{r.got}</p>
-                    <p className="text-xs text-banking-muted">{r.time}</p>
-                  </div>
+          {orderPanelOpen && (
+            <>
+              <div className="grid grid-cols-2 rounded-xl bg-slate-50 p-1">
+                <button
+                  type="button"
+                  onClick={() => switchSide("buy")}
+                  className={cn("rounded-lg py-3 text-sm font-black transition-colors", side === "buy" ? "bg-emerald-600 text-white shadow-sm" : "text-slate-500")}
+                >
+                  Buy
+                </button>
+                <button
+                  type="button"
+                  onClick={() => switchSide("sell")}
+                  className={cn("rounded-lg py-3 text-sm font-black transition-colors", side === "sell" ? "bg-[#113285] text-white shadow-sm" : "text-slate-500")}
+                >
+                  Sell
+                </button>
+              </div>
+
+              <div className="mt-4">
+                <p className="text-xs font-bold uppercase tracking-widest text-[#718096]">
+                  {side === "buy" ? "Buy mode" : "Sell mode"}
+                </p>
+                <h3 className="mt-1 text-lg font-black text-[#0A0F2C]">
+                  {side === "buy" ? `Buy ${selectedCoin.baseAsset}` : `Sell ${selectedCoin.baseAsset}`}
+                </h3>
+              </div>
+
+              <div className={cn("mt-4 rounded-xl border p-4", side === "buy" ? "border-blue-200 bg-blue-50" : "border-emerald-200 bg-emerald-50")}>
+                <div className="flex items-center gap-2 text-xs font-bold text-[#113285]">
+                  <Wallet className="h-4 w-4" />
+                  Available Balance
                 </div>
-              ))}
-            </div>
-          </Panel>
-        </div>
+                <p className="mt-2 text-lg font-black text-[#113285]">
+                  {side === "buy" ? "$12,450.00" : `${assetBalance.toLocaleString("en-US", { maximumFractionDigits: 8 })} ${selectedCoin.baseAsset}`}
+                </p>
+              </div>
+
+              <label className="mt-5 block text-sm font-black text-[#0A0F2C]">
+                {side === "buy" ? "Amount in USDT" : `Amount in ${selectedCoin.baseAsset}`}
+              </label>
+              <input
+                value={amount}
+                onChange={(event) => setAmount(event.target.value)}
+                inputMode="decimal"
+                placeholder={side === "buy" ? "0.00" : "0.00000000"}
+                className="mt-2 h-14 w-full rounded-xl border border-slate-200 px-4 text-lg font-black text-[#0A0F2C] outline-none transition focus:border-[#113285] focus:ring-4 focus:ring-blue-100"
+              />
+
+              <label className="mt-5 block text-sm font-black text-[#0A0F2C]">
+                {side === "buy" ? `Estimated ${selectedCoin.baseAsset}` : "Estimated USDT"}
+              </label>
+              <div className="mt-2 flex h-14 items-center rounded-xl border border-slate-200 bg-slate-50 px-4 text-lg font-black text-slate-400">
+                {side === "buy"
+                  ? estimatedCrypto > 0 ? estimatedCrypto.toFixed(selectedCoin.baseAsset === "BTC" ? 8 : 4) : "0.00000000"
+                  : estimatedUsd > 0 ? `$${estimatedUsd.toLocaleString("en-US", { maximumFractionDigits: 2 })}` : "$0.00"}
+              </div>
+
+              <div className="mt-4 grid grid-cols-4 gap-2">
+                {(side === "buy" ? [100, 500, 1000] : [25, 50, 75]).map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => {
+                      if (side === "buy") {
+                        setAmount(String(value));
+                      } else {
+                        setAmount(((assetBalance * value) / 100).toFixed(selectedCoin.baseAsset === "BTC" ? 8 : 4));
+                      }
+                    }}
+                    className="rounded-lg border border-slate-200 px-2 py-2 text-xs font-bold text-[#0A0F2C] hover:border-[#113285]"
+                  >
+                    {side === "buy" ? `$${value}` : `${value}%`}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setAmount(side === "buy" ? "12450" : assetBalance.toFixed(selectedCoin.baseAsset === "BTC" ? 8 : 4))}
+                  className="rounded-lg border border-slate-200 px-2 py-2 text-xs font-bold text-[#0A0F2C] hover:border-[#113285]"
+                >
+                  Max
+                </button>
+              </div>
+
+              <div className="mt-5 space-y-3 rounded-xl bg-slate-50 p-4 text-sm">
+                <div className="flex justify-between gap-3">
+                  <span className="font-semibold text-[#718096]">Market Price</span>
+                  <span className="font-black text-[#0A0F2C]">{livePrice > 0 ? `$${livePrice.toLocaleString("en-US", { maximumFractionDigits: 2 })}` : "--"}</span>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <span className="font-semibold text-[#718096]">Fee ({side === "buy" ? "0.50" : "0.40"}%)</span>
+                  <span className="font-black text-[#0A0F2C]">{formatCurrency(fee)}</span>
+                </div>
+                <div className="flex justify-between gap-3 border-t border-slate-200 pt-3">
+                  <span className="font-black text-[#0A0F2C]">{side === "buy" ? "Total Cost" : "Net Proceeds"}</span>
+                  <span className="font-black text-[#0A0F2C]">{formatCurrency(total)}</span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                className={cn(
+                  "mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-xl text-sm font-black text-white transition-colors",
+                  side === "buy" ? "bg-emerald-500 hover:bg-emerald-600" : "bg-[#113285] hover:bg-[#0D266A]",
+                )}
+              >
+                {side === "buy" ? "Buy" : "Sell"} Order
+                <ArrowUpRight className="h-4 w-4" />
+              </button>
+
+              <p className="mt-4 flex gap-2 text-xs font-medium leading-5 text-[#718096]">
+                <CircleDollarSign className="mt-0.5 h-4 w-4 shrink-0" />
+                Orders are reviewed before confirmation. Live Binance market price may change.
+              </p>
+            </>
+          )}
+        </aside>
       </div>
-    </>
+    </div>
   );
 }

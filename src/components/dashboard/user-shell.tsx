@@ -9,6 +9,7 @@ import {
   ChevronDown,
   LayoutDashboard, 
   Wallet, 
+  BarChart3,
   ArrowRightLeft, 
   Settings, 
   HelpCircle,
@@ -25,6 +26,7 @@ import { useState, useRef, useEffect } from "react";
 const sidebarNav = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Wallets", href: "/wallets", icon: Wallet },
+  { label: "Buy / Sell", href: "/exchange", icon: BarChart3 },
   { label: "Transactions", href: "/transactions", icon: ArrowRightLeft },
   { label: "Settings", href: "/settings", icon: Settings },
   { label: "Help & Support", href: "/support", icon: HelpCircle },
