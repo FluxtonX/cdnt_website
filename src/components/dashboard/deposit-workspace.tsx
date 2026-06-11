@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -12,6 +12,7 @@ import {
 import { CoinLogo } from "@/components/market/CoinLogo";
 import { DepositRequestForm } from "@/components/deposit/DepositRequestForm";
 import { FixedDepositQR } from "@/components/deposit/FixedDepositQR";
+import { BinancePayQR } from "@/components/deposit/BinancePayQR";
 import {
   type DepositAddressConfig,
   type DepositAsset,
@@ -40,6 +41,19 @@ export function DepositWorkspace({ initialAsset }: { initialAsset?: string }) {
   const [step, setStep] = useState(0);
   const [reference] = useState(() => `NUD-${Date.now().toString(36).toUpperCase()}`);
 
+  const [paymentMethod, setPaymentMethod] = useState<"binance_pay" | "direct">("binance_pay");
+  const [loadingOrder, setLoadingOrder] = useState(false);
+  const [binanceOrder, setBinanceOrder] = useState<{
+    tradeNo: string;
+    prepayId: string;
+    qrContent: string;
+    checkoutUrl: string;
+  } | null>(null);
+  const [paymentStatus, setPaymentStatus] = useState<string>("PENDING");
+  const [checkingStatus, setCheckingStatus] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
+
   const networks = getDepositNetworks(asset);
   const config = useMemo<DepositAddressConfig>(
     () => getDepositConfig(asset, network),
@@ -48,12 +62,90 @@ export function DepositWorkspace({ initialAsset }: { initialAsset?: string }) {
   const numericAmount = Number(amount);
   const amountIsValid = Number.isFinite(numericAmount) && numericAmount >= config.minAmount;
 
+  const handleCheckStatus = async (tradeNo: string) => {
+    setCheckingStatus(true);
+    try {
+      const res = await fetch(`/api/deposit/verify-order?tradeNo=${tradeNo}`);
+      if (res.ok) {
+        const data = await res.json();
+        setPaymentStatus(data.status);
+        if (data.status === "PAID") {
+          if (pollingInterval) clearInterval(pollingInterval);
+          window.location.href = "/deposit/success";
+        }
+      }
+    } catch (e) {
+      console.error("Error verifying payment status:", e);
+    } finally {
+      setCheckingStatus(false);
+    }
+  };
+
+  const handleGenerateQR = async () => {
+    if (paymentMethod === "direct") {
+      setStep(2);
+      return;
+    }
+
+    setLoadingOrder(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/deposit/create-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: numericAmount, asset }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to create Binance Pay order");
+      }
+      setBinanceOrder(data);
+      setPaymentStatus("PENDING");
+      setStep(2);
+
+      // Start polling
+      if (pollingInterval) clearInterval(pollingInterval);
+      const interval = setInterval(async () => {
+        try {
+          const checkRes = await fetch(`/api/deposit/verify-order?tradeNo=${data.tradeNo}`);
+          if (checkRes.ok) {
+            const checkData = await checkRes.json();
+            setPaymentStatus(checkData.status);
+            if (checkData.status === "PAID") {
+              clearInterval(interval);
+              window.location.href = "/deposit/success";
+            }
+          }
+        } catch (e) {
+          console.error("Error polling order status:", e);
+        }
+      }, 4000);
+      setPollingInterval(interval);
+    } catch (err: any) {
+      setError(err.message || "An error occurred");
+    } finally {
+      setLoadingOrder(false);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (pollingInterval) clearInterval(pollingInterval);
+    };
+  }, [pollingInterval]);
+
   const handleAssetChange = (nextAsset: DepositAsset) => {
     const nextConfig = getDepositConfig(nextAsset);
     setAsset(nextConfig.asset);
     setNetwork(nextConfig.network);
     setAmount("");
     setStep(0);
+    setBinanceOrder(null);
+    setError(null);
+    if (pollingInterval) {
+      clearInterval(pollingInterval);
+      setPollingInterval(null);
+    }
   };
 
   return (
@@ -204,12 +296,53 @@ export function DepositWorkspace({ initialAsset }: { initialAsset?: string }) {
                   </span>
                 </label>
 
+                <div>
+                  <p className="mb-2 text-sm font-bold text-[#0A0F2C]">Select Deposit Method</p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod("binance_pay")}
+                      className={cn(
+                        "rounded-2xl border px-4 py-3.5 text-left transition-colors",
+                        paymentMethod === "binance_pay"
+                          ? "border-[#113285] bg-[#EEF4FF]"
+                          : "border-gray-200 bg-white hover:bg-gray-50"
+                      )}
+                    >
+                      <span className="block text-sm font-bold text-[#0A0F2C]">
+                        Binance Pay
+                      </span>
+                      <span className="mt-1 block text-xs font-medium text-[#718096]">
+                        Instant automated payment verification
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod("direct")}
+                      className={cn(
+                        "rounded-2xl border px-4 py-3.5 text-left transition-colors",
+                        paymentMethod === "direct"
+                          ? "border-[#113285] bg-[#EEF4FF]"
+                          : "border-gray-200 bg-white hover:bg-gray-50"
+                      )}
+                    >
+                      <span className="block text-sm font-bold text-[#0A0F2C]">
+                        Direct Crypto Transfer
+                      </span>
+                      <span className="mt-1 block text-xs font-medium text-[#718096]">
+                        Manual verification with transaction hash
+                      </span>
+                    </button>
+                  </div>
+                </div>
+
                 <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-4">
                   <div className="flex gap-3">
                     <Info className="mt-0.5 h-5 w-5 shrink-0 text-[#113285]" />
                     <p className="text-sm leading-6 text-[#4A5568]">
-                      The QR contains the fixed company deposit address for this asset and network.
-                      The address is intentionally not displayed as plain text on this screen.
+                      {paymentMethod === "binance_pay"
+                        ? "You will generate a dynamic Binance Pay payment QR code. Paying through your Binance app will verify and credit your balance instantly."
+                        : "The QR contains the fixed company deposit address for this asset and network. The address is intentionally not displayed as plain text on this screen."}
                     </p>
                   </div>
                 </div>
@@ -233,11 +366,16 @@ export function DepositWorkspace({ initialAsset }: { initialAsset?: string }) {
                 <h3 className="text-base font-bold text-[#0A0F2C]">Review deposit details</h3>
                 <dl className="mt-5 grid gap-4 sm:grid-cols-2">
                   <ReviewItem label="Asset" value={`${config.assetName} (${config.asset})`} />
-                  <ReviewItem label="Network" value={config.networkName} />
+                  <ReviewItem label="Network" value={paymentMethod === "binance_pay" ? "Binance Pay Network" : config.networkName} />
                   <ReviewItem label="Expected amount" value={formatAmount(numericAmount, config.asset)} />
-                  <ReviewItem label="Deposit reference" value={reference} />
-                  <ReviewItem label="Confirmations" value={`${config.confirmations} required`} />
-                  <ReviewItem label="Estimated arrival" value={`~${config.arrivalTime}`} />
+                  <ReviewItem label="Payment Method" value={paymentMethod === "binance_pay" ? "Binance Pay (Automated)" : "Direct Crypto Transfer (Manual)"} />
+                  {paymentMethod === "direct" && (
+                    <>
+                      <ReviewItem label="Deposit reference" value={reference} />
+                      <ReviewItem label="Confirmations" value={`${config.confirmations} required`} />
+                      <ReviewItem label="Estimated arrival" value={`~${config.arrivalTime}`} />
+                    </>
+                  )}
                 </dl>
               </div>
 
@@ -250,18 +388,34 @@ export function DepositWorkspace({ initialAsset }: { initialAsset?: string }) {
                     </p>
                   </div>
                 </div>
+
+                {error && (
+                  <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">
+                    {error}
+                  </div>
+                )}
+
                 <div className="flex flex-col gap-3 sm:flex-row xl:flex-col">
                   <button
+                    disabled={loadingOrder}
                     onClick={() => setStep(0)}
-                    className="flex-1 rounded-2xl border border-gray-200 bg-white px-5 py-3.5 text-sm font-bold text-[#0A0F2C] hover:bg-gray-50"
+                    className="flex-1 rounded-2xl border border-gray-200 bg-white px-5 py-3.5 text-sm font-bold text-[#0A0F2C] hover:bg-gray-50 disabled:opacity-50"
                   >
                     Edit details
                   </button>
                   <button
-                    onClick={() => setStep(2)}
-                    className="flex-1 rounded-2xl bg-[#113285] px-5 py-3.5 text-sm font-bold text-white hover:bg-[#0D2768]"
+                    disabled={loadingOrder}
+                    onClick={handleGenerateQR}
+                    className="flex-1 rounded-2xl bg-[#113285] px-5 py-3.5 text-sm font-bold text-white hover:bg-[#0D2768] disabled:opacity-50 flex items-center justify-center gap-2"
                   >
-                    Generate QR
+                    {loadingOrder ? (
+                      <>
+                        <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      "Generate QR"
+                    )}
                   </button>
                 </div>
               </div>
@@ -271,37 +425,76 @@ export function DepositWorkspace({ initialAsset }: { initialAsset?: string }) {
           {step === 2 ? (
             <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
               <div className="space-y-5">
-                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-                  <div className="flex gap-3">
-                    <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-700" />
-                    <div>
-                      <p className="text-sm font-bold text-emerald-900">Deposit QR ready</p>
-                      <p className="mt-1 text-sm leading-6 text-emerald-800">
-                        Scan the QR from your external wallet and send only on {config.networkName}.
-                      </p>
+                {paymentMethod === "binance_pay" && binanceOrder ? (
+                  <BinancePayQR
+                    qrContent={binanceOrder.qrContent}
+                    checkoutUrl={binanceOrder.checkoutUrl}
+                    tradeNo={binanceOrder.tradeNo}
+                    amount={numericAmount}
+                    asset={asset}
+                    status={paymentStatus}
+                    onCheckStatus={() => handleCheckStatus(binanceOrder.tradeNo)}
+                    checkingStatus={checkingStatus}
+                  />
+                ) : (
+                  <>
+                    <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                      <div className="flex gap-3">
+                        <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-700" />
+                        <div>
+                          <p className="text-sm font-bold text-emerald-900">Deposit QR ready</p>
+                          <p className="mt-1 text-sm leading-6 text-emerald-800">
+                            Scan the QR from your external wallet and send only on {config.networkName}.
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
 
-                <FixedDepositQR config={config} />
-                <DepositRequestForm config={config} />
+                    <FixedDepositQR config={config} />
+                    <DepositRequestForm config={config} />
+                  </>
+                )}
               </div>
 
               <div className="space-y-5">
-                <DepositRules config={config} />
+                {paymentMethod === "binance_pay" ? (
+                  <div className="rounded-2xl border border-[#FFEDCC] bg-[#FFF9EA] p-5">
+                    <h3 className="mb-4 flex items-center gap-2 text-sm font-bold text-[#B7791F]">
+                      <AlertTriangle className="h-4 w-4" />
+                      Important instructions
+                    </h3>
+                    <ul className="space-y-3 text-sm font-medium leading-6 text-[#4A5568]">
+                      <li>Pay only using your Binance App or Binance Web account.</li>
+                      <li>Double-check the checkout amount before confirming the payment.</li>
+                      <li>Payment is processed and credited to your balance instantly upon success.</li>
+                      <li>If your browser does not redirect automatically, click "Verify Payment Status".</li>
+                    </ul>
+                  </div>
+                ) : (
+                  <DepositRules config={config} />
+                )}
+
                 <div className="rounded-2xl bg-[#F8FAFC] p-5">
                   <h3 className="mb-4 text-sm font-bold text-[#0A0F2C]">Deposit Status</h3>
                   {[
-                    ["QR generated", "Complete"],
-                    ["Awaiting transfer", "Pending"],
-                    ["Network confirmations", `${config.confirmations} required`],
-                    ["Admin review", "Manual"],
+                    paymentMethod === "binance_pay" 
+                      ? ["Order generated", "Complete"]
+                      : ["QR generated", "Complete"],
+                    paymentMethod === "binance_pay"
+                      ? ["Awaiting Binance payment", paymentStatus === "PAID" ? "Paid" : "Pending"]
+                      : ["Awaiting transfer", "Pending"],
+                    paymentMethod === "binance_pay"
+                      ? ["Auto-credit balance", paymentStatus === "PAID" ? "Complete" : "Waiting"]
+                      : ["Network confirmations", `${config.confirmations} required`],
+                    paymentMethod === "binance_pay"
+                      ? ["Transaction logged", "Instant"]
+                      : ["Admin review", "Manual"],
                   ].map(([label, value], index) => (
                     <div key={label} className="flex items-center gap-3 border-b border-gray-100 py-3 last:border-b-0">
                       <span
                         className={cn(
                           "h-2.5 w-2.5 rounded-full",
-                          index === 0 ? "bg-emerald-500" : "bg-gray-300",
+                          index === 0 || (paymentStatus === "PAID" && index <= 2) ? "bg-emerald-500" : "bg-gray-300",
                         )}
                       />
                       <span className="min-w-0 flex-1 text-sm font-semibold text-[#0A0F2C]">
