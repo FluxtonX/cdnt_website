@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Image from "next/image";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { 
   Bell, 
   ChevronDown,
@@ -18,10 +19,12 @@ import {
   Shield,
   FileCheck,
   AlertCircle,
-  CheckCircle2
+  CheckCircle2,
+  Info,
+  XCircle,
+  ShieldCheck
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState, useRef, useEffect } from "react";
 
 const sidebarNav = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -39,60 +42,175 @@ export function UserShell({ children }: { children: React.ReactNode }) {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
   
+  const [userProfile, setUserProfile] = useState<{ email: string, fullName: string, initials: string, isKycVerified: boolean, kycStatus: string | null } | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [dbNotifications, setDbNotifications] = useState<any[]>([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(true);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isHighValue, setIsHighValue] = useState(false);
+  const notificationsRef = useRef<HTMLDivElement>(null);
+
+  const formatTime = (dateStr: string) => {
+    const diffMs = Date.now() - new Date(dateStr).getTime();
+    const diffMin = Math.floor(diffMs / 1000 / 60);
+    const diffHr = Math.floor(diffMin / 60);
+    const diffDays = Math.floor(diffHr / 24);
+
+    if (diffDays > 0) return `${diffDays}d ago`;
+    if (diffHr > 0) return `${diffHr}h ago`;
+    if (diffMin > 0) return `${diffMin}m ago`;
+    return "just now";
+  };
+
+  const getReadNotifications = (): string[] => {
+    if (typeof window === "undefined") return [];
+    try {
+      const read = localStorage.getItem("read_notifications");
+      return read ? JSON.parse(read) : [];
+    } catch (e) {
+      console.error("Error reading from localStorage:", e);
+      return [];
+    }
+  };
+
+  const markNotificationAsRead = (id: string) => {
+    try {
+      const read = getReadNotifications();
+      if (!read.includes(id)) {
+        read.push(id);
+        localStorage.setItem("read_notifications", JSON.stringify(read));
+      }
+    } catch (e) {
+      console.error("Error writing to localStorage:", e);
+    }
+  };
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     router.push("/login");
   };
-  
-const [userProfile, setUserProfile] = useState<{ email: string, fullName: string, initials: string, isKycVerified: boolean, kycStatus: string | null } | null>(null);
 
   useEffect(() => {
- async function loadUser() {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
-  
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("full_name, kyc_verified")
-    .eq("id", user.id)
-    .single();
+    async function loadUser() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("full_name, kyc_verified")
+          .eq("id", user.id)
+          .single();
 
-  const { data: kyc } = await supabase
-    .from("kyc_submissions")
-    .select("status")
-    .eq("user_id", user.id)
-    .single();
+        const { data: kyc } = await supabase
+          .from("kyc_submissions")
+          .select("status")
+          .eq("user_id", user.id)
+          .single();
 
-  const fullNameFromProfile = profile?.full_name?.trim();
-  const fullNameFromMeta = (user as any).user_metadata?.full_name?.trim();
-  const fallbackName = user.email?.split("@")[0] ?? "User";
-  const fullName =
-    (fullNameFromProfile && fullNameFromProfile.length > 0 && fullNameFromProfile) ||
-    (fullNameFromMeta && fullNameFromMeta.length > 0 && fullNameFromMeta) ||
-    fallbackName;
-  const initials = fullName
-    .split(" ")
-    .map((n: string) => n[0])
-    .join("")
-    .substring(0, 2)
-    .toUpperCase();
+        const fullNameFromProfile = profile?.full_name?.trim();
+        const fullNameFromMeta = (user as any).user_metadata?.full_name?.trim();
+        const fallbackName = user.email?.split("@")[0] ?? "User";
+        const fullName =
+          (fullNameFromProfile && fullNameFromProfile.length > 0 && fullNameFromProfile) ||
+          (fullNameFromMeta && fullNameFromMeta.length > 0 && fullNameFromMeta) ||
+          fallbackName;
+        const initials = fullName
+          .split(" ")
+          .map((n: string) => n[0])
+          .join("")
+          .substring(0, 2)
+          .toUpperCase();
 
-  setUserProfile({
-    email: user.email ?? "",
-    fullName,
-    initials,
-    isKycVerified: profile?.kyc_verified ?? false,
-    kycStatus: kyc?.status ?? null,
-  });
-}
+        setUserProfile({
+          email: user.email ?? "",
+          fullName,
+          initials,
+          isKycVerified: profile?.kyc_verified ?? false,
+          kycStatus: kyc?.status ?? null,
+        });
+      } catch (err) {
+        console.error("Error loading user profile:", err);
+      } finally {
+        setProfileLoading(false);
+      }
+    }
     loadUser();
   }, [supabase]);
+
+  useEffect(() => {
+    async function fetchNotifications() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data, error } = await supabase
+          .from("notifications")
+          .select("*")
+          .order("created_at", { ascending: false });
+
+        if (!error && data) {
+          setDbNotifications(data);
+
+          const { count } = await supabase
+            .from("deposit_requests")
+            .select("id", { count: "exact", head: true })
+            .eq("user_id", user.id)
+            .eq("status", "approved");
+          
+          setIsHighValue((count || 0) > 0);
+        }
+      } catch (e) {
+        console.error("Error loading notifications:", e);
+      } finally {
+        setNotificationsLoading(false);
+      }
+    }
+    
+    fetchNotifications();
+
+    const channel = supabase
+      .channel("realtime-notifications")
+      .on("postgres_changes", { event: "*", schema: "public", table: "notifications" }, () => {
+        fetchNotifications();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [supabase]);
+
+  const visibleNotifications = useMemo(() => {
+    return dbNotifications.filter((n: any) => {
+      const aud = n.audience;
+      if (!aud || aud === "All") return true;
+      if (profileLoading || !userProfile) return false;
+      if (aud === "Verified" && userProfile.kycStatus === "approved") return true;
+      if (aud === "Unverified" && userProfile.kycStatus !== "approved") return true;
+      if (aud === "High Value" && isHighValue) return true;
+      return false;
+    });
+  }, [dbNotifications, userProfile, profileLoading, isHighValue]);
+
+  useEffect(() => {
+    if (visibleNotifications.length > 0) {
+      const readIds = getReadNotifications();
+      const unread = visibleNotifications.filter(n => !readIds.includes(n.id));
+      setUnreadCount(unread.length);
+    } else {
+      setUnreadCount(0);
+    }
+  }, [visibleNotifications]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsDropdownOpen(false);
+      }
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
+        setIsNotificationsOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -157,17 +275,102 @@ const [userProfile, setUserProfile] = useState<{ email: string, fullName: string
       {/* Main Content Area */}
       <div className="min-w-0 pb-20 lg:pb-0">
         {/* Top Header */}
-        <header className="sticky top-0 z-30 flex h-[88px] items-center justify-between border-b border-gray-100 bg-white px-4 md:px-8">
-          <div className="flex flex-col justify-center">
-            <h1 className="text-[20px] font-bold text-[#0A0F2C]">Welcome back, {userProfile?.fullName.split(' ')[0] || 'User'}</h1>
-            <p className="text-[13px] text-[#718096] mt-0.5">Here's what's happening with your portfolio today</p>
+        <header className="sticky top-0 z-30 flex h-[88px] items-center justify-between border-b border-gray-100 bg-white px-4 sm:px-6 md:px-8">
+          <div className="flex flex-col justify-center min-w-0 mr-4">
+            <h1 className="text-[16px] sm:text-[20px] font-bold text-[#0A0F2C] truncate">
+              Welcome back, {userProfile?.fullName.split(' ')[0] || 'User'}
+            </h1>
+            <p className="text-[12px] sm:text-[13px] text-[#718096] mt-0.5 hidden sm:block truncate">
+              Here's what's happening with your portfolio today
+            </p>
           </div>
           
-          <div className="flex items-center gap-6">
-            <button className="relative text-[#4A5568] hover:text-[#0A0F2C] transition-colors">
-              <Bell className="h-5 w-5" strokeWidth={2} />
-              <span className="absolute top-0 right-0 block h-2 w-2 -translate-y-0.5 translate-x-0.5 rounded-full bg-[#E53E3E] ring-2 ring-white" />
-            </button>
+          <div className="flex items-center gap-3 sm:gap-6 flex-shrink-0">
+            <div className="relative" ref={notificationsRef}>
+              <button 
+                onClick={() => {
+                  const wasOpen = isNotificationsOpen;
+                  setIsNotificationsOpen(!wasOpen);
+                  if (!wasOpen) {
+                    visibleNotifications.forEach(n => markNotificationAsRead(n.id));
+                    setUnreadCount(0);
+                  }
+                }}
+                className={cn(
+                  "relative text-[#4A5568] hover:text-[#0A0F2C] transition-colors p-2 rounded-lg border",
+                  isNotificationsOpen ? "bg-gray-50 border-gray-100" : "border-transparent hover:bg-gray-50 hover:border-gray-100"
+                )}
+                aria-label="Notifications"
+              >
+                <Bell className="h-5 w-5" strokeWidth={2} />
+                {unreadCount > 0 && (
+                  <span className="absolute top-1 right-1 block h-2 w-2 rounded-full bg-[#E53E3E] ring-2 ring-white animate-pulse" />
+                )}
+              </button>
+
+              {isNotificationsOpen && (
+                <div className="absolute right-0 mt-2 w-80 origin-top-right rounded-xl bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none divide-y divide-gray-100 py-1 z-50">
+                  <div className="flex items-center justify-between px-4 py-2.5">
+                    <span className="text-xs font-bold text-gray-900">Notifications</span>
+                    {unreadCount > 0 && (
+                      <button 
+                        onClick={() => {
+                          visibleNotifications.forEach(n => markNotificationAsRead(n.id));
+                          setUnreadCount(0);
+                        }}
+                        className="text-[10px] font-bold text-[#113285] hover:underline cursor-pointer"
+                      >
+                        Mark all as read
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="max-h-64 overflow-y-auto divide-y divide-gray-50 no-scrollbar">
+                    {notificationsLoading ? (
+                      <div className="py-6 text-center text-xs font-semibold text-[#718096] animate-pulse">
+                        Loading notifications...
+                      </div>
+                    ) : visibleNotifications.length === 0 ? (
+                      <div className="py-8 text-center text-xs font-semibold text-[#718096]">
+                        No new notifications
+                      </div>
+                    ) : (
+                      visibleNotifications.slice(0, 5).map((n: any) => {
+                        const Icon = n.type === "Info" ? Info :
+                                      n.type === "Warning" ? AlertCircle :
+                                      n.type === "Success" ? CheckCircle2 : XCircle;
+                        return (
+                          <div key={n.id} className="p-3.5 flex gap-3 hover:bg-gray-50/50 transition-colors">
+                            <div className={cn("grid h-8 w-8 place-items-center rounded-lg shrink-0", 
+                              n.type === "Info" ? "bg-blue-50 text-[#113285]" :
+                              n.type === "Warning" ? "bg-amber-50 text-amber-600" :
+                              n.type === "Success" ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
+                            )}>
+                              <Icon className="h-4 w-4" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs font-bold text-[#0A0F2C] leading-snug line-clamp-1">{n.title}</p>
+                              <p className="text-[11px] text-[#718096] mt-0.5 leading-relaxed line-clamp-2">{n.message}</p>
+                              <span className="text-[9px] text-[#A0AEC0] font-semibold mt-1 block font-mono">{formatTime(n.created_at)}</span>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  <div className="py-1 px-2">
+                    <Link 
+                      href="/notifications" 
+                      onClick={() => setIsNotificationsOpen(false)}
+                      className="block text-center py-2 text-xs font-bold text-[#113285] hover:bg-blue-50/50 rounded-lg transition-colors"
+                    >
+                      View all notifications
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </div>
             
             <div className="h-6 w-px bg-gray-200" />
             

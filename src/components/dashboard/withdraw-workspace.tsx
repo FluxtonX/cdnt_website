@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, AlertCircle } from "lucide-react";
+import { ArrowLeft, AlertCircle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
+import { useToast } from "@/components/ui/toast";
 
 export function WithdrawWorkspace() {
   const [step, setStep] = useState(1);
@@ -12,6 +14,11 @@ export function WithdrawWorkspace() {
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
   const [twoFa, setTwoFa] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const supabase = createClient();
+  const { notify } = useToast();
 
   const availableBalance = 51750.00;
   const fee = 2.50;
@@ -21,6 +28,45 @@ export function WithdrawWorkspace() {
 
   const nextStep = () => setStep((s) => Math.min(3, s + 1));
   const prevStep = () => setStep((s) => Math.max(1, s - 1));
+
+  const handleConfirmWithdrawal = async () => {
+    setSubmitting(true);
+    setErrorMsg(null);
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        throw new Error("User session not found. Please log in again.");
+      }
+
+      const { error: insertError } = await supabase
+        .from("withdrawal_requests")
+        .insert({
+          user_id: user.id,
+          amount: numAmount,
+          interac_email: email,
+          security_question: question,
+          security_answer: answer,
+          status: "pending"
+        });
+
+      if (insertError) {
+        throw new Error(insertError.message);
+      }
+
+      notify({
+        title: "Withdrawal submitted",
+        description: "Your withdrawal is pending admin review.",
+      });
+
+      alert("Withdrawal submitted successfully!");
+      window.location.href = "/dashboard";
+    } catch (err: any) {
+      console.error("Error submitting withdrawal:", err);
+      setErrorMsg(err.message || "Something went wrong. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div className="mx-auto w-full max-w-[640px]">
@@ -241,6 +287,12 @@ export function WithdrawWorkspace() {
               </div>
             </div>
 
+            {errorMsg && (
+              <div className="mb-4 rounded-[14px] border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
+                {errorMsg}
+              </div>
+            )}
+
             <div className="mb-8">
               <label className="mb-2 block text-[14px] font-bold text-[#0A0F2C]">2FA Code</label>
               <input 
@@ -256,19 +308,24 @@ export function WithdrawWorkspace() {
             <div className="flex gap-4">
               <button 
                 onClick={prevStep}
-                className="flex-1 rounded-[14px] border border-gray-200 bg-white py-4 text-[15px] font-bold text-[#0A0F2C] transition-colors hover:bg-gray-50"
+                disabled={submitting}
+                className="flex-1 rounded-[14px] border border-gray-200 bg-white py-4 text-[15px] font-bold text-[#0A0F2C] transition-colors hover:bg-gray-50 disabled:opacity-50"
               >
                 Back
               </button>
               <button 
-                className="flex-1 rounded-[14px] bg-[#113285] py-4 text-[15px] font-bold text-white transition-colors hover:bg-[#0c2461] disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={twoFa.length < 6}
-                onClick={() => {
-                  // handle submit
-                  alert("Withdrawal submitted!");
-                }}
+                className="flex-1 rounded-[14px] bg-[#113285] py-4 text-[15px] font-bold text-white transition-colors hover:bg-[#0c2461] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                disabled={twoFa.length < 6 || submitting}
+                onClick={handleConfirmWithdrawal}
               >
-                Confirm Withdrawal
+                {submitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  "Confirm Withdrawal"
+                )}
               </button>
             </div>
           </div>
