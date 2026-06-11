@@ -40,7 +40,7 @@ export const DEPOSIT_ADDRESSES: DepositAddressConfig[] = [
     network: "BTC",
     networkName: "Bitcoin Network",
     address: BTC_ADDRESS,
-    qrValue: `bitcoin:${BTC_ADDRESS}`,
+    qrValue: BTC_ADDRESS,
     warning:
       "Send only BTC on Bitcoin Network network to this address. Sending any other coin or network may cause permanent loss.",
     explorerName: "Blockstream Explorer",
@@ -58,7 +58,7 @@ export const DEPOSIT_ADDRESSES: DepositAddressConfig[] = [
     network: "ETH",
     networkName: "Ethereum Mainnet",
     address: ETH_ADDRESS,
-    qrValue: `ethereum:${ETH_ADDRESS}`,
+    qrValue: ETH_ADDRESS,
     warning:
       "Send only ETH on Ethereum Mainnet network to this address. Sending any other coin or network may cause permanent loss.",
     explorerName: "Etherscan",
@@ -95,7 +95,7 @@ export const DEPOSIT_ADDRESSES: DepositAddressConfig[] = [
     network: "ERC20",
     networkName: "Ethereum ERC20",
     address: USDT_ERC20_ADDRESS,
-    qrValue: `ethereum:${USDT_ERC20_ADDRESS}`,
+    qrValue: USDT_ERC20_ADDRESS,
     warning:
       "Send only USDT on Ethereum ERC20 network to this address. Sending any other coin or network may cause permanent loss.",
     explorerName: "Etherscan",
