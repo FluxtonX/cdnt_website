@@ -10,11 +10,17 @@ import {
   TrendingDown,
   TrendingUp,
   Wallet,
+  Loader2,
+  Check,
+  AlertCircle
 } from "lucide-react";
 import { COINS } from "@/config/coins";
 import { LiveCryptoChart } from "@/components/market/LiveCryptoChart";
 import { CoinLogo } from "@/components/market/CoinLogo";
 import { cn } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
+
+const supabase = createClient();
 
 type Ticker24h = {
   symbol: string;
@@ -36,15 +42,6 @@ type Candle = {
   volume: number;
 };
 
-const DEMO_BALANCES: Record<string, number> = {
-  BTCUSDT: 0.8421,
-  ETHUSDT: 8.214,
-  BNBUSDT: 45.2,
-  SOLUSDT: 124.5,
-  XRPUSDT: 12500,
-  ADAUSDT: 8400,
-};
-
 function formatCurrency(value: number) {
   return value.toLocaleString("en-US", {
     style: "currency",
@@ -63,6 +60,52 @@ export default function ExchangePage() {
   const [side, setSide] = React.useState<"buy" | "sell">("buy");
   const [amount, setAmount] = React.useState("");
 
+  const [balances, setBalances] = React.useState<Record<string, number>>({
+    USDT: 0,
+    BTC: 0,
+    ETH: 0,
+  });
+  const [loadingBalances, setLoadingBalances] = React.useState(true);
+  const [tradeLoading, setTradeLoading] = React.useState(false);
+  const [toast, setToast] = React.useState<{ type: "success" | "error"; msg: string } | null>(null);
+
+  // Prices tracker for portfolio value estimation
+  const [prices, setPrices] = React.useState<Record<string, number>>({
+    BTC: 0,
+    ETH: 0,
+    USDT: 1,
+  });
+
+  const loadBalances = React.useCallback(async () => {
+    try {
+      setLoadingBalances(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data } = await supabase
+        .from("user_wallets")
+        .select("*")
+        .eq("user_id", user.id);
+
+      if (data) {
+        const balanceMap = data.reduce((acc: any, w: any) => {
+          acc[w.currency] = Number(w.balance);
+          return acc;
+        }, {});
+        setBalances((prev) => ({ ...prev, ...balanceMap }));
+      }
+    } catch (err) {
+      console.error("Failed to load user balances:", err);
+    } finally {
+      setLoadingBalances(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    loadBalances();
+  }, [loadBalances]);
+
+  // Load ticker from Binance
   React.useEffect(() => {
     const controller = new AbortController();
 
@@ -78,6 +121,13 @@ export default function ExchangePage() {
         }
         const data = (await response.json()) as Ticker24h;
         setTicker(data);
+
+        // Keep track of current pricing
+        const coinSymbol = selectedCoin.baseAsset;
+        setPrices((prev) => ({
+          ...prev,
+          [coinSymbol]: Number(data.lastPrice),
+        }));
       } catch (error) {
         if (!controller.signal.aborted) {
           setTickerError(error instanceof Error ? error.message : "Failed to load ticker");
@@ -96,19 +146,79 @@ export default function ExchangePage() {
   const livePrice = latestCandle?.close ?? ticker?.lastPrice ?? 0;
   const changePercent = ticker?.priceChangePercent ?? 0;
   const amountValue = Number(amount) || 0;
-  const assetBalance = DEMO_BALANCES[selectedCoin.symbol] ?? 0;
+
+  // Available coin balance is dynamically determined
+  const coinSymbol = selectedCoin.baseAsset;
+  const assetBalance = balances[coinSymbol] ?? 0;
+
   const estimatedCrypto = side === "buy" && amountValue > 0 && livePrice > 0 ? amountValue / livePrice : 0;
   const estimatedUsd = side === "sell" && amountValue > 0 ? amountValue * livePrice : 0;
   const fee = side === "buy" ? amountValue * 0.005 : estimatedUsd * 0.004;
   const total = side === "buy" ? amountValue + fee : Math.max(0, estimatedUsd - fee);
+
+  // Dynamically calculate portfolio total in USD
+  const totalPortfolioValue = (balances["USDT"] || 0) + ((balances["BTC"] || 0) * (coinSymbol === "BTC" ? livePrice : prices["BTC"])) + ((balances["ETH"] || 0) * (coinSymbol === "ETH" ? livePrice : prices["ETH"]));
 
   function switchSide(nextSide: "buy" | "sell") {
     setSide(nextSide);
     setAmount("");
   }
 
+  // Execute buy/sell trade securely in Supabase
+  const handleOrderExecute = async () => {
+    if (!amount || Number(amount) <= 0) return;
+    setTradeLoading(true);
+    setToast(null);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Please log in first.");
+
+      const usdVal = side === "buy" ? Number(amount) : Number(amount) * livePrice;
+      const cryptoVal = side === "buy" ? Number(amount) / livePrice : Number(amount);
+
+      // Call transaction-safe RPC function
+      const { error } = await supabase.rpc("execute_trade", {
+        p_user_id: user.id,
+        p_side: side,
+        p_crypto_symbol: selectedCoin.baseAsset,
+        p_usd_amount: usdVal,
+        p_crypto_amount: cryptoVal,
+      });
+
+      if (error) throw error;
+
+      setToast({
+        type: "success",
+        msg: `${side === "buy" ? "Bought" : "Sold"} ${cryptoVal.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${selectedCoin.baseAsset} successfully!`,
+      });
+      setAmount("");
+      await loadBalances();
+    } catch (err: any) {
+      console.error(err);
+      setToast({
+        type: "error",
+        msg: err.message || "Failed to execute order. Please check balance and try again.",
+      });
+    } finally {
+      setTradeLoading(false);
+      setTimeout(() => setToast(null), 5000);
+    }
+  };
+
   return (
     <div className="space-y-6">
+      {/* Toast Notification */}
+      {toast && (
+        <div className={cn(
+          "fixed top-6 left-1/2 -translate-x-1/2 z-50 border px-5 py-3 rounded-xl shadow-xl text-xs sm:text-sm font-bold flex items-center gap-2",
+          toast.type === "success" ? "bg-emerald-50 border-emerald-100 text-emerald-800" : "bg-red-50 border-red-100 text-red-800"
+        )}>
+          {toast.type === "success" ? <Check className="h-4.5 w-4.5 text-emerald-600" /> : <AlertCircle className="h-4.5 w-4.5 text-red-600" />}
+          <span>{toast.msg}</span>
+        </div>
+      )}
+
       <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-end">
         <div>
           <h1 className="text-3xl font-black tracking-normal text-[#0A0F2C]">Buy / Sell</h1>
@@ -117,11 +227,15 @@ export default function ExchangePage() {
         <div className="grid grid-cols-2 gap-6 text-right">
           <div>
             <p className="text-xs font-semibold text-[#718096]">Total Portfolio</p>
-            <p className="text-xl font-black text-[#0A0F2C]">$51,750.00</p>
+            <p className="text-xl font-black text-[#0A0F2C]">
+              {loadingBalances ? "--" : formatCurrency(totalPortfolioValue)}
+            </p>
           </div>
           <div>
             <p className="text-xs font-semibold text-[#718096]">Available USDT</p>
-            <p className="text-xl font-black text-[#F5A400]">$12,450.00</p>
+            <p className="text-xl font-black text-[#F5A400]">
+              {loadingBalances ? "--" : formatCurrency(balances["USDT"] || 0)}
+            </p>
           </div>
         </div>
       </div>
@@ -294,7 +408,10 @@ export default function ExchangePage() {
                   Available Balance
                 </div>
                 <p className="mt-2 text-lg font-black text-[#113285]">
-                  {side === "buy" ? "$12,450.00" : `${assetBalance.toLocaleString("en-US", { maximumFractionDigits: 8 })} ${selectedCoin.baseAsset}`}
+                  {side === "buy" 
+                    ? loadingBalances ? "--" : formatCurrency(balances["USDT"] || 0)
+                    : loadingBalances ? "--" : `${assetBalance.toLocaleString("en-US", { maximumFractionDigits: 8 })} ${selectedCoin.baseAsset}`
+                  }
                 </p>
               </div>
 
@@ -337,7 +454,7 @@ export default function ExchangePage() {
                 ))}
                 <button
                   type="button"
-                  onClick={() => setAmount(side === "buy" ? "12450" : assetBalance.toFixed(selectedCoin.baseAsset === "BTC" ? 8 : 4))}
+                  onClick={() => setAmount(side === "buy" ? String(balances["USDT"] || 0) : assetBalance.toFixed(selectedCoin.baseAsset === "BTC" ? 8 : 4))}
                   className="rounded-lg border border-slate-200 px-2 py-2 text-xs font-bold text-[#0A0F2C] hover:border-[#113285]"
                 >
                   Max
@@ -361,13 +478,24 @@ export default function ExchangePage() {
 
               <button
                 type="button"
+                onClick={handleOrderExecute}
+                disabled={tradeLoading || !amount || Number(amount) <= 0}
                 className={cn(
-                  "mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-xl text-sm font-black text-white transition-colors",
+                  "mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-xl text-sm font-black text-white transition-colors disabled:opacity-50",
                   side === "buy" ? "bg-emerald-500 hover:bg-emerald-600" : "bg-[#113285] hover:bg-[#0D266A]",
                 )}
               >
-                {side === "buy" ? "Buy" : "Sell"} Order
-                <ArrowUpRight className="h-4 w-4" />
+                {tradeLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin text-white" />
+                    Executing...
+                  </>
+                ) : (
+                  <>
+                    {side === "buy" ? "Buy" : "Sell"} Order
+                    <ArrowUpRight className="h-4 w-4" />
+                  </>
+                )}
               </button>
 
               <p className="mt-4 flex gap-2 text-xs font-medium leading-5 text-[#718096]">

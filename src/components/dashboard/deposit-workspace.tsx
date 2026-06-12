@@ -21,6 +21,7 @@ import {
   getDepositNetworks,
 } from "@/config/depositAddresses";
 import { cn } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
 
 const steps = ["Details", "Review", "Transfer"];
 const assetOptions = Array.from(
@@ -48,6 +49,9 @@ export function DepositWorkspace({ initialAsset }: { initialAsset?: string }) {
     prepayId: string;
     qrContent: string;
     checkoutUrl: string;
+    deeplink?: string;
+    universalUrl?: string;
+    expireTime?: number;
   } | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<string>("PENDING");
   const [checkingStatus, setCheckingStatus] = useState(false);
@@ -65,14 +69,18 @@ export function DepositWorkspace({ initialAsset }: { initialAsset?: string }) {
   const handleCheckStatus = async (tradeNo: string) => {
     setCheckingStatus(true);
     try {
-      const res = await fetch(`/api/deposit/verify-order?tradeNo=${tradeNo}`);
-      if (res.ok) {
-        const data = await res.json();
-        setPaymentStatus(data.status);
-        if (data.status === "PAID") {
-          if (pollingInterval) clearInterval(pollingInterval);
-          window.location.href = "/deposit/success";
-        }
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("payment_orders")
+        .select("status")
+        .eq("merchant_trade_no", tradeNo)
+        .single();
+      
+      if (error) throw error;
+      setPaymentStatus(data.status);
+      if (data.status === "PAID") {
+        if (pollingInterval) clearInterval(pollingInterval);
+        window.location.href = "/deposit/success";
       }
     } catch (e) {
       console.error("Error verifying payment status:", e);
@@ -90,40 +98,103 @@ export function DepositWorkspace({ initialAsset }: { initialAsset?: string }) {
     setLoadingOrder(true);
     setError(null);
     try {
-      const res = await fetch("/api/deposit/create-order", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: numericAmount, asset }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to create Binance Pay order");
+      const supabase = createClient();
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        throw new Error("Unauthorized. Please sign in.");
       }
-      setBinanceOrder(data);
-      setPaymentStatus("PENDING");
-      setStep(2);
 
-      // Start polling
+      // Generate merchantTradeNo client-side: max 32 characters, alphanumeric
+      const merchantTradeNo = Array.from({ length: 32 }, () =>
+        Math.floor(Math.random() * 16).toString(16)
+      ).join("").substring(0, 32);
+
+      // Insert directly into the table "payment_orders"
+      const { data: order, error: insertError } = await supabase
+        .from("payment_orders")
+        .insert({
+          user_id: user.id,
+          merchant_trade_no: merchantTradeNo,
+          currency: asset.toUpperCase(),
+          amount: numericAmount,
+          status: "PENDING",
+        })
+        .select()
+        .single();
+
+      if (insertError || !order) {
+        throw new Error(insertError?.message || "Failed to create order in database");
+      }
+
+      setPaymentStatus("PENDING");
+
+      // Start polling/subscribing until edge function populated qr_content
       if (pollingInterval) clearInterval(pollingInterval);
+      
+      let attempts = 0;
       const interval = setInterval(async () => {
+        attempts++;
+        if (attempts > 30) { // Timeout after 90 seconds
+          clearInterval(interval);
+          setError("Failed to fetch payment details. Please try again.");
+          setLoadingOrder(false);
+          return;
+        }
+
         try {
-          const checkRes = await fetch(`/api/deposit/verify-order?tradeNo=${data.tradeNo}`);
-          if (checkRes.ok) {
-            const checkData = await checkRes.json();
-            setPaymentStatus(checkData.status);
-            if (checkData.status === "PAID") {
-              clearInterval(interval);
-              window.location.href = "/deposit/success";
-            }
+          const { data: currentOrder, error: queryError } = await supabase
+            .from("payment_orders")
+            .select("qr_content, checkout_url, prepay_id, merchant_trade_no, deeplink, universal_url, expire_time, status")
+            .eq("id", order.id)
+            .single();
+
+          if (!queryError && currentOrder && currentOrder.qr_content) {
+            clearInterval(interval);
+            
+            setBinanceOrder({
+              tradeNo: currentOrder.merchant_trade_no,
+              prepayId: currentOrder.prepay_id,
+              qrContent: currentOrder.qr_content,
+              checkoutUrl: currentOrder.checkout_url,
+              deeplink: currentOrder.deeplink,
+              universalUrl: currentOrder.universal_url,
+              expireTime: currentOrder.expire_time ? Number(currentOrder.expire_time) : undefined,
+            });
+            setPaymentStatus(currentOrder.status);
+            setStep(2);
+            setLoadingOrder(false);
+
+            // Start polling order status (PAID/EXPIRED)
+            const statusInterval = setInterval(async () => {
+              try {
+                const { data: statusData, error: statusError } = await supabase
+                  .from("payment_orders")
+                  .select("status")
+                  .eq("id", order.id)
+                  .single();
+
+                if (!statusError && statusData) {
+                  setPaymentStatus(statusData.status);
+                  if (statusData.status === "PAID") {
+                    clearInterval(statusInterval);
+                    window.location.href = "/deposit/success";
+                  }
+                }
+              } catch (e) {
+                console.error("Error polling order status:", e);
+              }
+            }, 4000);
+            setPollingInterval(statusInterval);
           }
         } catch (e) {
-          console.error("Error polling order status:", e);
+          console.error("Error checking order details:", e);
         }
-      }, 4000);
+      }, 3000);
+      
       setPollingInterval(interval);
+
     } catch (err: any) {
       setError(err.message || "An error occurred");
-    } finally {
       setLoadingOrder(false);
     }
   };
@@ -150,7 +221,7 @@ export function DepositWorkspace({ initialAsset }: { initialAsset?: string }) {
 
   return (
     <div className="mx-auto w-full max-w-[1120px]">
-      <div className="mb-6 flex flex-wrap items-center gap-4">
+      <div className="mb-6 flex items-start sm:items-center gap-3 sm:gap-4">
         <Link
           href="/wallets"
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-600 shadow-sm transition-colors hover:bg-gray-50"
@@ -159,27 +230,27 @@ export function DepositWorkspace({ initialAsset }: { initialAsset?: string }) {
           <ArrowLeft className="h-5 w-5" />
         </Link>
         <div className="min-w-0">
-          <h1 className="text-[24px] font-bold tracking-tight text-[#0A0F2C]">
+          <h1 className="text-xl sm:text-[24px] font-bold tracking-tight text-[#0A0F2C]">
             Deposit Cryptocurrency
           </h1>
-          <p className="text-sm text-[#718096]">
+          <p className="text-xs sm:text-sm text-[#718096] mt-0.5">
             Select an asset, review the network, then scan the company deposit QR.
           </p>
         </div>
       </div>
 
-      <div className="mb-6 grid gap-3 sm:grid-cols-3">
+      <div className="mb-6 grid grid-cols-3 gap-2 sm:gap-3">
         {steps.map((label, index) => (
           <div
             key={label}
             className={cn(
-              "flex items-center gap-3 rounded-2xl border bg-white px-4 py-3 shadow-sm",
+              "flex flex-col sm:flex-row items-center gap-2 sm:gap-3 rounded-xl sm:rounded-2xl border bg-white p-2.5 sm:px-4 sm:py-3 shadow-sm text-center sm:text-left",
               index <= step ? "border-[#113285]/20" : "border-gray-100",
             )}
           >
             <span
               className={cn(
-                "grid h-8 w-8 shrink-0 place-items-center rounded-full text-sm font-bold",
+                "grid h-7 w-7 sm:h-8 sm:w-8 shrink-0 place-items-center rounded-full text-xs sm:text-sm font-bold",
                 index < step
                   ? "bg-emerald-100 text-emerald-700"
                   : index === step
@@ -190,10 +261,10 @@ export function DepositWorkspace({ initialAsset }: { initialAsset?: string }) {
               {index < step ? <CheckCircle2 className="h-4 w-4" /> : index + 1}
             </span>
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+              <p className="hidden md:block text-[10px] sm:text-xs font-semibold uppercase tracking-wide text-gray-400">
                 Step {index + 1}
               </p>
-              <p className="text-sm font-bold text-[#0A0F2C]">{label}</p>
+              <p className="text-xs sm:text-sm font-bold text-[#0A0F2C]">{label}</p>
             </div>
           </div>
         ))}
@@ -232,15 +303,15 @@ export function DepositWorkspace({ initialAsset }: { initialAsset?: string }) {
         </aside>
 
         <main className="min-w-0 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm sm:p-6 lg:p-8">
-          <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+          <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <CoinLogo src={config.logoUrl} symbol={config.asset} className="h-12 w-12 p-2" />
+              <CoinLogo src={config.logoUrl} symbol={config.asset} className="h-10 w-10 p-1.5 sm:h-12 sm:w-12 sm:p-2" />
               <div>
-                <h2 className="text-xl font-bold text-[#0A0F2C]">Deposit {config.assetName}</h2>
-                <p className="text-sm font-medium text-[#718096]">{config.networkName}</p>
+                <h2 className="text-lg sm:text-xl font-bold text-[#0A0F2C]">Deposit {config.assetName}</h2>
+                <p className="text-xs sm:text-sm font-medium text-[#718096]">{config.networkName}</p>
               </div>
             </div>
-            <div className="rounded-full border border-[#FFEDCC] bg-[#FFF9EA] px-3 py-1 text-xs font-bold text-[#B7791F]">
+            <div className="self-start sm:self-auto rounded-full border border-[#FFEDCC] bg-[#FFF9EA] px-2.5 py-0.5 sm:px-3 sm:py-1 text-[10px] sm:text-xs font-bold text-[#B7791F]">
               Network: {config.network}
             </div>
           </div>
@@ -429,6 +500,9 @@ export function DepositWorkspace({ initialAsset }: { initialAsset?: string }) {
                   <BinancePayQR
                     qrContent={binanceOrder.qrContent}
                     checkoutUrl={binanceOrder.checkoutUrl}
+                    deeplink={binanceOrder.deeplink}
+                    universalUrl={binanceOrder.universalUrl}
+                    expireTime={binanceOrder.expireTime}
                     tradeNo={binanceOrder.tradeNo}
                     amount={numericAmount}
                     asset={asset}

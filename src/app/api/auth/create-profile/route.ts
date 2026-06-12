@@ -41,6 +41,21 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: dbErr.message }, { status: 500 });
     }
 
+    try {
+      await supabaseAdmin.from("security_logs").insert({
+        action: "Account Created",
+        category: "Account",
+        severity: "Info",
+        user_name: fullName || email,
+        user_id: user.id,
+        ip_address: req.headers.get("x-forwarded-for") || "127.0.0.1",
+        details: `User account created successfully for email: ${email}.`,
+        user_agent: req.headers.get("user-agent") || "Unknown"
+      });
+    } catch (logErr) {
+      console.error("Failed to write registration log:", logErr);
+    }
+
     return NextResponse.json({ success: true });
   } catch (e) {
     console.error("create-profile error:", e);

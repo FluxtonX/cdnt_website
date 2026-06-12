@@ -53,6 +53,29 @@ export function WithdrawWorkspace() {
         throw new Error(insertError.message);
       }
 
+      try {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("id", user.id)
+          .single();
+
+        await fetch("/api/log-event", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "Withdrawal Requested",
+            category: "Transaction",
+            severity: "Warning",
+            userName: profile?.full_name || user.email || "Unknown User",
+            userId: user.id,
+            details: `Requested withdrawal of $${numAmount} CAD via Interac to email: ${email}.`
+          })
+        });
+      } catch (logErr) {
+        console.error("Failed to call log-event for withdrawal request:", logErr);
+      }
+
       notify({
         title: "Withdrawal submitted",
         description: "Your withdrawal is pending admin review.",

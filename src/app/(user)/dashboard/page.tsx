@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { 
   Eye, 
@@ -65,27 +65,84 @@ export default function DashboardPage() {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loadingTx, setLoadingTx] = useState(true);
 
+  const [btcBalance, setBtcBalance] = useState(0);
+  const [ethBalance, setEthBalance] = useState(0);
+  const [usdtBalance, setUsdtBalance] = useState(0);
+  
+  const [prices, setPrices] = useState<Record<string, number>>({
+    BTC: 60000,
+    ETH: 3000,
+    USDT: 1,
+  });
+
+  const [portfolioValue, setPortfolioValue] = useState(0);
+  const [cadBalance, setCadBalance] = useState(0);
+
   useEffect(() => {
-    async function loadTransactions() {
+    async function loadDashboardData() {
       try {
+        setLoadingTx(true);
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        // Fetch deposits
+        // 1. Fetch live crypto prices in USD from Binance ticker
+        let btcPrice = 60000;
+        let ethPrice = 3000;
+        try {
+          const btcRes = await fetch("/api/market/ticker?symbol=BTCUSDT");
+          if (btcRes.ok) {
+            const btcData = await btcRes.json();
+            btcPrice = Number(btcData.lastPrice) || 60000;
+          }
+          const ethRes = await fetch("/api/market/ticker?symbol=ETHUSDT");
+          if (ethRes.ok) {
+            const ethData = await ethRes.json();
+            ethPrice = Number(ethData.lastPrice) || 3000;
+          }
+        } catch (err) {
+          console.error("Failed to fetch live prices:", err);
+        }
+        setPrices({ BTC: btcPrice, ETH: ethPrice, USDT: 1 });
+
+        // 2. Fetch user wallet balances from Supabase
+        const { data: userWallets, error: walletsErr } = await supabase
+          .from("user_wallets")
+          .select("*")
+          .eq("user_id", user.id);
+
+        if (!walletsErr && userWallets) {
+          const btcBal = Number(userWallets.find((w: any) => w.currency === "BTC")?.balance || 0);
+          const ethBal = Number(userWallets.find((w: any) => w.currency === "ETH")?.balance || 0);
+          const usdtBal = Number(userWallets.find((w: any) => w.currency === "USDT")?.balance || 0);
+
+          setBtcBalance(btcBal);
+          setEthBalance(ethBal);
+          setUsdtBalance(usdtBal);
+
+          const btcVal = btcBal * btcPrice;
+          const ethVal = ethBal * ethPrice;
+          const usdtVal = usdtBal;
+
+          const total = btcVal + ethVal + usdtVal;
+          setPortfolioValue(total);
+          setCadBalance(usdtVal); 
+        }
+
+        // 3. Fetch deposits
         const { data: deposits, error: depErr } = await supabase
           .from("deposit_requests")
-          .select("id, asset, expected_amount, status, created_at, tx_hash");
+          .select("id, asset, expected_amount, status, created_at, tx_hash")
+          .eq("user_id", user.id);
 
-        // Fetch withdrawals
+        // 4. Fetch withdrawals
         const { data: withdrawals, error: wdrErr } = await supabase
           .from("withdrawal_requests")
-          .select("id, amount, status, created_at, interac_email");
+          .select("id, amount, status, created_at, interac_email")
+          .eq("user_id", user.id);
 
-        // Fallbacks if tables don't exist yet
         const dbError = (depErr && depErr.code === "PGRST205") || (wdrErr && wdrErr.code === "PGRST205");
 
         if (dbError) {
-          // Fallback to static mock data
           setTransactions([
             { id: "1", type: "Deposit", asset: "BTC", amount: 5000, status: "approved", date: new Date(Date.now() - 2 * 60 * 60 * 1000) },
             { id: "2", type: "Withdrawal", asset: "ETH", amount: 1250, status: "completed", date: new Date(Date.now() - 5 * 60 * 60 * 1000) },
@@ -123,22 +180,52 @@ export default function DashboardPage() {
           });
         }
 
-        // Sort descending by date
         list.sort((a, b) => b.date.getTime() - a.date.getTime());
         setTransactions(list.slice(0, 4));
       } catch (err) {
-        console.error("Error loading transactions:", err);
+        console.error("Error loading dashboard data:", err);
       } finally {
         setLoadingTx(false);
       }
     }
-    loadTransactions();
+    loadDashboardData();
   }, [supabase]);
+
+  const btcValue = btcBalance * prices.BTC;
+  const ethValue = ethBalance * prices.ETH;
+  const usdtValue = usdtBalance;
+
+  const allocationData = useMemo(() => {
+    if (portfolioValue === 0) {
+      return [
+        { name: "Bitcoin", value: 25000, color: "#1E40AF" },
+        { name: "Ethereum", value: 18750, color: "#2563EB" },
+        { name: "USDT", value: 8000, color: "#F5A623" },
+      ];
+    }
+    return [
+      { name: "Bitcoin", value: btcValue, color: "#1E40AF" },
+      { name: "Ethereum", value: ethValue, color: "#2563EB" },
+      { name: "USDT", value: usdtValue, color: "#F5A623" },
+    ].filter(item => item.value > 0);
+  }, [btcValue, ethValue, usdtValue, portfolioValue]);
+
+  const performanceData = useMemo(() => {
+    const val = portfolioValue || 51750.00;
+    return [
+      { name: "Mon", value: Math.round(val * 0.95) },
+      { name: "Tue", value: Math.round(val * 0.93) },
+      { name: "Wed", value: Math.round(val * 0.95) },
+      { name: "Thu", value: Math.round(val * 0.96) },
+      { name: "Fri", value: Math.round(val * 0.98) },
+      { name: "Sat", value: Math.round(val * 0.97) },
+      { name: "Sun", value: Math.round(val) },
+    ];
+  }, [portfolioValue]);
 
   return (
     <div className="space-y-6">
       
-      {/* 1. Main Balance Card */}
       <div className="bg-[#1855C0] rounded-2xl p-8 text-white shadow-lg">
         <div className="flex flex-col md:flex-row justify-between items-start gap-6">
           <div>
@@ -149,7 +236,7 @@ export default function DashboardPage() {
               </button>
             </div>
             <h1 className="text-4xl md:text-[44px] font-bold tracking-tight mb-2">
-              {hideBalance ? "$••,•••.••" : "$51,750.00"}
+              {hideBalance ? "$••,•••.••" : `$${portfolioValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
             </h1>
             <div className="flex items-center gap-1.5 text-[14px]">
               <TrendingUp className="w-4 h-4 text-[#FFD166]" />
@@ -160,7 +247,7 @@ export default function DashboardPage() {
           <div className="md:text-right">
             <span className="text-[13px] text-blue-100/90 font-medium">CAD Balance</span>
             <div className="text-xl md:text-2xl font-bold mt-1">
-              {hideBalance ? "$•,•••.••" : "$8,000.00"}
+              {hideBalance ? "$•,•••.••" : `$${cadBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
             </div>
           </div>
         </div>
@@ -177,10 +264,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* 2. Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
-        
-        {/* Line Chart */}
         <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
           <h2 className="text-[15px] font-bold text-[#0A0F2C] mb-6">Portfolio Performance</h2>
           <div className="h-[240px] w-full">
@@ -197,7 +281,6 @@ export default function DashboardPage() {
                   axisLine={true} 
                   tickLine={false} 
                   tick={{ fontSize: 11, fill: '#A0AEC0' }} 
-                  ticks={[0, 15000, 30000, 45000, 60000]}
                 />
                 <Tooltip 
                   contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
@@ -216,7 +299,6 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Donut Chart */}
         <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex flex-col">
           <h2 className="text-[15px] font-bold text-[#0A0F2C] mb-4">Asset Allocation</h2>
           <div className="flex-1 flex flex-col justify-between">
@@ -249,7 +331,7 @@ export default function DashboardPage() {
                     <span className="text-[13px] text-[#4A5568]">{item.name}</span>
                   </div>
                   <span className="text-[13px] font-bold text-[#0A0F2C]">
-                    ${item.value.toLocaleString()}
+                    ${item.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
               ))}
@@ -258,10 +340,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* 3. Balances Row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        
-        {/* Bitcoin Card */}
         <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex flex-col">
           <div className="flex items-start justify-between mb-4">
             <CoinLogo src={btcLogo} symbol="BTC" className="h-10 w-10 p-1.5" />
@@ -270,12 +349,14 @@ export default function DashboardPage() {
             </div>
           </div>
           <h3 className="text-[15px] font-bold text-[#0A0F2C] mb-1">Bitcoin</h3>
-          <div className="text-[20px] font-bold text-[#0A0F2C] mb-0.5">${(25000).toLocaleString()}</div>
-          <div className="text-[11px] text-[#A0AEC0] font-medium">0.45823 BTC</div>
+          <div className="text-[20px] font-bold text-[#0A0F2C] mb-0.5">
+            ${btcValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </div>
+          <div className="text-[11px] text-[#A0AEC0] font-medium">
+            {btcBalance.toLocaleString(undefined, { maximumFractionDigits: 8 })} BTC
+          </div>
         </div>
 
-
-        {/* Ethereum Card */}
         <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex flex-col">
           <div className="flex items-start justify-between mb-4">
             <CoinLogo src={ethLogo} symbol="ETH" className="h-10 w-10 p-1.5" />
@@ -284,11 +365,14 @@ export default function DashboardPage() {
             </div>
           </div>
           <h3 className="text-[15px] font-bold text-[#0A0F2C] mb-1">Ethereum</h3>
-          <div className="text-[20px] font-bold text-[#0A0F2C] mb-0.5">${(18750).toLocaleString()}</div>
-          <div className="text-[11px] text-[#A0AEC0] font-medium">7.8234 ETH</div>
+          <div className="text-[20px] font-bold text-[#0A0F2C] mb-0.5">
+            ${ethValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </div>
+          <div className="text-[11px] text-[#A0AEC0] font-medium">
+            {ethBalance.toLocaleString(undefined, { maximumFractionDigits: 8 })} ETH
+          </div>
         </div>
 
-        {/* Tether Card */}
         <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex flex-col">
           <div className="flex items-start justify-between mb-4">
             <CoinLogo src={usdtLogo} symbol="USDT" className="h-10 w-10 p-1.5" />
@@ -297,12 +381,15 @@ export default function DashboardPage() {
             </div>
           </div>
           <h3 className="text-[15px] font-bold text-[#0A0F2C] mb-1">Tether</h3>
-          <div className="text-[20px] font-bold text-[#0A0F2C] mb-0.5">${(8000).toLocaleString()}</div>
-          <div className="text-[11px] text-[#A0AEC0] font-medium">8,000 USDT</div>
+          <div className="text-[20px] font-bold text-[#0A0F2C] mb-0.5">
+            ${usdtValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </div>
+          <div className="text-[11px] text-[#A0AEC0] font-medium">
+            {usdtBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })} USDT
+          </div>
         </div>
       </div>
 
-      {/* 4. Recent Transactions */}
       <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-[15px] font-bold text-[#0A0F2C]">Recent Transactions</h2>
@@ -351,7 +438,7 @@ export default function DashboardPage() {
                         "text-[14px] font-bold",
                         isDeposit ? "text-[#10B981]" : "text-[#0A0F2C]"
                       )}>
-                        {isDeposit ? "+" : "-"}{tx.amount.toLocaleString()} CAD
+                        {isDeposit ? "+" : "-"}{tx.amount.toLocaleString()} {tx.asset}
                       </div>
                       <div className="text-[12px] text-[#A0AEC0]">{dateStr}</div>
                     </div>
@@ -362,7 +449,6 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
-
     </div>
   );
 }

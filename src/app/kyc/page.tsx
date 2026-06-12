@@ -124,6 +124,23 @@ const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, field: keyof t
 
       if (insertError) throw insertError;
 
+      try {
+        await fetch("/api/log-event", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "KYC Documents Submitted",
+            category: "Kyc",
+            severity: "Info",
+            userName: formData.fullName,
+            userId: user.id,
+            details: "User submitted front ID, back ID, and selfie for KYC verification."
+          })
+        });
+      } catch (logErr) {
+        console.error("Failed to call log-event for KYC submission:", logErr);
+      }
+
       setCurrentStep(5);
     } catch (error: any) {
       console.error("KYC submission error:", error);

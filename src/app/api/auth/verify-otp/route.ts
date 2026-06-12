@@ -64,6 +64,27 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Failed to verify profile" }, { status: 500 });
     }
 
+    try {
+      const { data: profile } = await supabaseAdmin
+        .from("profiles")
+        .select("id, full_name")
+        .eq("email", email)
+        .single();
+
+      await supabaseAdmin.from("security_logs").insert({
+        action: "User Login",
+        category: "Auth",
+        severity: "Info",
+        user_name: profile?.full_name || email,
+        user_id: profile?.id || "N/A",
+        ip_address: req.headers.get("x-forwarded-for") || "127.0.0.1",
+        details: `User logged in successfully by verifying OTP for email: ${email}.`,
+        user_agent: req.headers.get("user-agent") || "Unknown"
+      });
+    } catch (logErr) {
+      console.error("Failed to write login log:", logErr);
+    }
+
     return NextResponse.json({ success: true, message: "Email verified successfully" });
   } catch (error) {
     console.error("Verify OTP error:", error);

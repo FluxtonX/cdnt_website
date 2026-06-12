@@ -78,6 +78,27 @@ export async function POST(req: Request) {
       );
     }
 
+    try {
+      const { data: profile } = await supabaseAdmin
+        .from("profiles")
+        .select("full_name")
+        .eq("id", user.id)
+        .single();
+
+      await supabaseAdmin.from("security_logs").insert({
+        action: "Deposit Request Created",
+        category: "Transaction",
+        severity: "Info",
+        user_name: profile?.full_name || user.email || "Unknown User",
+        user_id: user.id,
+        ip_address: req.headers.get("x-forwarded-for") || "127.0.0.1",
+        details: `Created deposit request of ${numericAmount} ${asset} via Binance Pay.`,
+        user_agent: req.headers.get("user-agent") || "Unknown"
+      });
+    } catch (logErr) {
+      console.error("Failed to write deposit request log:", logErr);
+    }
+
     return NextResponse.json({
       success: true,
       tradeNo: merchantTradeNo,

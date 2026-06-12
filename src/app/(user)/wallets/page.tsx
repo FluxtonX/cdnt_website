@@ -1,68 +1,198 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Copy, QrCode, TriangleAlert, ArrowDownLeft, ArrowUpRight } from "lucide-react";
+import { Copy, QrCode, TriangleAlert, ArrowDownLeft, ArrowUpRight, Loader2, Check } from "lucide-react";
 import { CoinLogo } from "@/components/market/CoinLogo";
 import { getCoinBySymbol } from "@/config/coins";
+import { createClient } from "@/lib/supabase/client";
+import { QRCodeSVG } from "qrcode.react";
 
-const walletsData = [
-  {
-    id: "bitcoin",
-    name: "Bitcoin",
-    symbol: "BTC",
-    balance: "0.45823",
-    value: "$25,000.00",
-    change: "+12.3%",
-    changeType: "positive",
-    network: "Bitcoin Network",
-    address: "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0w1",
-    image: getCoinBySymbol("BTCUSDT")?.logoUrl,
-    activities: [
-      { id: 1, type: "Deposit", time: "2 hours ago", amount: "+0.05 BTC", amountType: "positive", status: "Confirmed" },
-      { id: 2, type: "Withdrawal", time: "1 day ago", amount: "-0.02 BTC", amountType: "negative", status: "Confirmed" },
-      { id: 3, type: "Deposit", time: "3 days ago", amount: "+0.15 BTC", amountType: "positive", status: "Confirmed" },
-    ]
-  },
-  {
-    id: "ethereum",
-    name: "Ethereum",
-    symbol: "ETH",
-    balance: "7.8234",
-    value: "$18,750.00",
-    change: "+8.37%",
-    changeType: "positive",
-    network: "Ethereum Mainnet",
-    address: "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0w1",
-    image: getCoinBySymbol("ETHUSDT")?.logoUrl,
-    activities: [
-      { id: 1, type: "Deposit", time: "2 hours ago", amount: "+0.05 ETH", amountType: "positive", status: "Confirmed" },
-      { id: 2, type: "Withdrawal", time: "1 day ago", amount: "-0.02 ETH", amountType: "negative", status: "Confirmed" },
-      { id: 3, type: "Deposit", time: "3 days ago", amount: "+0.15 ETH", amountType: "positive", status: "Confirmed" },
-    ]
-  },
-  {
-    id: "tether",
-    name: "Tether",
-    symbol: "USDT",
-    balance: "8,000",
-    value: "$8,000.00",
-    change: "0.0%",
-    changeType: "neutral",
-    network: "ERC-20",
-    address: "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0w1",
-    image: "https://cryptologos.cc/logos/tether-usdt-logo.png",
-    activities: [
-      { id: 1, type: "Deposit", time: "2 hours ago", amount: "+0.05 USDT", amountType: "positive", status: "Confirmed" },
-      { id: 2, type: "Withdrawal", time: "1 day ago", amount: "-0.02 USDT", amountType: "negative", status: "Confirmed" },
-      { id: 3, type: "Deposit", time: "3 days ago", amount: "+0.15 USDT", amountType: "positive", status: "Confirmed" },
-    ]
-  }
-];
+const supabase = createClient();
 
 export default function WalletsPage() {
+  const [wallets, setWallets] = useState<any[]>([]);
   const [selectedWalletId, setSelectedWalletId] = useState("bitcoin");
-  const selectedWallet = walletsData.find(w => w.id === selectedWalletId)!;
+  const [loading, setLoading] = useState(true);
+  const [copied, setCopied] = useState(false);
+  const [showQr, setShowQr] = useState(false);
+
+  const [prices, setPrices] = useState<Record<string, number>>({
+    BTC: 0,
+    ETH: 0,
+    USDT: 1,
+  });
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        setLoading(true);
+
+        // 1. Get authenticated user
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        // 2. Fetch live crypto prices in USD from Binance ticker
+        let btcPrice = 60000;
+        let ethPrice = 3000;
+        try {
+          const btcRes = await fetch("/api/market/ticker?symbol=BTCUSDT");
+          if (btcRes.ok) {
+            const btcData = await btcRes.json();
+            btcPrice = Number(btcData.lastPrice);
+          }
+          const ethRes = await fetch("/api/market/ticker?symbol=ETHUSDT");
+          if (ethRes.ok) {
+            const ethData = await ethRes.json();
+            ethPrice = Number(ethData.lastPrice);
+          }
+        } catch (err) {
+          console.error("Failed to fetch live prices:", err);
+        }
+        setPrices({ BTC: btcPrice, ETH: ethPrice, USDT: 1 });
+
+        // 3. Fetch user wallet balances
+        const { data: userWallets, error: walletsErr } = await supabase
+          .from("user_wallets")
+          .select("*")
+          .eq("user_id", user.id);
+
+        if (walletsErr) throw walletsErr;
+
+        // 4. Fetch platform hot wallet addresses for deposits
+        const { data: platformWallets, error: platformErr } = await supabase
+          .from("platform_wallets")
+          .select("*")
+          .eq("type", "Hot");
+
+        if (platformErr) throw platformErr;
+
+        const platformAddressMap = (platformWallets || []).reduce((acc: any, w: any) => {
+          acc[w.crypto] = w.address;
+          return acc;
+        }, {});
+
+        // 5. Fetch recent transactions from wallet_ledger
+        const { data: ledger, error: ledgerErr } = await supabase
+          .from("wallet_ledger")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false });
+
+        if (ledgerErr) throw ledgerErr;
+
+        // 6. Fetch pending manual deposit requests
+        const { data: deposits, error: depositsErr } = await supabase
+          .from("deposit_requests")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("status", "pending")
+          .order("created_at", { ascending: false });
+
+        if (depositsErr) throw depositsErr;
+
+        // Combine ledger and pending deposits into a single activity list per coin
+        const allActivities = [
+          ...(ledger || []).map((l: any) => ({
+            id: l.id,
+            type: l.type === "DEPOSIT" ? "Deposit" : "Withdrawal",
+            time: new Date(l.created_at).toLocaleDateString() + " " + new Date(l.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            amount: `${l.type === "DEPOSIT" ? "+" : "-"}${Number(l.amount).toLocaleString(undefined, { maximumFractionDigits: 8 })} ${l.currency}`,
+            amountType: l.type === "DEPOSIT" ? "positive" : "negative",
+            status: l.status || "Confirmed",
+            currency: l.currency,
+            createdAt: new Date(l.created_at),
+          })),
+          ...(deposits || []).map((d: any) => ({
+            id: d.id,
+            type: "Deposit",
+            time: new Date(d.created_at).toLocaleDateString() + " " + new Date(d.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            amount: `+${Number(d.expected_amount).toLocaleString(undefined, { maximumFractionDigits: 8 })} ${d.asset}`,
+            amountType: "positive",
+            status: "Pending Approval",
+            currency: d.asset,
+            createdAt: new Date(d.created_at),
+          })),
+        ].sort((a: any, b: any) => b.createdAt.getTime() - a.createdAt.getTime());
+
+        // Map balance values
+        const btcBalance = Number(userWallets?.find((w: any) => w.currency === "BTC")?.balance || 0);
+        const ethBalance = Number(userWallets?.find((w: any) => w.currency === "ETH")?.balance || 0);
+        const usdtBalance = Number(userWallets?.find((w: any) => w.currency === "USDT")?.balance || 0);
+
+        const mappedWallets = [
+          {
+            id: "bitcoin",
+            name: "Bitcoin",
+            symbol: "BTC",
+            balance: btcBalance.toFixed(8),
+            rawBalance: btcBalance,
+            value: `$${(btcBalance * btcPrice).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+            change: "Live",
+            changeType: "positive",
+            network: "Bitcoin Network",
+            address: platformAddressMap["BTC"] || "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
+            image: getCoinBySymbol("BTCUSDT")?.logoUrl,
+            activities: allActivities.filter((act: any) => act.currency === "BTC").slice(0, 5),
+          },
+          {
+            id: "ethereum",
+            name: "Ethereum",
+            symbol: "ETH",
+            balance: ethBalance.toFixed(8),
+            rawBalance: ethBalance,
+            value: `$${(ethBalance * ethPrice).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+            change: "Live",
+            changeType: "positive",
+            network: "Ethereum Mainnet",
+            address: platformAddressMap["ETH"] || "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
+            image: getCoinBySymbol("ETHUSDT")?.logoUrl,
+            activities: allActivities.filter((act: any) => act.currency === "ETH").slice(0, 5),
+          },
+          {
+            id: "tether",
+            name: "Tether",
+            symbol: "USDT",
+            balance: usdtBalance.toFixed(2),
+            rawBalance: usdtBalance,
+            value: `$${usdtBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+            change: "Stable",
+            changeType: "neutral",
+            network: "ERC-20",
+            address: platformAddressMap["USDT"] || "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
+            image: "https://cryptologos.cc/logos/tether-usdt-logo.png",
+            activities: allActivities.filter((act: any) => act.currency === "USDT").slice(0, 5),
+          },
+        ];
+
+        setWallets(mappedWallets);
+      } catch (err) {
+        console.error("Failed to load wallets data from Supabase:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadData();
+  }, [selectedWalletId]);
+
+  const selectedWallet = wallets.find(w => w.id === selectedWalletId);
+
+  const handleCopy = (address: string) => {
+    navigator.clipboard.writeText(address);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center bg-transparent">
+        <Loader2 className="h-8 w-8 animate-spin text-primary-blue" />
+      </div>
+    );
+  }
+
+  if (!selectedWallet) return null;
 
   return (
     <div className="max-w-5xl">
@@ -73,7 +203,7 @@ export default function WalletsPage() {
 
       {/* Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        {walletsData.map(wallet => {
+        {wallets.map(wallet => {
           const isSelected = wallet.id === selectedWalletId;
           return (
             <div
@@ -98,7 +228,7 @@ export default function WalletsPage() {
               <div>
                 <h3 className="font-semibold text-lg text-gray-900">{wallet.name}</h3>
                 <div className="text-[26px] font-bold text-gray-900 mt-0.5">{wallet.value}</div>
-                <div className="text-sm text-gray-500 mt-1">{wallet.balance} {wallet.symbol}</div>
+                <div className="text-sm text-gray-500 mt-1">{Number(wallet.balance).toLocaleString(undefined, { maximumFractionDigits: 8 })} {wallet.symbol}</div>
               </div>
             </div>
           );
@@ -116,7 +246,7 @@ export default function WalletsPage() {
           </div>
 
           <div>
-            <p className="text-sm font-semibold text-gray-900 mb-2">Your {selectedWallet.name} Address</p>
+            <p className="text-sm font-semibold text-gray-900 mb-2">Your Platform {selectedWallet.name} Deposit Address</p>
             <div className="flex gap-3">
               <input 
                 type="text" 
@@ -124,14 +254,29 @@ export default function WalletsPage() {
                 value={selectedWallet.address} 
                 className="flex-1 bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-mono text-gray-600 focus:outline-none"
               />
-              <button className="p-3 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-gray-600">
-                <Copy className="w-5 h-5" />
+              <button 
+                onClick={() => handleCopy(selectedWallet.address)}
+                className="p-3 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-gray-600"
+                title="Copy Address"
+              >
+                {copied ? <Check className="w-5 h-5 text-emerald-600" /> : <Copy className="w-5 h-5" />}
               </button>
-              <button className="p-3 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-gray-600">
+              <button 
+                onClick={() => setShowQr(!showQr)}
+                className={`p-3 border rounded-xl transition-colors ${showQr ? "bg-blue-50 border-primary-blue text-primary-blue" : "border-gray-200 hover:bg-gray-50 text-gray-600"}`}
+                title="Show QR Code"
+              >
                 <QrCode className="w-5 h-5" />
               </button>
             </div>
           </div>
+
+          {showQr && (
+            <div className="mt-5 flex flex-col items-center justify-center p-4 border border-dashed border-gray-200 rounded-xl bg-gray-50/50">
+              <QRCodeSVG value={selectedWallet.address} size={160} />
+              <p className="mt-3 text-xs text-gray-500 font-mono font-bold">{selectedWallet.address}</p>
+            </div>
+          )}
 
           <div className="mt-6 bg-[#FFF9EE] rounded-xl p-5 border border-orange-100/50">
             <div className="flex items-center gap-2 text-[#E8A020] font-semibold text-sm">
@@ -140,24 +285,27 @@ export default function WalletsPage() {
             </div>
             <ul className="mt-3 space-y-2 text-sm text-gray-500 list-disc pl-5">
               <li>Only send {selectedWallet.name} to this address</li>
-              <li>Minimum deposit: 0.001 {selectedWallet.symbol}</li>
+              <li>Minimum deposit: {selectedWallet.symbol === "BTC" ? "0.0005" : selectedWallet.symbol === "ETH" ? "0.01" : "5.0"} {selectedWallet.symbol}</li>
               <li>Requires 3 network confirmations</li>
-              <li>Always verify the address before sending</li>
+              <li>Submit transaction hash on deposit request page after sending</li>
             </ul>
           </div>
 
           <div className="mt-6 flex gap-4">
             <Link
               href={`/deposit?asset=${selectedWallet.symbol}`}
-              className="flex-1 bg-primary-blue hover:bg-blue-800 text-white font-semibold rounded-xl py-3.5 flex items-center justify-center gap-2 transition-colors"
+              className="flex-1 bg-primary-blue hover:bg-blue-800 text-white font-semibold rounded-xl py-3.5 flex items-center justify-center gap-2 transition-colors text-center"
             >
               <ArrowDownLeft className="w-5 h-5" />
               Deposit {selectedWallet.symbol}
             </Link>
-            <button className="flex-1 bg-white border border-gray-200 hover:bg-gray-50 text-gray-900 font-semibold rounded-xl py-3.5 flex items-center justify-center gap-2 transition-colors">
+            <Link
+              href="/withdraw"
+              className="flex-1 bg-white border border-gray-200 hover:bg-gray-50 text-gray-900 font-semibold rounded-xl py-3.5 flex items-center justify-center gap-2 transition-colors text-center"
+            >
               <ArrowUpRight className="w-5 h-5" />
               Withdraw {selectedWallet.symbol}
-            </button>
+            </Link>
           </div>
         </div>
 
@@ -179,7 +327,7 @@ export default function WalletsPage() {
             </div>
             <div>
               <p className="text-xs text-gray-500 mb-1">Current Balance</p>
-              <p className="text-sm font-semibold text-gray-900">{selectedWallet.balance} {selectedWallet.symbol}</p>
+              <p className="text-sm font-semibold text-gray-900">{Number(selectedWallet.balance).toLocaleString(undefined, { maximumFractionDigits: 8 })} {selectedWallet.symbol}</p>
             </div>
             <div>
               <p className="text-xs text-gray-500 mb-1">CAD Value</p>
@@ -193,33 +341,45 @@ export default function WalletsPage() {
       <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm mb-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-6">Recent {selectedWallet.name} Activity</h2>
         <div className="space-y-6">
-          {selectedWallet.activities.map(activity => (
-            <div key={activity.id} className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                  activity.type === "Deposit" ? "bg-[#DCFCE7] text-[#16A34A]" : "bg-[#E0E7FF] text-primary-blue"
-                }`}>
-                  {activity.type === "Deposit" ? <ArrowDownLeft className="w-5 h-5" /> : <ArrowUpRight className="w-5 h-5" />}
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-gray-900">{activity.type}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">{activity.time}</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className={`text-sm font-semibold ${
-                  activity.amountType === "positive" ? "text-[#16A34A]" : "text-gray-900"
-                }`}>
-                  {activity.amount}
-                </p>
-                <div className="mt-1">
-                  <span className="px-2 py-0.5 bg-[#DCFCE7] text-[#16A34A] rounded-full text-[10px] font-semibold uppercase tracking-wide">
-                    {activity.status}
-                  </span>
-                </div>
-              </div>
+          {selectedWallet.activities.length === 0 ? (
+            <div className="text-center py-8 text-sm text-gray-400">
+              No recent transactions found for {selectedWallet.symbol}.
             </div>
-          ))}
+          ) : (
+            selectedWallet.activities.map((activity: any) => (
+              <div key={activity.id} className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                    activity.type === "Deposit" ? "bg-[#DCFCE7] text-[#16A34A]" : "bg-[#E0E7FF] text-primary-blue"
+                  }`}>
+                    {activity.type === "Deposit" ? <ArrowDownLeft className="w-5 h-5" /> : <ArrowUpRight className="w-5 h-5" />}
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">{activity.type}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{activity.time}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className={`text-sm font-semibold ${
+                    activity.amountType === "positive" ? "text-[#16A34A]" : "text-gray-900"
+                  }`}>
+                    {activity.amount}
+                  </p>
+                  <div className="mt-1">
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide ${
+                      activity.status === "Confirmed" || activity.status === "COMPLETED" || activity.status === "PAID"
+                        ? "bg-[#DCFCE7] text-[#16A34A]"
+                        : activity.status === "Pending Approval"
+                        ? "bg-[#FFF9EE] text-[#E8A020]"
+                        : "bg-red-50 text-red-650"
+                    }`}>
+                      {activity.status}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>
