@@ -1,51 +1,259 @@
-import Link from "next/link";
-import { LockKeyhole, MonitorCheck, UserRound } from "lucide-react";
-import { PageTitle, Panel } from "@/components/dashboard/blocks";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
+"use client";
 
-export default function SettingsPage() {
+import { Shield, AlertCircle, CheckCircle2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+
+export default function ProfileSettingsPage() {
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [kycStatus, setKycStatus] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  const supabase = createClient();
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          setIsLoading(false);
+          return;
+        }
+
+        setUserId(user.id);
+        setEmail(user.email || "");
+        setPhone(user.user_metadata?.phone || "");
+        
+        // Also fetch from profiles table
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("full_name, kyc_verified")
+          .eq("id", user.id)
+          .single();
+
+        setFullName(profile?.full_name || user.user_metadata?.full_name || "");
+        
+        // Let's get actual KYC status if possible, otherwise rely on profile.kyc_verified
+        const { data: kyc } = await supabase
+          .from("kyc_submissions")
+          .select("status")
+          .eq("user_id", user.id)
+          .single();
+
+        if (kyc?.status === "approved" || profile?.kyc_verified) {
+          setKycStatus("verified");
+        } else if (kyc?.status === "pending") {
+          setKycStatus("pending");
+        } else {
+          setKycStatus("unverified");
+        }
+
+      } catch (error) {
+        console.error("Failed to load profile data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadData();
+  }, [supabase]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!userId) return;
+
+    setMessage(null);
+    setIsSaving(true);
+
+    try {
+      // 1. Update Auth metadata and Email
+      // Note: Changing email in Supabase sends a confirmation email to both addresses by default unless disabled.
+      const { error: authError } = await supabase.auth.updateUser({
+        email,
+        data: { full_name: fullName, phone }
+      });
+
+      if (authError) throw authError;
+
+      // 2. Update Profiles table
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update({ full_name: fullName })
+        .eq("id", userId);
+
+      if (profileError) throw profileError;
+
+      setMessage({ type: "success", text: "Profile updated successfully. If you changed your email, check your inbox to confirm." });
+      
+    } catch (error: any) {
+      console.error("Update error:", error);
+      setMessage({ type: "error", text: error.message || "Failed to update profile." });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col gap-6 animate-pulse">
+        <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="h-6 w-48 bg-gray-200 rounded mb-2"></div>
+          <div className="h-4 w-64 bg-gray-100 rounded mb-6"></div>
+          <div className="space-y-6">
+            <div className="h-12 bg-gray-50 rounded-xl"></div>
+            <div className="h-12 bg-gray-50 rounded-xl"></div>
+            <div className="h-12 bg-gray-50 rounded-xl"></div>
+          </div>
+        </section>
+        <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="h-6 w-48 bg-gray-200 rounded mb-2"></div>
+          <div className="h-24 bg-gray-50 rounded-xl mb-4"></div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="h-24 bg-gray-50 rounded-xl"></div>
+            <div className="h-24 bg-gray-50 rounded-xl"></div>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
   return (
-    <>
-      <PageTitle
-        title="Settings"
-        description="Manage profile details, security preferences, notification settings, and account preferences."
-      />
-      <div className="grid gap-4 md:grid-cols-3">
-        {[
-          ["Profile", "Update contact and personal information.", UserRound, "/settings"],
-          ["Security", "Password, 2FA, and sensitive actions.", LockKeyhole, "/settings/security"],
-          ["Devices", "Review and remove active sessions.", MonitorCheck, "/settings/devices"],
-        ].map(([title, body, Icon, href]) => (
-          <Link key={title as string} href={href as string} className="rounded-lg border border-banking-border bg-white p-5 shadow-sm hover:border-banking-blue">
-            <Icon className="h-6 w-6 text-banking-blue" />
-            <h2 className="mt-4 font-semibold">{title as string}</h2>
-            <p className="mt-2 text-sm leading-6 text-banking-muted">{body as string}</p>
-          </Link>
-        ))}
-      </div>
-      <div className="mt-6">
-        <Panel title="Profile">
-          <form className="grid gap-4 md:grid-cols-2">
-            <input className="h-12 rounded-md border border-banking-border px-4" placeholder="Full name" />
-            <input className="h-12 rounded-md border border-banking-border px-4" placeholder="Email" />
-            <input className="h-12 rounded-md border border-banking-border px-4" placeholder="Phone" />
-            <input className="h-12 rounded-md border border-banking-border px-4" placeholder="Country" />
-          </form>
-        </Panel>
-      </div>
-      <div className="mt-6">
-        <Panel title="Appearance">
-          <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+    <div className="flex flex-col gap-6">
+      {/* Personal Information Card */}
+      <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="mb-6">
+          <h2 className="text-[18px] font-bold text-[#0A0F2C]">Personal Information</h2>
+          <p className="mt-1 text-[14px] text-[#718096]">Update your account details</p>
+        </div>
+
+        {message && (
+          <div className={`mb-6 p-4 rounded-xl flex items-start gap-3 border ${
+            message.type === 'success' 
+              ? 'bg-green-50 border-green-200 text-green-800' 
+              : 'bg-red-50 border-red-200 text-red-800'
+          }`}>
+            {message.type === 'success' ? (
+              <CheckCircle2 className="h-5 w-5 shrink-0 mt-0.5 text-green-600" />
+            ) : (
+              <AlertCircle className="h-5 w-5 shrink-0 mt-0.5 text-red-600" />
+            )}
+            <p className="text-[14px] font-medium leading-relaxed">{message.text}</p>
+          </div>
+        )}
+
+        <form className="space-y-5" onSubmit={handleSubmit}>
+          <div className="space-y-2">
+            <label className="text-[13px] font-bold text-[#0A0F2C]">Full Name</label>
+            <input 
+              type="text" 
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              className="w-full rounded-xl border border-gray-200 px-4 py-3.5 text-[15px] text-[#0A0F2C] outline-none transition-colors focus:border-[#113285] focus:ring-1 focus:ring-[#113285] disabled:opacity-60 disabled:bg-gray-50" 
+              disabled={isSaving}
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[13px] font-bold text-[#0A0F2C]">Email Address</label>
+            <input 
+              type="email" 
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full rounded-xl border border-gray-200 px-4 py-3.5 text-[15px] text-[#0A0F2C] outline-none transition-colors focus:border-[#113285] focus:ring-1 focus:ring-[#113285] disabled:opacity-60 disabled:bg-gray-50" 
+              disabled={isSaving}
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[13px] font-bold text-[#0A0F2C]">Phone Number</label>
+            <input 
+              type="tel" 
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className="w-full rounded-xl border border-gray-200 px-4 py-3.5 text-[15px] text-[#0A0F2C] outline-none transition-colors focus:border-[#113285] focus:ring-1 focus:ring-[#113285] disabled:opacity-60 disabled:bg-gray-50" 
+              disabled={isSaving}
+              required
+            />
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <button 
+              type="submit"
+              disabled={isSaving}
+              className="flex items-center justify-center min-w-[140px] rounded-xl bg-[#113285] px-6 py-3 text-[14px] font-bold text-white shadow-sm transition-colors hover:bg-blue-900 focus:outline-none focus:ring-2 focus:ring-[#113285] focus:ring-offset-2 disabled:opacity-70"
+            >
+              {isSaving ? (
+                <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+              ) : (
+                "Save Changes"
+              )}
+            </button>
+          </div>
+        </form>
+      </section>
+
+      {/* Account Status Card */}
+      <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="mb-6">
+          <h2 className="text-[18px] font-bold text-[#0A0F2C]">Account Status</h2>
+          <p className="mt-1 text-[14px] text-[#718096]">Your verification and account limits</p>
+        </div>
+
+        <div className={`mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-xl p-5 ${kycStatus === 'verified' ? 'bg-[#F4F8FF]' : 'bg-gray-50 border border-gray-200'}`}>
+          <div className="flex items-center gap-4">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center">
+              {kycStatus === 'verified' ? (
+                <Shield className="h-6 w-6 text-[#38A169]" strokeWidth={2} />
+              ) : kycStatus === 'pending' ? (
+                <AlertCircle className="h-6 w-6 text-yellow-500" strokeWidth={2} />
+              ) : (
+                <AlertCircle className="h-6 w-6 text-gray-400" strokeWidth={2} />
+              )}
+            </div>
             <div>
-              <h2 className="font-semibold">Theme preference</h2>
-              <p className="mt-1 text-sm text-banking-muted">
-                Choose light, dark, or system mode for the client workspace.
+              <p className="text-[15px] font-bold text-[#0A0F2C]">KYC Verification</p>
+              <p className="text-[14px] text-[#718096] mt-0.5">
+                {kycStatus === 'verified' ? 'Identity verified' : kycStatus === 'pending' ? 'Verification pending' : 'Unverified'}
               </p>
             </div>
-            <ThemeToggle />
           </div>
-        </Panel>
-      </div>
-    </>
+          {kycStatus === 'verified' ? (
+            <span className="inline-flex shrink-0 items-center rounded-full bg-[#C6F6D5] px-3 py-1 text-[12px] font-bold text-[#22543D]">
+              Verified
+            </span>
+          ) : kycStatus === 'pending' ? (
+            <span className="inline-flex shrink-0 items-center rounded-full bg-yellow-100 px-3 py-1 text-[12px] font-bold text-yellow-800">
+              Pending
+            </span>
+          ) : (
+            <span className="inline-flex shrink-0 items-center rounded-full bg-gray-200 px-3 py-1 text-[12px] font-bold text-gray-700">
+              Unverified
+            </span>
+          )}
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="rounded-xl border border-gray-200 p-5">
+            <p className="text-[13px] font-medium text-[#718096]">Daily Withdrawal Limit</p>
+            <p className="mt-1 text-[24px] font-black tracking-tight text-[#0A0F2C]">
+              {kycStatus === 'verified' ? '$50,000' : '$1,000'}
+            </p>
+          </div>
+          <div className="rounded-xl border border-gray-200 p-5">
+            <p className="text-[13px] font-medium text-[#718096]">Monthly Limit</p>
+            <p className="mt-1 text-[24px] font-black tracking-tight text-[#0A0F2C]">
+              {kycStatus === 'verified' ? '$500,000' : '$10,000'}
+            </p>
+          </div>
+        </div>
+      </section>
+    </div>
   );
 }

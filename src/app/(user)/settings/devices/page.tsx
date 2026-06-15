@@ -1,47 +1,76 @@
-import { Laptop, MapPin, Smartphone } from "lucide-react";
-import { PageTitle, Panel } from "@/components/dashboard/blocks";
-import { StatusBadge } from "@/components/ui/status-badge";
+"use client";
 
-export default function DevicesPage() {
+import { Smartphone } from "lucide-react";
+
+export default function DevicesSettingsPage() {
   return (
-    <>
-      <PageTitle
-        title="Device Management"
-        description="View active sessions, new device logins, IP metadata, and remove sessions you do not recognize."
-      />
-      <div className="mb-6 grid gap-4 md:grid-cols-3">
-        {[
-          ["Active sessions", "3", Laptop],
-          ["Known locations", "2", MapPin],
-          ["New device alerts", "Enabled", Smartphone],
-        ].map(([label, value, Icon]) => (
-          <article key={label as string} className="rounded-lg border border-banking-border bg-white p-5 shadow-sm">
-            <Icon className="h-5 w-5 text-banking-blue" />
-            <p className="mt-4 text-sm text-banking-muted">{label as string}</p>
-            <p className="mt-1 text-2xl font-semibold">{value as string}</p>
-          </article>
-        ))}
-      </div>
-      <Panel title="Active devices">
-        <div className="space-y-3">
-          {["Chrome on Windows", "Safari on iPhone", "Edge on Windows"].map((device, index) => (
-            <article key={device} className="grid gap-3 rounded-md border border-banking-border p-4 md:grid-cols-[1fr_0.7fr_0.5fr_110px] md:items-center">
-              <div className="flex items-center gap-3">
-                <Smartphone className="h-5 w-5 text-banking-blue" />
-                <div>
-                  <p className="font-semibold">{device}</p>
-                  <p className="text-sm text-banking-muted">IP 192.168.1.{index + 12}</p>
-                </div>
-              </div>
-              <p className="text-sm text-banking-muted">{index === 0 ? "Current session" : "Last active today"}</p>
-              <StatusBadge status={index === 0 ? "active" : "reviewed"} />
-              <button className="rounded-md border border-banking-border px-3 py-2 text-sm font-semibold">
-                {index === 0 ? "Current" : "Remove"}
-              </button>
-            </article>
-          ))}
+    <div className="flex flex-col gap-6">
+      {/* Trusted Devices Card */}
+      <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="mb-6">
+          <h2 className="text-[18px] font-bold text-[#0A0F2C]">Trusted Devices</h2>
+          <p className="mt-1 text-[14px] text-[#718096]">Manage devices that can access your account</p>
         </div>
-      </Panel>
-    </>
+
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-xl border border-gray-200 p-5">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#F4F8FF]">
+                <Smartphone className="h-6 w-6 text-[#113285]" strokeWidth={2} />
+              </div>
+              <div>
+                <p className="text-[15px] font-bold text-[#0A0F2C]">MacBook Pro</p>
+                <p className="text-[14px] text-[#718096] mt-0.5">Toronto, ON • Active now</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 w-full sm:w-auto mt-2 sm:mt-0">
+              <span className="inline-flex shrink-0 items-center rounded-full bg-[#C6F6D5] px-3 py-1 text-[12px] font-bold text-[#22543D]">
+                Trusted
+              </span>
+              <button className="rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-[13px] font-bold text-[#0A0F2C] shadow-sm transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#113285] focus:ring-offset-2 ml-auto sm:ml-0">
+                Remove
+              </button>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-xl border border-gray-200 p-5">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#F4F8FF]">
+                <Smartphone className="h-6 w-6 text-[#113285]" strokeWidth={2} />
+              </div>
+              <div>
+                <p className="text-[15px] font-bold text-[#0A0F2C]">iPhone 15 Pro</p>
+                <p className="text-[14px] text-[#718096] mt-0.5">Toronto, ON • 2 hours ago</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 w-full sm:w-auto mt-2 sm:mt-0">
+              <span className="inline-flex shrink-0 items-center rounded-full bg-[#C6F6D5] px-3 py-1 text-[12px] font-bold text-[#22543D]">
+                Trusted
+              </span>
+              <button className="rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-[13px] font-bold text-[#0A0F2C] shadow-sm transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#113285] focus:ring-offset-2 ml-auto sm:ml-0">
+                Remove
+              </button>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-xl border border-gray-200 p-5">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#F4F8FF]">
+                <Smartphone className="h-6 w-6 text-[#113285]" strokeWidth={2} />
+              </div>
+              <div>
+                <p className="text-[15px] font-bold text-[#0A0F2C]">iPad Air</p>
+                <p className="text-[14px] text-[#718096] mt-0.5">Montreal, QC • 1 week ago</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 w-full sm:w-auto mt-2 sm:mt-0">
+              <button className="rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-[13px] font-bold text-[#0A0F2C] shadow-sm transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#113285] focus:ring-offset-2 ml-auto sm:ml-0">
+                Remove
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
   );
 }
