@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ArrowLeft, Check, CheckCircle2, Circle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { validatePasswordRules } from "@/lib/utils";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -28,9 +29,7 @@ export default function RegisterPage() {
   const supabase = createClient();
 
   // Validation
-  const hasMinLength = password.length >= 8;
-  const hasUppercase = /[A-Z]/.test(password);
-  const hasNumber = /[0-9]/.test(password);
+  const { hasMinLength, hasUppercase, hasNumber } = validatePasswordRules(password);
   
   const canProceedStep2 = hasMinLength && hasUppercase && hasNumber && password !== "" && password === confirmPassword;
 

@@ -39,6 +39,41 @@ function LoginForm() {
       setError(signInError.message);
       setIsLoading(false);
     } else {
+      // Record the session/device
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const ua = navigator.userAgent;
+        let browser = "Unknown Browser";
+        if (ua.includes("Chrome")) browser = "Chrome";
+        else if (ua.includes("Firefox")) browser = "Firefox";
+        else if (ua.includes("Safari") && !ua.includes("Chrome")) browser = "Safari";
+        else if (ua.includes("Edge")) browser = "Edge";
+        
+        let os = "Unknown OS";
+        if (ua.includes("Win")) os = "Windows";
+        else if (ua.includes("Mac")) os = "MacOS";
+        else if (ua.includes("Linux")) os = "Linux";
+        else if (ua.includes("Android")) os = "Android";
+        else if (ua.includes("like Mac")) os = "iOS";
+
+        try {
+          const { data: sessionData } = await supabase.from('user_sessions').insert({
+            user_id: user.id,
+            device_name: `${os} Device`,
+            browser,
+            os,
+            location: "Unknown Location",
+            is_current: true
+          }).select().single();
+
+          if (sessionData) {
+            localStorage.setItem('current_session_id', sessionData.id);
+          }
+        } catch (err) {
+          console.error("Failed to record session", err);
+        }
+      }
+      
       router.push("/dashboard");
     }
   };
