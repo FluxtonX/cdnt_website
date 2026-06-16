@@ -459,13 +459,6 @@ export function UserShell({ children }: { children: React.ReactNode }) {
   </div>
 )}
 
-{userProfile && userProfile.kycStatus === 'approved' && (
-  <div className="mb-6 rounded-xl bg-green-50 border border-green-200 p-4 flex items-center gap-3 shadow-sm">
-    <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" strokeWidth={2.5} />
-    <p className="text-[14px] font-bold text-green-800">KYC Verified ✓ — Your account is fully verified.</p>
-  </div>
-)}
-
           {children}
         </main>
       </div>
