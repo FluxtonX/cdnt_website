@@ -57,6 +57,7 @@ function formatRelativeTime(date: Date): string {
 
 export default function DashboardPage() {
   const [hideBalance, setHideBalance] = useState(false);
+  const [loadingBalance, setLoadingBalance] = useState(true);
   const btcLogo = getCoinBySymbol("BTCUSDT")?.logoUrl;
   const ethLogo = getCoinBySymbol("ETHUSDT")?.logoUrl;
   const usdtLogo = "https://cryptologos.cc/logos/tether-usdt-logo.png";
@@ -85,36 +86,60 @@ export default function DashboardPage() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        // 1. Fetch live crypto prices in USD from Binance ticker
-        let btcPrice = 60000;
-        let ethPrice = 3000;
-        try {
-          const btcRes = await fetch("/api/market/ticker?symbol=BTCUSDT");
-          if (btcRes.ok) {
-            const btcData = await btcRes.json();
-            btcPrice = Number(btcData.lastPrice) || 60000;
+        // Start all fetches in parallel
+        const pricePromise = (async () => {
+          let btcPrice = 60000;
+          let ethPrice = 3000;
+          try {
+            const [btcRes, ethRes] = await Promise.all([
+              fetch("/api/market/ticker?symbol=BTCUSDT"),
+              fetch("/api/market/ticker?symbol=ETHUSDT"),
+            ]);
+            if (btcRes.ok) {
+              const btcData = await btcRes.json();
+              btcPrice = Number(btcData.lastPrice) || 60000;
+            }
+            if (ethRes.ok) {
+              const ethData = await ethRes.json();
+              ethPrice = Number(ethData.lastPrice) || 3000;
+            }
+          } catch (err) {
+            console.error("Failed to fetch live prices:", err);
           }
-          const ethRes = await fetch("/api/market/ticker?symbol=ETHUSDT");
-          if (ethRes.ok) {
-            const ethData = await ethRes.json();
-            ethPrice = Number(ethData.lastPrice) || 3000;
-          }
-        } catch (err) {
-          console.error("Failed to fetch live prices:", err);
-        }
-        setPrices({ BTC: btcPrice, ETH: ethPrice, USDT: 1 });
+          return { btcPrice, ethPrice };
+        })();
 
-        // 2. Fetch user wallet balances from Supabase
-        const { data: userWallets, error: walletsErr } = await supabase
+        const walletsPromise = supabase
           .from("user_wallets")
           .select("*")
           .eq("user_id", user.id);
 
+        const depositsPromise = supabase
+          .from("deposit_requests")
+          .select("id, asset, expected_amount, status, created_at, tx_hash")
+          .eq("user_id", user.id);
+
+        const withdrawalsPromise = supabase
+          .from("withdrawal_requests")
+          .select("id, amount, status, created_at, interac_email")
+          .eq("user_id", user.id);
+
+        // Await all promises
+        const [{ btcPrice, ethPrice }, { data: userWallets, error: walletsErr }, { data: deposits, error: depErr }, { data: withdrawals, error: wdrErr }] = await Promise.all([
+          pricePromise,
+          walletsPromise,
+          depositsPromise,
+          withdrawalsPromise,
+        ]);
+
+        // Update prices state
+        setPrices({ BTC: btcPrice, ETH: ethPrice, USDT: 1 });
+
+        // Process wallet balances
         if (!walletsErr && userWallets) {
           const btcBal = Number(userWallets.find((w: any) => w.currency === "BTC")?.balance || 0);
           const ethBal = Number(userWallets.find((w: any) => w.currency === "ETH")?.balance || 0);
           const usdtBal = Number(userWallets.find((w: any) => w.currency === "USDT")?.balance || 0);
-
           setBtcBalance(btcBal);
           setEthBalance(ethBal);
           setUsdtBalance(usdtBal);
@@ -122,26 +147,15 @@ export default function DashboardPage() {
           const btcVal = btcBal * btcPrice;
           const ethVal = ethBal * ethPrice;
           const usdtVal = usdtBal;
-
           const total = btcVal + ethVal + usdtVal;
           setPortfolioValue(total);
-          setCadBalance(usdtVal); 
+          setCadBalance(usdtVal);
+          // Wallet data is ready, stop loading balance
+          setLoadingBalance(false);
         }
 
-        // 3. Fetch deposits
-        const { data: deposits, error: depErr } = await supabase
-          .from("deposit_requests")
-          .select("id, asset, expected_amount, status, created_at, tx_hash")
-          .eq("user_id", user.id);
-
-        // 4. Fetch withdrawals
-        const { data: withdrawals, error: wdrErr } = await supabase
-          .from("withdrawal_requests")
-          .select("id, amount, status, created_at, interac_email")
-          .eq("user_id", user.id);
-
+        // Handle transactions (same as before)
         const dbError = (depErr && depErr.code === "PGRST205") || (wdrErr && wdrErr.code === "PGRST205");
-
         if (dbError) {
           setTransactions([
             { id: "1", type: "Deposit", asset: "BTC", amount: 5000, status: "approved", date: new Date(Date.now() - 2 * 60 * 60 * 1000) },
@@ -179,7 +193,6 @@ export default function DashboardPage() {
             });
           });
         }
-
         list.sort((a, b) => b.date.getTime() - a.date.getTime());
         setTransactions(list.slice(0, 4));
       } catch (err) {
@@ -236,7 +249,7 @@ export default function DashboardPage() {
               </button>
             </div>
             <h1 className="text-4xl md:text-[44px] font-bold tracking-tight mb-2">
-              {hideBalance ? "$••,•••.••" : `$${portfolioValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+               {hideBalance ? "$••,•••.••" : loadingBalance ? <div className="h-8 w-48 bg-gray-200 animate-pulse rounded"></div> : `$${portfolioValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
             </h1>
             <div className="flex items-center gap-1.5 text-[14px]">
               <TrendingUp className="w-4 h-4 text-[#FFD166]" />
@@ -247,7 +260,7 @@ export default function DashboardPage() {
           <div className="md:text-right">
             <span className="text-[13px] text-blue-100/90 font-medium">CAD Balance</span>
             <div className="text-xl md:text-2xl font-bold mt-1">
-              {hideBalance ? "$•,•••.••" : `$${cadBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+               {hideBalance ? "$•,•••.••" : loadingBalance ? <div className="h-8 w-48 bg-gray-200 animate-pulse rounded"></div> : `$${cadBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
             </div>
           </div>
         </div>

@@ -440,25 +440,9 @@ export function UserShell({ children }: { children: React.ReactNode }) {
         <p className="text-[13px] text-amber-700 mt-0.5">Please complete your KYC verification to unlock full account features and higher limits.</p>
       </div>
     </div>
-    <Link
-      href="/kyc"
-      className="whitespace-nowrap rounded-lg bg-amber-500 px-4 py-2 text-[13px] font-bold text-white shadow-sm hover:bg-amber-600 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 flex-shrink-0"
-    >
-      Complete Verification
-    </Link>
+    <Link href="/kyc" className="whitespace-nowrap rounded-lg bg-amber-500 px-4 py-2 text-[13px] font-bold text-white shadow-sm hover:bg-amber-600 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 flex-shrink-0">Complete Verification</Link>
   </div>
 )}
-
-{userProfile && userProfile.kycStatus === 'pending' && (
-  <div className="mb-6 rounded-xl bg-yellow-50 border border-yellow-200 p-4 flex items-start sm:items-center gap-3 shadow-sm">
-    <AlertCircle className="h-5 w-5 text-yellow-500 flex-shrink-0" strokeWidth={2.5} />
-    <div>
-      <h3 className="text-[14px] font-bold text-yellow-900">KYC Under Review</h3>
-      <p className="text-[13px] text-yellow-700 mt-0.5">Your verification is being reviewed. We'll notify you when it's approved.</p>
-    </div>
-  </div>
-)}
-
           {children}
         </main>
       </div>
