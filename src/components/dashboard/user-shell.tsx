@@ -42,7 +42,7 @@ export function UserShell({ children }: { children: React.ReactNode }) {
     router.push("/login");
   };
   
-  const [userProfile, setUserProfile] = useState<{ email: string, fullName: string, initials: string } | null>(null);
+  const [userProfile, setUserProfile] = useState<{ email: string, fullName: string, initials: string, kycVerified: boolean } | null>(null);
 
   useEffect(() => {
     async function loadUser() {
@@ -51,7 +51,7 @@ export function UserShell({ children }: { children: React.ReactNode }) {
       
       const { data: profile } = await supabase
         .from('profiles')
-        .select('full_name')
+        .select('full_name, kyc_verified')
         .eq('id', user.id)
         .single();
         
@@ -61,7 +61,8 @@ export function UserShell({ children }: { children: React.ReactNode }) {
       setUserProfile({
         email: user.email || '',
         fullName,
-        initials
+        initials,
+        kycVerified: profile?.kyc_verified || false
       });
     }
     loadUser();
@@ -203,7 +204,7 @@ export function UserShell({ children }: { children: React.ReactNode }) {
 
         {/* Page Content */}
         <main className="mx-auto w-full p-4 md:p-8">
-          {!isKycVerified && (
+          {!userProfile?.kycVerified && (
             <div className="mb-6 rounded-xl bg-amber-50 border border-amber-200 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
               <div className="flex items-start sm:items-center gap-3">
                 <div className="mt-0.5 sm:mt-0 flex-shrink-0">
