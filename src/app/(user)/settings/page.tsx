@@ -13,6 +13,7 @@ export default function ProfileSettingsPage() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [kycStatus, setKycStatus] = useState<string | null>(null);
+  const [rejectionReason, setRejectionReason] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
 
   const supabase = createClient();
@@ -42,7 +43,7 @@ export default function ProfileSettingsPage() {
         // Let's get actual KYC status if possible, otherwise rely on profile.kyc_verified
         const { data: kyc } = await supabase
           .from("kyc_submissions")
-          .select("status")
+          .select("status, rejection_reason")
           .eq("user_id", user.id)
           .single();
 
@@ -50,6 +51,9 @@ export default function ProfileSettingsPage() {
           setKycStatus("verified");
         } else if (kyc?.status === "pending") {
           setKycStatus("pending");
+        } else if (kyc?.status === "rejected") {
+          setKycStatus("rejected");
+          setRejectionReason(kyc.rejection_reason);
         } else {
           setKycStatus("unverified");
         }
@@ -206,13 +210,15 @@ export default function ProfileSettingsPage() {
           <p className="mt-1 text-[14px] text-[#718096]">Your verification and account limits</p>
         </div>
 
-        <div className={`mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-xl p-5 ${kycStatus === 'verified' ? 'bg-[#F4F8FF]' : 'bg-gray-50 border border-gray-200'}`}>
+        <div className={`mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-xl p-5 ${kycStatus === 'verified' ? 'bg-[#F4F8FF]' : kycStatus === 'rejected' ? 'bg-red-50 border border-red-200' : 'bg-gray-50 border border-gray-200'}`}>
           <div className="flex items-center gap-4">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center">
               {kycStatus === 'verified' ? (
                 <Shield className="h-6 w-6 text-[#38A169]" strokeWidth={2} />
               ) : kycStatus === 'pending' ? (
                 <AlertCircle className="h-6 w-6 text-yellow-500" strokeWidth={2} />
+              ) : kycStatus === 'rejected' ? (
+                <AlertCircle className="h-6 w-6 text-red-500" strokeWidth={2} />
               ) : (
                 <AlertCircle className="h-6 w-6 text-gray-400" strokeWidth={2} />
               )}
@@ -220,7 +226,7 @@ export default function ProfileSettingsPage() {
             <div>
               <p className="text-[15px] font-bold text-[#0A0F2C]">KYC Verification</p>
               <p className="text-[14px] text-[#718096] mt-0.5">
-                {kycStatus === 'verified' ? 'Identity verified' : kycStatus === 'pending' ? 'Verification pending' : 'Unverified'}
+                {kycStatus === 'verified' ? 'Identity verified' : kycStatus === 'pending' ? 'Verification pending' : kycStatus === 'rejected' ? 'Verification rejected' : 'Unverified'}
               </p>
             </div>
           </div>
@@ -232,12 +238,23 @@ export default function ProfileSettingsPage() {
             <span className="inline-flex shrink-0 items-center rounded-full bg-yellow-100 px-3 py-1 text-[12px] font-bold text-yellow-800">
               Pending
             </span>
+          ) : kycStatus === 'rejected' ? (
+            <span className="inline-flex shrink-0 items-center rounded-full bg-red-100 px-3 py-1 text-[12px] font-bold text-red-800">
+              Rejected
+            </span>
           ) : (
             <span className="inline-flex shrink-0 items-center rounded-full bg-gray-200 px-3 py-1 text-[12px] font-bold text-gray-700">
               Unverified
             </span>
           )}
         </div>
+
+        {kycStatus === 'rejected' && rejectionReason && (
+          <div className="mb-4 bg-white border border-red-200 rounded-xl p-4">
+            <p className="text-[13px] font-bold text-red-800 mb-1">Rejection Reason:</p>
+            <p className="text-[14px] text-red-600 leading-relaxed">{rejectionReason}</p>
+          </div>
+        )}
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="rounded-xl border border-gray-200 p-5">

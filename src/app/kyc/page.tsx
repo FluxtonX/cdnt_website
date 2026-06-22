@@ -6,11 +6,13 @@ import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { useToast } from "@/components/ui/toast";
 
 export default function KYCPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const router = useRouter();
   const supabase = createClient();
+  const { notify } = useToast();
 
   useEffect(() => {
   async function checkExistingKyc() {
@@ -22,7 +24,7 @@ export default function KYCPage() {
       .eq('user_id', user.id)
       .single();
     if (data?.status === 'pending') {
-      alert("You have already submitted your KYC. Please wait for approval.");
+      notify({ title: "KYC Already Submitted", description: "You have already submitted your KYC. Please wait for approval." });
       router.push('/dashboard');
     } else if (data?.status === 'approved') {
       router.push('/dashboard');
@@ -270,11 +272,10 @@ const nextStep = () => {
         <div>
           <label className="block text-[12px] font-bold text-[#0A0F2C] mb-1">Date of Birth</label>
           <input 
-            type="text" 
+            type="date" 
             name="dob"
             value={formData.dob}
             onChange={handleInputChange}
-            placeholder="dd/mm/yyyy" 
             className={`w-full px-3 py-2.5 rounded-xl border text-[14px] text-[#0A0F2C] focus:outline-none focus:ring-2 focus:ring-[#113285]/20 focus:border-[#113285] transition-all ${errors.dob ? 'border-red-400' : 'border-gray-200'}`}
           />
           {errors.dob && <p className="text-[11px] text-red-500 mt-1">{errors.dob}</p>}

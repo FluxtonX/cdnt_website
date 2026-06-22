@@ -78,6 +78,8 @@ export default function DashboardPage() {
 
   const [portfolioValue, setPortfolioValue] = useState(0);
   const [cadBalance, setCadBalance] = useState(0);
+  const [thisMonthDeposits, setThisMonthDeposits] = useState(0);
+  const [percentChange, setPercentChange] = useState(0);
 
   useEffect(() => {
     async function loadDashboardData() {
@@ -124,12 +126,23 @@ export default function DashboardPage() {
           .select("id, amount, status, created_at, interac_email")
           .eq("user_id", user.id);
 
+        const now = new Date();
+        const firstDayLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
+
+        const ledgerPromise = supabase
+          .from("wallet_ledger")
+          .select("amount, currency, created_at")
+          .eq("user_id", user.id)
+          .eq("type", "DEPOSIT")
+          .gte("created_at", firstDayLastMonth);
+
         // Await all promises
-        const [{ btcPrice, ethPrice }, { data: userWallets, error: walletsErr }, { data: deposits, error: depErr }, { data: withdrawals, error: wdrErr }] = await Promise.all([
+        const [{ btcPrice, ethPrice }, { data: userWallets, error: walletsErr }, { data: deposits, error: depErr }, { data: withdrawals, error: wdrErr }, { data: ledger }] = await Promise.all([
           pricePromise,
           walletsPromise,
           depositsPromise,
           withdrawalsPromise,
+          ledgerPromise
         ]);
 
         // Update prices state
@@ -152,6 +165,31 @@ export default function DashboardPage() {
           setCadBalance(usdtVal);
           // Wallet data is ready, stop loading balance
           setLoadingBalance(false);
+        }
+
+        if (ledger) {
+          const rates = { BTC: btcPrice, ETH: ethPrice, USDT: 1, CAD: 1, USDC: 1 };
+          let thisMonth = 0;
+          let lastMonth = 0;
+          const firstDayThisMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+
+          ledger.forEach((item: any) => {
+            const date = new Date(item.created_at).getTime();
+            const rate = (rates as any)[item.currency?.toUpperCase()] || 1;
+            const value = Number(item.amount) * rate;
+            if (date >= firstDayThisMonth) {
+              thisMonth += value;
+            } else {
+              lastMonth += value;
+            }
+          });
+
+          setThisMonthDeposits(thisMonth);
+          if (lastMonth === 0) {
+            setPercentChange(thisMonth > 0 ? 100 : 0);
+          } else {
+            setPercentChange(((thisMonth - lastMonth) / lastMonth) * 100);
+          }
         }
 
         // Handle transactions (same as before)
@@ -252,8 +290,10 @@ export default function DashboardPage() {
                {hideBalance ? "$••,•••.••" : loadingBalance ? <div className="h-8 w-48 bg-gray-200 animate-pulse rounded"></div> : `$${portfolioValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
             </h1>
             <div className="flex items-center gap-1.5 text-[14px]">
-              <TrendingUp className="w-4 h-4 text-[#FFD166]" />
-              <span className="text-[#FFD166] font-semibold">+$3,250 (6.7%)</span>
+              <TrendingUp className={cn("w-4 h-4", percentChange >= 0 ? "text-[#FFD166]" : "text-red-400")} />
+              <span className={cn("font-semibold", percentChange >= 0 ? "text-[#FFD166]" : "text-red-400")}>
+                {percentChange >= 0 ? "+" : "-"}${Math.abs(thisMonthDeposits).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ({percentChange >= 0 ? "+" : ""}{percentChange.toFixed(1)}%)
+              </span>
               <span className="text-blue-200/80">this month</span>
             </div>
           </div>
