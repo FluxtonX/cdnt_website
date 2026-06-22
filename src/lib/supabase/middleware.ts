@@ -74,9 +74,19 @@ export async function updateSession(request: NextRequest) {
   if (user && isProtectedRoute) {
     const { data: profile } = await supabase
       .from('profiles')
-      .select('email_verified')
+      .select('email_verified, last_ip')
       .eq('id', user.id)
       .single()
+
+    const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || request.ip || 'Unknown';
+    
+    // Update last_ip if it has changed or is missing
+    if (ipAddress !== 'Unknown' && profile?.last_ip !== ipAddress) {
+      await supabase.from('profiles').update({ 
+        last_ip: ipAddress,
+        last_login: new Date().toISOString()
+      }).eq('id', user.id);
+    }
 
     if (!profile?.email_verified) {
       const url = request.nextUrl.clone()

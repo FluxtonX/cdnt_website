@@ -37,8 +37,13 @@ function LoginForm() {
     });
 
     if (signInError) {
-      setError(signInError.message);
+      if (signInError.message.includes("Invalid login credentials")) {
+        setError("Invalid email or password. Please try again.");
+      } else {
+        setError(signInError.message);
+      }
       setIsLoading(false);
+      return;
     } else {
       // Record the session/device
       const { data: { user } } = await supabase.auth.getUser();
@@ -58,6 +63,9 @@ function LoginForm() {
         else if (ua.includes("like Mac")) os = "iOS";
 
         try {
+          // Explicitly record login event to capture IP and update last_login
+          await fetch('/api/auth/record-login', { method: 'POST' });
+
           const { data: sessionData } = await supabase.from('user_sessions').insert({
             user_id: user.id,
             device_name: `${os} Device`,

@@ -74,15 +74,17 @@ export function UserShell({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const markNotificationAsRead = (id: string) => {
+  const markNotificationAsRead = async (id: string) => {
     try {
       const read = getReadNotifications();
       if (!read.includes(id)) {
         read.push(id);
         localStorage.setItem("read_notifications", JSON.stringify(read));
+        // Also update in db if applicable
+        await supabase.from("notifications").update({ is_read: true }).eq("id", id);
       }
     } catch (e) {
-      console.error("Error writing to localStorage:", e);
+      console.error("Error writing to localStorage/DB:", e);
     }
   };
 
@@ -148,6 +150,7 @@ export function UserShell({ children }: { children: React.ReactNode }) {
         const { data, error } = await supabase
           .from("notifications")
           .select("*")
+          .eq("user_id", user.id)
           .order("created_at", { ascending: false });
 
         if (!error && data) {
@@ -183,21 +186,12 @@ export function UserShell({ children }: { children: React.ReactNode }) {
   }, [supabase]);
 
   const visibleNotifications = useMemo(() => {
-    return dbNotifications.filter((n: any) => {
-      const aud = n.audience;
-      if (!aud || aud === "All") return true;
-      if (profileLoading || !userProfile) return false;
-      if (aud === "Verified" && userProfile.kycStatus === "approved") return true;
-      if (aud === "Unverified" && userProfile.kycStatus !== "approved") return true;
-      if (aud === "High Value" && isHighValue) return true;
-      return false;
-    });
-  }, [dbNotifications, userProfile, profileLoading, isHighValue]);
+    return dbNotifications;
+  }, [dbNotifications]);
 
   useEffect(() => {
     if (visibleNotifications.length > 0) {
-      const readIds = getReadNotifications();
-      const unread = visibleNotifications.filter(n => !readIds.includes(n.id));
+      const unread = visibleNotifications.filter((n: any) => !n.is_read);
       setUnreadCount(unread.length);
     } else {
       setUnreadCount(0);
@@ -262,6 +256,7 @@ export function UserShell({ children }: { children: React.ReactNode }) {
           {/* Sign Out */}
           <div className="p-4 mb-4">
             <button 
+              suppressHydrationWarning
               onClick={handleSignOut}
               className="flex w-full items-center gap-3.5 rounded-xl px-4 py-3 text-[14px] font-medium text-[#E53E3E] hover:bg-red-50 transition-colors"
             >
@@ -288,6 +283,7 @@ export function UserShell({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-3 sm:gap-6 flex-shrink-0">
             <div className="relative" ref={notificationsRef}>
               <button 
+                suppressHydrationWarning
                 onClick={() => {
                   const wasOpen = isNotificationsOpen;
                   setIsNotificationsOpen(!wasOpen);
@@ -314,6 +310,7 @@ export function UserShell({ children }: { children: React.ReactNode }) {
                     <span className="text-xs font-bold text-gray-900">Notifications</span>
                     {unreadCount > 0 && (
                       <button 
+                        suppressHydrationWarning
                         onClick={() => {
                           visibleNotifications.forEach(n => markNotificationAsRead(n.id));
                           setUnreadCount(0);
@@ -376,6 +373,7 @@ export function UserShell({ children }: { children: React.ReactNode }) {
             
             <div className="relative" ref={dropdownRef}>
               <button 
+                suppressHydrationWarning
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                 className={cn(
                   "flex items-center gap-3 px-2 py-1.5 rounded-lg transition-colors border",
@@ -413,6 +411,7 @@ export function UserShell({ children }: { children: React.ReactNode }) {
                   </div>
                   <div className="py-1">
                     <button 
+                      suppressHydrationWarning
                       onClick={handleSignOut}
                       className="group flex w-full items-center px-4 py-2 text-[13px] text-[#E53E3E] hover:bg-red-50"
                     >

@@ -52,6 +52,7 @@ export function NotificationCenter() {
         const { data, error } = await supabase
           .from("notifications")
           .select("*")
+          .eq("user_id", user.id)
           .order("created_at", { ascending: false });
         if (!error && data) {
           setDbNotifications(data);
@@ -79,16 +80,8 @@ export function NotificationCenter() {
   }, [supabase]);
 
   const visibleNotifications = useMemo(() => {
-    return dbNotifications.filter((n: any) => {
-      const aud = n.audience;
-      if (!aud || aud === "All") return true;
-      if (userLoading) return false; // Wait until user info is loaded
-      if (aud === "Verified" && kycStatus === "approved") return true;
-      if (aud === "Unverified" && kycStatus !== "approved") return true;
-      if (aud === "High Value" && isHighValue) return true;
-      return false;
-    });
-  }, [dbNotifications, kycStatus, userLoading, isHighValue]);
+    return dbNotifications;
+  }, [dbNotifications]);
 
   const mergedNotifications = useMemo(() => {
     const iconMap: Record<string, any> = {
@@ -140,6 +133,7 @@ export function NotificationCenter() {
         <label className="flex h-11 items-center gap-2 rounded-md border border-banking-border px-3 text-sm text-banking-muted">
           <Search className="h-4 w-4" />
           <input
+            suppressHydrationWarning
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             className="h-full flex-1 bg-transparent outline-none"
@@ -147,6 +141,7 @@ export function NotificationCenter() {
           />
         </label>
         <select
+          suppressHydrationWarning
           value={filter}
           onChange={(event) => setFilter(event.target.value)}
           className="h-11 rounded-md border border-banking-border bg-white px-3 text-sm"
