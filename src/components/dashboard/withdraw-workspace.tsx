@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ArrowLeft, AlertCircle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/ui/toast";
+import { useRouter } from "next/navigation";
+import { fetchLiveCADRates, calculateCADBalance } from "@/lib/utils";
 
 export function WithdrawWorkspace() {
   const [step, setStep] = useState(1);
@@ -17,22 +19,97 @@ export function WithdrawWorkspace() {
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  const [availableBalance, setAvailableBalance] = useState<number | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [sendingOtp, setSendingOtp] = useState(false);
+
   const supabase = createClient();
   const { notify } = useToast();
+  const router = useRouter();
 
-  const availableBalance = 51750.00;
   const fee = 2.50;
   
   const numAmount = parseFloat(amount || "0");
   const youReceive = numAmount > fee ? numAmount - fee : 0;
 
-  const nextStep = () => setStep((s) => Math.min(3, s + 1));
-  const prevStep = () => setStep((s) => Math.max(1, s - 1));
+  useEffect(() => {
+    async function fetchBalance() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          setUserEmail(user.email ?? null);
+          
+          const { data: wallets } = await supabase
+            .from("user_wallets")
+            .select("currency, balance")
+            .eq("user_id", user.id);
+            
+          const rates = await fetchLiveCADRates();
+          
+          if (wallets && wallets.length > 0) {
+            const totalCAD = calculateCADBalance(wallets, rates);
+            setAvailableBalance(totalCAD);
+          } else {
+            setAvailableBalance(0);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch balance:", err);
+        setAvailableBalance(0);
+      }
+    }
+    fetchBalance();
+  }, [supabase]);
+
+  const handleNextStep2 = async () => {
+    // Before going to step 3, we send the OTP
+    setErrorMsg(null);
+    setSendingOtp(true);
+    try {
+      if (!userEmail) throw new Error("Could not determine your registered email.");
+      
+      const res = await fetch("/api/auth/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: userEmail }),
+      });
+      
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to send 2FA code.");
+      }
+
+      setStep(3);
+    } catch (err: any) {
+      setErrorMsg(err.message || "Failed to send 2FA code.");
+    } finally {
+      setSendingOtp(false);
+    }
+  };
+
+  const prevStep = () => {
+    setErrorMsg(null);
+    setStep((s) => Math.max(1, s - 1));
+  };
 
   const handleConfirmWithdrawal = async () => {
     setSubmitting(true);
     setErrorMsg(null);
     try {
+      if (!userEmail) throw new Error("Session expired. Please log in again.");
+
+      // Verify OTP
+      const verifyRes = await fetch("/api/withdraw/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: userEmail, code: twoFa }),
+      });
+      
+      const verifyData = await verifyRes.json();
+      if (!verifyRes.ok) {
+        throw new Error(verifyData.error || "Invalid 2FA code.");
+      }
+
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) {
         throw new Error("User session not found. Please log in again.");
@@ -43,6 +120,7 @@ export function WithdrawWorkspace() {
         .insert({
           user_id: user.id,
           amount: numAmount,
+          method: 'interac',
           interac_email: email,
           security_question: question,
           security_answer: answer,
@@ -53,36 +131,12 @@ export function WithdrawWorkspace() {
         throw new Error(insertError.message);
       }
 
-      try {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("full_name")
-          .eq("id", user.id)
-          .single();
-
-        await fetch("/api/log-event", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "Withdrawal Requested",
-            category: "Transaction",
-            severity: "Warning",
-            userName: profile?.full_name || user.email || "Unknown User",
-            userId: user.id,
-            details: `Requested withdrawal of $${numAmount} CAD via Interac to email: ${email}.`
-          })
-        });
-      } catch (logErr) {
-        console.error("Failed to call log-event for withdrawal request:", logErr);
-      }
-
       notify({
-        title: "Withdrawal submitted",
-        description: "Your withdrawal is pending admin review.",
+        title: "Withdrawal request submitted successfully!",
+        description: "Awaiting admin approval.",
       });
 
-      alert("Withdrawal submitted successfully!");
-      window.location.href = "/dashboard";
+      router.push("/dashboard");
     } catch (err: any) {
       console.error("Error submitting withdrawal:", err);
       setErrorMsg(err.message || "Something went wrong. Please try again.");
@@ -161,7 +215,11 @@ export function WithdrawWorkspace() {
             </div>
             
             <p className="mb-6 text-center text-[14px] text-[#718096]">
-              Available balance: ${availableBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              {availableBalance === null ? (
+                "Loading balance..."
+              ) : (
+                `Available balance: $${availableBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+              )}
             </p>
 
             <div className="mb-8 flex flex-wrap gap-3 sm:flex-nowrap">
@@ -175,7 +233,7 @@ export function WithdrawWorkspace() {
                 </button>
               ))}
               <button 
-                onClick={() => setAmount(availableBalance.toString())}
+                onClick={() => setAmount(availableBalance ? availableBalance.toString() : "0")}
                 className="flex-1 rounded-[12px] border border-gray-200 bg-white py-3 text-[14px] font-bold text-[#0A0F2C] transition-colors hover:bg-gray-50 focus:border-[#113285] focus:ring-1 focus:ring-[#113285] outline-none"
               >
                 Max
@@ -195,9 +253,26 @@ export function WithdrawWorkspace() {
               </div>
             </div>
 
+            {errorMsg && (
+              <div className="mb-4 rounded-[14px] border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
+                {errorMsg}
+              </div>
+            )}
+
             <button 
-              onClick={nextStep}
-              disabled={!amount || parseFloat(amount) <= 0}
+              onClick={() => {
+                if (numAmount > (availableBalance || 0)) {
+                  setErrorMsg("Amount exceeds available balance.");
+                  return;
+                }
+                if (numAmount < 10) {
+                  setErrorMsg("Minimum withdrawal amount is $10.");
+                  return;
+                }
+                setErrorMsg(null);
+                setStep(2);
+              }}
+              disabled={!amount || numAmount <= 0 || availableBalance === null}
               className="w-full rounded-[14px] bg-[#113285] py-4 text-[15px] font-bold text-white transition-colors hover:bg-[#0c2461] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Continue
@@ -255,19 +330,33 @@ export function WithdrawWorkspace() {
               </p>
             </div>
 
+            {errorMsg && (
+              <div className="mb-4 rounded-[14px] border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
+                {errorMsg}
+              </div>
+            )}
+
             <div className="flex gap-4">
               <button 
                 onClick={prevStep}
-                className="flex-1 rounded-[14px] border border-gray-200 bg-white py-4 text-[15px] font-bold text-[#0A0F2C] transition-colors hover:bg-gray-50"
+                disabled={sendingOtp}
+                className="flex-1 rounded-[14px] border border-gray-200 bg-white py-4 text-[15px] font-bold text-[#0A0F2C] transition-colors hover:bg-gray-50 disabled:opacity-50"
               >
                 Back
               </button>
               <button 
-                onClick={nextStep}
-                disabled={!email || !question || !answer}
-                className="flex-1 rounded-[14px] bg-[#113285] py-4 text-[15px] font-bold text-white transition-colors hover:bg-[#0c2461] disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={handleNextStep2}
+                disabled={!email || !question || !answer || sendingOtp}
+                className="flex-1 rounded-[14px] bg-[#113285] py-4 text-[15px] font-bold text-white transition-colors hover:bg-[#0c2461] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                Continue
+                {sendingOtp ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Sending Code...
+                  </>
+                ) : (
+                  "Continue"
+                )}
               </button>
             </div>
           </div>
@@ -296,7 +385,7 @@ export function WithdrawWorkspace() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-[14px] font-medium text-[#718096]">Recipient</span>
-                  <span className="text-[14px] font-bold text-[#0A0F2C]">{email || "as@gmail.com"}</span>
+                  <span className="text-[14px] font-bold text-[#0A0F2C]">{email}</span>
                 </div>
               </div>
 
@@ -317,14 +406,15 @@ export function WithdrawWorkspace() {
             )}
 
             <div className="mb-8">
-              <label className="mb-2 block text-[14px] font-bold text-[#0A0F2C]">2FA Code</label>
+              <label className="mb-2 block text-[14px] font-bold text-[#0A0F2C]">2FA Verification Code</label>
+              <p className="mb-4 text-sm text-[#718096]">We have sent a 6-digit code to your registered email address.</p>
               <input 
                 type="text" 
                 placeholder="0 0 0 0 0 0"
                 value={twoFa}
                 onChange={(e) => setTwoFa(e.target.value)}
                 maxLength={6}
-                className="w-full rounded-[14px] border border-gray-200 bg-white px-5 py-4 text-[18px] tracking-[0.25em] text-[#0A0F2C] placeholder-[#A0AEC0] outline-none transition-all focus:border-[#113285] focus:ring-1 focus:ring-[#113285]"
+                className="w-full rounded-[14px] border border-gray-200 bg-white px-5 py-4 text-[18px] tracking-[0.25em] text-[#0A0F2C] placeholder-[#A0AEC0] outline-none transition-all focus:border-[#113285] focus:ring-1 focus:ring-[#113285] text-center"
               />
             </div>
 
@@ -344,7 +434,7 @@ export function WithdrawWorkspace() {
                 {submitting ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Submitting...
+                    Verifying...
                   </>
                 ) : (
                   "Confirm Withdrawal"

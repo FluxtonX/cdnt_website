@@ -19,6 +19,8 @@ import {
   Pie, 
   Cell 
 } from "recharts";
+import { useToast } from "@/components/ui/toast";
+import { fetchLiveCADRates, calculateCADBalance } from "@/lib/utils";
 import { CoinLogo } from "@/components/market/CoinLogo";
 import { getCoinBySymbol } from "@/config/coins";
 import { createClient } from "@/lib/supabase/client";
@@ -123,7 +125,7 @@ export default function DashboardPage() {
 
         const withdrawalsPromise = supabase
           .from("withdrawal_requests")
-          .select("id, amount, status, created_at, interac_email")
+          .select("id, amount, status, created_at, interac_email, asset, network, wallet_address")
           .eq("user_id", user.id);
 
         const now = new Date();
@@ -150,6 +152,8 @@ export default function DashboardPage() {
 
         // Process wallet balances
         if (!walletsErr && userWallets) {
+          const rates = await fetchLiveCADRates();
+          
           const btcBal = Number(userWallets.find((w: any) => w.currency === "BTC")?.balance || 0);
           const ethBal = Number(userWallets.find((w: any) => w.currency === "ETH")?.balance || 0);
           const usdtBal = Number(userWallets.find((w: any) => w.currency === "USDT")?.balance || 0);
@@ -157,12 +161,16 @@ export default function DashboardPage() {
           setEthBalance(ethBal);
           setUsdtBalance(usdtBal);
 
+          const totalCAD = calculateCADBalance(userWallets, rates);
+          
+          // Legacy total logic for backward compatibility in the dashboard (using their USD rates for crypto)
           const btcVal = btcBal * btcPrice;
           const ethVal = ethBal * ethPrice;
           const usdtVal = usdtBal;
           const total = btcVal + ethVal + usdtVal;
-          setPortfolioValue(total);
-          setCadBalance(usdtVal);
+          
+          setPortfolioValue(totalCAD);
+          setCadBalance(totalCAD); // CAD balance = actual converted total CAD
           // Wallet data is ready, stop loading balance
           setLoadingBalance(false);
         }
@@ -223,11 +231,11 @@ export default function DashboardPage() {
             list.push({
               id: w.id,
               type: "Withdrawal",
-              asset: "CAD",
+              asset: w.asset || "CAD",
               amount: w.amount,
               status: w.status,
               date: new Date(w.created_at),
-              ref: w.interac_email,
+              ref: w.wallet_address || w.interac_email,
             });
           });
         }

@@ -4,15 +4,17 @@ import { useState } from "react";
 import { Send } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { DepositAddressConfig } from "@/config/depositAddresses";
+import { useRouter } from "next/navigation";
+import { useToast } from "@/components/ui/toast";
 
-export function DepositRequestForm({ config }: { config: DepositAddressConfig }) {
+export function DepositRequestForm({ config, amount }: { config: DepositAddressConfig; amount: number }) {
   const supabase = createClient();
-  const [expectedAmount, setExpectedAmount] = useState("");
+  const router = useRouter();
+  const { notify } = useToast();
   const [txHash, setTxHash] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  const amount = Number(expectedAmount);
   const canSubmit =
     Number.isFinite(amount) &&
     amount >= config.minAmount &&
@@ -64,12 +66,11 @@ export function DepositRequestForm({ config }: { config: DepositAddressConfig })
       return;
     }
 
-    setExpectedAmount("");
     setTxHash("");
-    setMessage({
-      type: "success",
-      text: "Deposit request submitted. Admin review will verify the transaction before crediting balance.",
+    notify({
+      title: "Deposit request submitted successfully! Awaiting admin approval.",
     });
+    router.push("/dashboard");
   };
 
   return (
@@ -79,20 +80,7 @@ export function DepositRequestForm({ config }: { config: DepositAddressConfig })
         Use this after sending funds from your external wallet. Balance is not credited automatically.
       </p>
 
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
-        <label className="block">
-          <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-[#718096]">
-            Expected amount
-          </span>
-          <input
-            inputMode="decimal"
-            value={expectedAmount}
-            onChange={(event) => setExpectedAmount(event.target.value.replace(/[^\d.]/g, ""))}
-            placeholder={`Minimum ${config.minAmount}`}
-            className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-bold text-[#0A0F2C] outline-none focus:border-[#113285] focus:ring-4 focus:ring-[#113285]/10"
-          />
-        </label>
-
+      <div className="mt-4 grid gap-4">
         <label className="block">
           <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-[#718096]">
             Transaction hash / ID
