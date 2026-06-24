@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/ui/toast";
 import { useRouter } from "next/navigation";
-import { fetchLiveCADRates, calculateCADBalance } from "@/lib/utils";
+import { useWithdrawBalance, useCreateWithdrawalRequest } from "@/hooks/useClientQueries";
 
 export function WithdrawWorkspace() {
   const [step, setStep] = useState(1);
@@ -19,46 +19,24 @@ export function WithdrawWorkspace() {
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const [availableBalance, setAvailableBalance] = useState<number | null>(null);
-  const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [sendingOtp, setSendingOtp] = useState(false);
-
   const supabase = createClient();
   const { notify } = useToast();
   const router = useRouter();
+  const { data: availableBalance = null, isLoading: balanceLoading } = useWithdrawBalance();
+  const createWithdrawal = useCreateWithdrawalRequest();
 
   const fee = 2.50;
   
   const numAmount = parseFloat(amount || "0");
   const youReceive = numAmount > fee ? numAmount - fee : 0;
 
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [sendingOtp, setSendingOtp] = useState(false);
+
   useEffect(() => {
-    async function fetchBalance() {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          setUserEmail(user.email ?? null);
-          
-          const { data: wallets } = await supabase
-            .from("user_wallets")
-            .select("currency, balance")
-            .eq("user_id", user.id);
-            
-          const rates = await fetchLiveCADRates();
-          
-          if (wallets && wallets.length > 0) {
-            const totalCAD = calculateCADBalance(wallets, rates);
-            setAvailableBalance(totalCAD);
-          } else {
-            setAvailableBalance(0);
-          }
-        }
-      } catch (err) {
-        console.error("Failed to fetch balance:", err);
-        setAvailableBalance(0);
-      }
-    }
-    fetchBalance();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUserEmail(user?.email ?? null);
+    });
   }, [supabase]);
 
   const handleNextStep2 = async () => {
@@ -115,21 +93,12 @@ export function WithdrawWorkspace() {
         throw new Error("User session not found. Please log in again.");
       }
 
-      const { error: insertError } = await supabase
-        .from("withdrawal_requests")
-        .insert({
-          user_id: user.id,
-          amount: numAmount,
-          method: 'interac',
-          interac_email: email,
-          security_question: question,
-          security_answer: answer,
-          status: "pending"
-        });
-
-      if (insertError) {
-        throw new Error(insertError.message);
-      }
+      await createWithdrawal.mutateAsync({
+        amount: numAmount,
+        interacEmail: email,
+        securityQuestion: question,
+        securityAnswer: answer,
+      });
 
       notify({
         title: "Withdrawal request submitted successfully!",
@@ -215,10 +184,10 @@ export function WithdrawWorkspace() {
             </div>
             
             <p className="mb-6 text-center text-[14px] text-[#718096]">
-              {availableBalance === null ? (
+              {balanceLoading ? (
                 "Loading balance..."
               ) : (
-                `Available balance: $${availableBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+                `Available balance: $${(availableBalance ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
               )}
             </p>
 
@@ -272,7 +241,7 @@ export function WithdrawWorkspace() {
                 setErrorMsg(null);
                 setStep(2);
               }}
-              disabled={!amount || numAmount <= 0 || availableBalance === null}
+              disabled={!amount || numAmount <= 0 || balanceLoading}
               className="w-full rounded-[14px] bg-[#113285] py-4 text-[15px] font-bold text-white transition-colors hover:bg-[#0c2461] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Continue

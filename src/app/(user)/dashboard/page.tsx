@@ -1,46 +1,28 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import Link from "next/link";
-import { 
-  Eye, 
-  ArrowDownLeft, 
-  ArrowUpRight, 
+import {
+  Eye,
+  ArrowDownLeft,
+  ArrowUpRight,
   TrendingUp
 } from "lucide-react";
-import { 
-  LineChart, 
-  Line, 
-  XAxis, 
-  YAxis, 
-  ResponsiveContainer, 
-  Tooltip, 
-  PieChart, 
-  Pie, 
-  Cell 
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  ResponsiveContainer,
+  Tooltip,
+  PieChart,
+  Pie,
+  Cell
 } from "recharts";
-import { useToast } from "@/components/ui/toast";
-import { fetchLiveCADRates, calculateCADBalance } from "@/lib/utils";
+import { useDashboardMetrics, useRecentTransactions } from "@/hooks/useClientQueries";
 import { CoinLogo } from "@/components/market/CoinLogo";
 import { getCoinBySymbol } from "@/config/coins";
-import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
-
-const performanceData = [
-  { name: "Mon", value: 49000 },
-  { name: "Tue", value: 15500 },
-  { name: "Wed", value: 49000 },
-  { name: "Thu", value: 29000 },
-  { name: "Fri", value: 52000 },
-  { name: "Sat", value: 5000 },
-  { name: "Sun", value: 52000 },
-];
-
-const allocationData = [
-  { name: "Bitcoin", value: 25000, color: "#1E40AF" },
-  { name: "Ethereum", value: 18750, color: "#2563EB" },
-  { name: "USDT", value: 8000, color: "#F5A623" },
-];
 
 function formatRelativeTime(date: Date): string {
   const now = new Date();
@@ -59,196 +41,21 @@ function formatRelativeTime(date: Date): string {
 
 export default function DashboardPage() {
   const [hideBalance, setHideBalance] = useState(false);
-  const [loadingBalance, setLoadingBalance] = useState(true);
+  const { data: metrics, isLoading: loadingBalance } = useDashboardMetrics();
+  const { data: transactions = [], isLoading: loadingTx } = useRecentTransactions();
+
   const btcLogo = getCoinBySymbol("BTCUSDT")?.logoUrl;
   const ethLogo = getCoinBySymbol("ETHUSDT")?.logoUrl;
   const usdtLogo = "https://cryptologos.cc/logos/tether-usdt-logo.png";
 
-  const supabase = createClient();
-  const [transactions, setTransactions] = useState<any[]>([]);
-  const [loadingTx, setLoadingTx] = useState(true);
-
-  const [btcBalance, setBtcBalance] = useState(0);
-  const [ethBalance, setEthBalance] = useState(0);
-  const [usdtBalance, setUsdtBalance] = useState(0);
-  
-  const [prices, setPrices] = useState<Record<string, number>>({
-    BTC: 60000,
-    ETH: 3000,
-    USDT: 1,
-  });
-
-  const [portfolioValue, setPortfolioValue] = useState(0);
-  const [cadBalance, setCadBalance] = useState(0);
-  const [thisMonthDeposits, setThisMonthDeposits] = useState(0);
-  const [percentChange, setPercentChange] = useState(0);
-
-  useEffect(() => {
-    async function loadDashboardData() {
-      try {
-        setLoadingTx(true);
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-
-        // Start all fetches in parallel
-        const pricePromise = (async () => {
-          let btcPrice = 60000;
-          let ethPrice = 3000;
-          try {
-            const [btcRes, ethRes] = await Promise.all([
-              fetch("/api/market/ticker?symbol=BTCUSDT"),
-              fetch("/api/market/ticker?symbol=ETHUSDT"),
-            ]);
-            if (btcRes.ok) {
-              const btcData = await btcRes.json();
-              btcPrice = Number(btcData.lastPrice) || 60000;
-            }
-            if (ethRes.ok) {
-              const ethData = await ethRes.json();
-              ethPrice = Number(ethData.lastPrice) || 3000;
-            }
-          } catch (err) {
-            console.error("Failed to fetch live prices:", err);
-          }
-          return { btcPrice, ethPrice };
-        })();
-
-        const walletsPromise = supabase
-          .from("user_wallets")
-          .select("*")
-          .eq("user_id", user.id);
-
-        const depositsPromise = supabase
-          .from("deposit_requests")
-          .select("id, asset, expected_amount, status, created_at, tx_hash")
-          .eq("user_id", user.id);
-
-        const withdrawalsPromise = supabase
-          .from("withdrawal_requests")
-          .select("id, amount, status, created_at, interac_email, asset, network, wallet_address")
-          .eq("user_id", user.id);
-
-        const now = new Date();
-        const firstDayLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
-
-        const ledgerPromise = supabase
-          .from("wallet_ledger")
-          .select("amount, currency, created_at")
-          .eq("user_id", user.id)
-          .eq("type", "DEPOSIT")
-          .gte("created_at", firstDayLastMonth);
-
-        // Await all promises
-        const [{ btcPrice, ethPrice }, { data: userWallets, error: walletsErr }, { data: deposits, error: depErr }, { data: withdrawals, error: wdrErr }, { data: ledger }] = await Promise.all([
-          pricePromise,
-          walletsPromise,
-          depositsPromise,
-          withdrawalsPromise,
-          ledgerPromise
-        ]);
-
-        // Update prices state
-        setPrices({ BTC: btcPrice, ETH: ethPrice, USDT: 1 });
-
-        // Process wallet balances
-        if (!walletsErr && userWallets) {
-          const rates = await fetchLiveCADRates();
-          
-          const btcBal = Number(userWallets.find((w: any) => w.currency === "BTC")?.balance || 0);
-          const ethBal = Number(userWallets.find((w: any) => w.currency === "ETH")?.balance || 0);
-          const usdtBal = Number(userWallets.find((w: any) => w.currency === "USDT")?.balance || 0);
-          setBtcBalance(btcBal);
-          setEthBalance(ethBal);
-          setUsdtBalance(usdtBal);
-
-          const totalCAD = calculateCADBalance(userWallets, rates);
-          
-          // Legacy total logic for backward compatibility in the dashboard (using their USD rates for crypto)
-          const btcVal = btcBal * btcPrice;
-          const ethVal = ethBal * ethPrice;
-          const usdtVal = usdtBal;
-          const total = btcVal + ethVal + usdtVal;
-          
-          setPortfolioValue(totalCAD);
-          setCadBalance(totalCAD); // CAD balance = actual converted total CAD
-          // Wallet data is ready, stop loading balance
-          setLoadingBalance(false);
-        }
-
-        if (ledger) {
-          const rates = { BTC: btcPrice, ETH: ethPrice, USDT: 1, CAD: 1, USDC: 1 };
-          let thisMonth = 0;
-          let lastMonth = 0;
-          const firstDayThisMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-
-          ledger.forEach((item: any) => {
-            const date = new Date(item.created_at).getTime();
-            const rate = (rates as any)[item.currency?.toUpperCase()] || 1;
-            const value = Number(item.amount) * rate;
-            if (date >= firstDayThisMonth) {
-              thisMonth += value;
-            } else {
-              lastMonth += value;
-            }
-          });
-
-          setThisMonthDeposits(thisMonth);
-          if (lastMonth === 0) {
-            setPercentChange(thisMonth > 0 ? 100 : 0);
-          } else {
-            setPercentChange(((thisMonth - lastMonth) / lastMonth) * 100);
-          }
-        }
-
-        // Handle transactions (same as before)
-        const dbError = (depErr && depErr.code === "PGRST205") || (wdrErr && wdrErr.code === "PGRST205");
-        if (dbError) {
-          setTransactions([
-            { id: "1", type: "Deposit", asset: "BTC", amount: 5000, status: "approved", date: new Date(Date.now() - 2 * 60 * 60 * 1000) },
-            { id: "2", type: "Withdrawal", asset: "ETH", amount: 1250, status: "completed", date: new Date(Date.now() - 5 * 60 * 60 * 1000) },
-            { id: "3", type: "Deposit", asset: "USDT", amount: 3000, status: "approved", date: new Date(Date.now() - 24 * 60 * 60 * 1000) },
-            { id: "4", type: "Withdrawal", asset: "BTC", amount: 500, status: "completed", date: new Date(Date.now() - 48 * 60 * 60 * 1000) },
-          ]);
-          return;
-        }
-
-        const list: any[] = [];
-        if (deposits) {
-          deposits.forEach((d) => {
-            list.push({
-              id: d.id,
-              type: "Deposit",
-              asset: d.asset,
-              amount: d.expected_amount,
-              status: d.status,
-              date: new Date(d.created_at),
-              ref: d.tx_hash,
-            });
-          });
-        }
-        if (withdrawals) {
-          withdrawals.forEach((w) => {
-            list.push({
-              id: w.id,
-              type: "Withdrawal",
-              asset: w.asset || "CAD",
-              amount: w.amount,
-              status: w.status,
-              date: new Date(w.created_at),
-              ref: w.wallet_address || w.interac_email,
-            });
-          });
-        }
-        list.sort((a, b) => b.date.getTime() - a.date.getTime());
-        setTransactions(list.slice(0, 4));
-      } catch (err) {
-        console.error("Error loading dashboard data:", err);
-      } finally {
-        setLoadingTx(false);
-      }
-    }
-    loadDashboardData();
-  }, [supabase]);
+  const prices = metrics?.prices ?? { BTC: 60000, ETH: 3000, USDT: 1 };
+  const btcBalance = metrics?.btcBalance ?? 0;
+  const ethBalance = metrics?.ethBalance ?? 0;
+  const usdtBalance = metrics?.usdtBalance ?? 0;
+  const portfolioValue = metrics?.portfolioValue ?? 0;
+  const cadBalance = metrics?.cadBalance ?? 0;
+  const thisMonthDeposits = metrics?.thisMonthDeposits ?? 0;
+  const percentChange = metrics?.percentChange ?? 0;
 
   const btcValue = btcBalance * prices.BTC;
   const ethValue = ethBalance * prices.ETH;
@@ -284,7 +91,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      
+
       <div className="bg-[#1855C0] rounded-2xl p-8 text-white shadow-lg">
         <div className="flex flex-col md:flex-row justify-between items-start gap-6">
           <div>
@@ -331,29 +138,29 @@ export default function DashboardPage() {
           <div className="h-[240px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={performanceData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <XAxis 
-                  dataKey="name" 
-                  axisLine={true} 
-                  tickLine={false} 
-                  tick={{ fontSize: 11, fill: '#A0AEC0' }} 
-                  dy={10} 
+                <XAxis
+                  dataKey="name"
+                  axisLine={true}
+                  tickLine={false}
+                  tick={{ fontSize: 11, fill: '#A0AEC0' }}
+                  dy={10}
                 />
-                <YAxis 
-                  axisLine={true} 
-                  tickLine={false} 
-                  tick={{ fontSize: 11, fill: '#A0AEC0' }} 
+                <YAxis
+                  axisLine={true}
+                  tickLine={false}
+                  tick={{ fontSize: 11, fill: '#A0AEC0' }}
                 />
-                <Tooltip 
+                <Tooltip
                   contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                   labelStyle={{ display: 'none' }}
                 />
-                <Line 
-                  type="monotone" 
-                  dataKey="value" 
-                  stroke="#113285" 
-                  strokeWidth={3} 
-                  dot={{ r: 4, fill: "#113285", strokeWidth: 0 }} 
-                  activeDot={{ r: 6, fill: "#113285" }} 
+                <Line
+                  type="monotone"
+                  dataKey="value"
+                  stroke="#113285"
+                  strokeWidth={3}
+                  dot={{ r: 4, fill: "#113285", strokeWidth: 0 }}
+                  activeDot={{ r: 6, fill: "#113285" }}
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -383,7 +190,7 @@ export default function DashboardPage() {
                 </PieChart>
               </ResponsiveContainer>
             </div>
-            
+
             <div className="space-y-3 mt-4">
               {allocationData.map((item) => (
                 <div key={item.name} className="flex items-center justify-between">
