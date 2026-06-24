@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { Check, Upload, CheckCircle2, Clock, Loader2, X } from "lucide-react";
+import { Check, Upload, CheckCircle2, Clock, Loader2, X, Camera } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
@@ -60,6 +60,86 @@ export default function KYCPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
 const [filePreviews, setFilePreviews] = useState<Record<string, string>>({});
 const [kycChecked, setKycChecked] = useState(false);
+
+  const [cameraState, setCameraState] = useState<{ isOpen: boolean; field: 'idFront' | 'idBack' | 'selfie' | null }>({ isOpen: false, field: null });
+  const [isMobile, setIsMobile] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const mobileCameraRefFront = useRef<HTMLInputElement>(null);
+  const mobileCameraRefBack = useRef<HTMLInputElement>(null);
+  const mobileCameraRefSelfie = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setIsMobile(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent));
+  }, []);
+
+  const openCamera = (field: 'idFront' | 'idBack' | 'selfie') => {
+    if (isMobile) {
+      if (field === 'idFront') mobileCameraRefFront.current?.click();
+      if (field === 'idBack') mobileCameraRefBack.current?.click();
+      if (field === 'selfie') mobileCameraRefSelfie.current?.click();
+    } else {
+      setCameraState({ isOpen: true, field });
+    }
+  };
+
+  const closeCamera = () => {
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach(track => track.stop());
+    }
+    setCameraState({ isOpen: false, field: null });
+  };
+
+  useEffect(() => {
+    if (cameraState.isOpen && !isMobile && videoRef.current) {
+      const constraints = {
+        video: {
+          facingMode: cameraState.field === 'selfie' ? 'user' : 'environment'
+        }
+      };
+      navigator.mediaDevices.getUserMedia(constraints)
+        .then(stream => {
+          if (videoRef.current) videoRef.current.srcObject = stream;
+        })
+        .catch(err => {
+          console.error("Error accessing camera:", err);
+          alert("Could not access camera. Please ensure permissions are granted.");
+          closeCamera();
+        });
+    }
+  }, [cameraState.isOpen, isMobile, cameraState.field]);
+
+  const capturePhoto = () => {
+    if (!videoRef.current || !canvasRef.current || !cameraState.field) return;
+    
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    if (cameraState.field === 'selfie') {
+      ctx.translate(canvas.width, 0);
+      ctx.scale(-1, 1);
+    }
+    
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const file = new File([blob], `${cameraState.field}-capture.jpg`, { type: 'image/jpeg' });
+      
+      setFiles(prev => ({ ...prev, [cameraState.field!]: file }));
+      const preview = URL.createObjectURL(file);
+      setFilePreviews(prev => ({ ...prev, [cameraState.field!]: preview }));
+      setErrors(prev => ({ ...prev, [cameraState.field!]: "" }));
+      
+      closeCamera();
+    }, 'image/jpeg', 0.9);
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -411,35 +491,65 @@ const nextStep = () => {
     <div className="space-y-3">
       {/* Upload Front */}
       <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" className="hidden" ref={idFrontRef} onChange={(e) => handleFileChange(e, 'idFront')} />
-      <button onClick={() => idFrontRef.current?.click()} className="w-full flex flex-col items-center justify-center p-4 border-2 border-dashed border-gray-200 rounded-2xl hover:border-[#113285]/50 hover:bg-[#113285]/5 transition-all group">
+      <input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" className="hidden" ref={mobileCameraRefFront} onChange={(e) => handleFileChange(e, 'idFront')} />
+      
+      <div className="w-full">
+        <div className="text-[14px] font-bold text-[#0A0F2C] mb-2">Front of ID</div>
         {filePreviews.idFront ? (
-          <img src={filePreviews.idFront} className="w-full h-32 object-cover rounded-xl mb-2" />
+          <div className="relative rounded-2xl border border-gray-200 overflow-hidden group">
+            <img src={filePreviews.idFront} className="w-full h-40 object-cover" />
+            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <button onClick={() => {
+                setFilePreviews(prev => ({ ...prev, idFront: "" }));
+                setFiles(prev => ({ ...prev, idFront: null }));
+              }} className="bg-white text-[#0A0F2C] px-4 py-2 rounded-lg font-bold text-sm shadow-lg">Retake</button>
+            </div>
+          </div>
         ) : (
-          <div className="w-10 h-10 mb-2 text-[#4A5568] group-hover:text-[#113285]">
-            <Upload className="w-full h-full" strokeWidth={1.5} />
+          <div className="grid grid-cols-2 gap-3">
+            <button onClick={() => idFrontRef.current?.click()} className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-gray-200 rounded-2xl hover:border-[#113285]/50 hover:bg-[#113285]/5 transition-all group">
+              <Upload className="w-6 h-6 mb-2 text-[#4A5568] group-hover:text-[#113285]" strokeWidth={1.5} />
+              <div className="text-[13px] font-bold text-[#0A0F2C]">Upload File</div>
+            </button>
+            <button onClick={() => openCamera('idFront')} className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-gray-200 rounded-2xl hover:border-[#113285]/50 hover:bg-[#113285]/5 transition-all group">
+              <Camera className="w-6 h-6 mb-2 text-[#4A5568] group-hover:text-[#113285]" strokeWidth={1.5} />
+              <div className="text-[13px] font-bold text-[#0A0F2C]">Take Photo</div>
+            </button>
           </div>
         )}
-        <div className="text-[14px] font-bold text-[#0A0F2C] mb-1">{files.idFront ? files.idFront.name : "Upload Front of ID"}</div>
-        <div className="text-[12px] text-[#718096]">JPG, PNG, WEBP, PDF • Max 10MB</div>
-        {files.idFront && <div className="text-[11px] text-[#A0AEC0] mt-1">{(files.idFront.size / 1024 / 1024).toFixed(2)} MB</div>}
-      </button>
-      {errors.idFront && <p className="text-[11px] text-red-500 mt-1">{errors.idFront}</p>}
+        {errors.idFront && <p className="text-[11px] text-red-500 mt-1">{errors.idFront}</p>}
+      </div>
 
       {/* Upload Back */}
       <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" className="hidden" ref={idBackRef} onChange={(e) => handleFileChange(e, 'idBack')} />
-      <button onClick={() => idBackRef.current?.click()} className="w-full flex flex-col items-center justify-center p-4 border-2 border-dashed border-gray-200 rounded-2xl hover:border-[#113285]/50 hover:bg-[#113285]/5 transition-all group">
+      <input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" className="hidden" ref={mobileCameraRefBack} onChange={(e) => handleFileChange(e, 'idBack')} />
+      
+      <div className="w-full">
+        <div className="text-[14px] font-bold text-[#0A0F2C] mb-2">Back of ID</div>
         {filePreviews.idBack ? (
-          <img src={filePreviews.idBack} className="w-full h-32 object-cover rounded-xl mb-2" />
+          <div className="relative rounded-2xl border border-gray-200 overflow-hidden group">
+            <img src={filePreviews.idBack} className="w-full h-40 object-cover" />
+            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <button onClick={() => {
+                setFilePreviews(prev => ({ ...prev, idBack: "" }));
+                setFiles(prev => ({ ...prev, idBack: null }));
+              }} className="bg-white text-[#0A0F2C] px-4 py-2 rounded-lg font-bold text-sm shadow-lg">Retake</button>
+            </div>
+          </div>
         ) : (
-          <div className="w-10 h-10 mb-2 text-[#4A5568] group-hover:text-[#113285]">
-            <Upload className="w-full h-full" strokeWidth={1.5} />
+          <div className="grid grid-cols-2 gap-3">
+            <button onClick={() => idBackRef.current?.click()} className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-gray-200 rounded-2xl hover:border-[#113285]/50 hover:bg-[#113285]/5 transition-all group">
+              <Upload className="w-6 h-6 mb-2 text-[#4A5568] group-hover:text-[#113285]" strokeWidth={1.5} />
+              <div className="text-[13px] font-bold text-[#0A0F2C]">Upload File</div>
+            </button>
+            <button onClick={() => openCamera('idBack')} className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-gray-200 rounded-2xl hover:border-[#113285]/50 hover:bg-[#113285]/5 transition-all group">
+              <Camera className="w-6 h-6 mb-2 text-[#4A5568] group-hover:text-[#113285]" strokeWidth={1.5} />
+              <div className="text-[13px] font-bold text-[#0A0F2C]">Take Photo</div>
+            </button>
           </div>
         )}
-        <div className="text-[14px] font-bold text-[#0A0F2C] mb-1">{files.idBack ? files.idBack.name : "Upload Back of ID"}</div>
-        <div className="text-[12px] text-[#718096]">JPG, PNG, WEBP, PDF • Max 10MB</div>
-        {files.idBack && <div className="text-[11px] text-[#A0AEC0] mt-1">{(files.idBack.size / 1024 / 1024).toFixed(2)} MB</div>}
-      </button>
-      {errors.idBack && <p className="text-[11px] text-red-500 mt-1">{errors.idBack}</p>}
+        {errors.idBack && <p className="text-[11px] text-red-500 mt-1">{errors.idBack}</p>}
+      </div>
     </div>
 
     <div className="grid grid-cols-2 gap-3 mt-6">
@@ -471,19 +581,33 @@ const nextStep = () => {
       </div>
 
       <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" ref={selfieRef} onChange={(e) => handleFileChange(e, 'selfie')} />
-      <button onClick={() => selfieRef.current?.click()} className="w-full flex flex-col items-center justify-center p-4 border-2 border-dashed border-gray-200 rounded-2xl hover:border-[#113285]/50 hover:bg-[#113285]/5 transition-all group">
+      <input type="file" accept="image/jpeg,image/png,image/webp" capture="user" className="hidden" ref={mobileCameraRefSelfie} onChange={(e) => handleFileChange(e, 'selfie')} />
+      
+      <div className="w-full">
         {filePreviews.selfie ? (
-          <img src={filePreviews.selfie} className="w-32 h-32 object-cover rounded-full mb-2" />
+          <div className="relative w-48 h-48 mx-auto rounded-full border border-gray-200 overflow-hidden group">
+            <img src={filePreviews.selfie} className="w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <button onClick={() => {
+                setFilePreviews(prev => ({ ...prev, selfie: "" }));
+                setFiles(prev => ({ ...prev, selfie: null }));
+              }} className="bg-white text-[#0A0F2C] px-4 py-2 rounded-lg font-bold text-sm shadow-lg">Retake</button>
+            </div>
+          </div>
         ) : (
-          <div className="w-10 h-10 mb-2 text-[#4A5568] group-hover:text-[#113285]">
-            <Upload className="w-full h-full" strokeWidth={1.5} />
+          <div className="grid grid-cols-2 gap-3">
+            <button onClick={() => selfieRef.current?.click()} className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-gray-200 rounded-2xl hover:border-[#113285]/50 hover:bg-[#113285]/5 transition-all group">
+              <Upload className="w-6 h-6 mb-2 text-[#4A5568] group-hover:text-[#113285]" strokeWidth={1.5} />
+              <div className="text-[13px] font-bold text-[#0A0F2C]">Upload File</div>
+            </button>
+            <button onClick={() => openCamera('selfie')} className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-gray-200 rounded-2xl hover:border-[#113285]/50 hover:bg-[#113285]/5 transition-all group">
+              <Camera className="w-6 h-6 mb-2 text-[#4A5568] group-hover:text-[#113285]" strokeWidth={1.5} />
+              <div className="text-[13px] font-bold text-[#0A0F2C]">Take Photo</div>
+            </button>
           </div>
         )}
-        <div className="text-[14px] font-bold text-[#0A0F2C] mb-1">{files.selfie ? files.selfie.name : "Upload Selfie"}</div>
-        <div className="text-[12px] text-[#718096]">JPG, PNG, WEBP • Max 10MB</div>
-        {files.selfie && <div className="text-[11px] text-[#A0AEC0] mt-1">{(files.selfie.size / 1024 / 1024).toFixed(2)} MB</div>}
-      </button>
-      {errors.selfie && <p className="text-[11px] text-red-500 mt-1">{errors.selfie}</p>}
+        {errors.selfie && <p className="text-[11px] text-red-500 mt-1 text-center">{errors.selfie}</p>}
+      </div>
     </div>
 
     <div className="grid grid-cols-2 gap-3 mt-6">
@@ -533,6 +657,35 @@ const nextStep = () => {
         )}
 
       </div>
+      
+      {cameraState.isOpen && !isMobile && (
+        <div className="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-center p-4">
+          <div className="w-full max-w-[600px] bg-black rounded-3xl overflow-hidden relative shadow-2xl">
+            <video 
+              ref={videoRef} 
+              autoPlay 
+              playsInline 
+              className={`w-full h-[400px] object-cover ${cameraState.field === 'selfie' ? 'scale-x-[-1]' : ''}`} 
+            />
+            <canvas ref={canvasRef} className="hidden" />
+            <div className="absolute top-4 right-4">
+              <button onClick={closeCamera} className="w-10 h-10 rounded-full bg-white/20 hover:bg-white/40 flex items-center justify-center backdrop-blur text-white transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="absolute bottom-6 inset-x-0 flex justify-center">
+              <button onClick={capturePhoto} className="w-16 h-16 rounded-full border-4 border-white/50 bg-white hover:bg-gray-200 transition-colors shadow-lg flex items-center justify-center">
+                <div className="w-12 h-12 rounded-full border-2 border-black/10"></div>
+              </button>
+            </div>
+            <div className="absolute bottom-8 left-8">
+              <button onClick={closeCamera} className="text-white font-bold text-sm bg-black/40 hover:bg-black/60 px-4 py-2 rounded-lg backdrop-blur">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

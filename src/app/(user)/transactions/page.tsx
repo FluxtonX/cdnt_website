@@ -1,30 +1,123 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { Download, Search } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
+import { Download, Search, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TransactionTable } from "@/components/dashboard/blocks";
-import { transactions } from "@/data/mock";
+import { createClient } from "@/lib/supabase/client";
 
-const FILTERS = ["All", "Deposits", "Withdrawals", "Fees"];
+const FILTERS = ["All", "Deposits", "Withdrawals"];
+
+type TransactionRow = {
+  id: string;
+  type: string;
+  asset: string;
+  amount: string;
+  fiat: string;
+  status: string;
+  date: string;
+  description?: string;
+  rawDate: Date; // for sorting
+  rawAmount: number;
+};
 
 export default function TransactionsPage() {
   const [activeFilter, setActiveFilter] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
+  const [transactions, setTransactions] = useState<TransactionRow[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const supabase = createClient();
+
+  useEffect(() => {
+    async function fetchTransactions() {
+      setIsLoading(true);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const [depositsRes, withdrawalsRes] = await Promise.all([
+          supabase
+            .from("deposit_requests")
+            .select("id, created_at, amount, currency, status")
+            .eq("user_id", user.id),
+          supabase
+            .from("withdrawal_requests")
+            .select("id, created_at, amount, method, status")
+            .eq("user_id", user.id)
+        ]);
+
+        const deposits: TransactionRow[] = (depositsRes.data || []).map(d => ({
+          id: d.id,
+          type: "deposit",
+          asset: d.currency || "USD",
+          amount: String(d.amount),
+          rawAmount: Number(d.amount),
+          fiat: "USD",
+          status: d.status,
+          date: new Date(d.created_at).toLocaleDateString(),
+          description: `TXN-${d.id.substring(0, 8).toUpperCase()}`,
+          rawDate: new Date(d.created_at)
+        }));
+
+        const withdrawals: TransactionRow[] = (withdrawalsRes.data || []).map(w => ({
+          id: w.id,
+          type: "withdrawal",
+          asset: w.method === "interac" ? "CAD" : "USD",
+          amount: String(w.amount),
+          rawAmount: Number(w.amount),
+          fiat: "USD",
+          status: w.status,
+          date: new Date(w.created_at).toLocaleDateString(),
+          description: `TXN-${w.id.substring(0, 8).toUpperCase()}`,
+          rawDate: new Date(w.created_at)
+        }));
+
+        const combined = [...deposits, ...withdrawals].sort((a, b) => b.rawDate.getTime() - a.rawDate.getTime());
+        setTransactions(combined);
+      } catch (error) {
+        console.error("Error fetching transactions:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchTransactions();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filteredTransactions = useMemo(() => {
     return transactions.filter((row) => {
       let matchesType = true;
-      if (activeFilter === "Deposits") matchesType = row.type === "crypto_deposit";
-      if (activeFilter === "Withdrawals") matchesType = row.type === "withdrawal_request";
-      if (activeFilter === "Fees") matchesType = row.type === "admin_adjustment"; // Or whatever logic maps to fees
+      if (activeFilter === "Deposits") matchesType = row.type === "deposit";
+      if (activeFilter === "Withdrawals") matchesType = row.type === "withdrawal";
       
-      const haystack = `${row.id} ${row.type} ${row.asset} ${row.status}`.toLowerCase();
+      const haystack = `${row.description} ${row.id} ${row.type} ${row.asset} ${row.status} ${row.amount}`.toLowerCase();
       const matchesSearch = haystack.includes(searchQuery.toLowerCase());
       
       return matchesType && matchesSearch;
     });
-  }, [activeFilter, searchQuery]);
+  }, [activeFilter, searchQuery, transactions]);
+
+  const handleExportCSV = () => {
+    if (filteredTransactions.length === 0) return;
+
+    const headers = ["Date", "Description", "Type", "Asset", "Amount", "Status"];
+    const csvContent = [
+      headers.join(","),
+      ...filteredTransactions.map(row => 
+        [row.date, row.description, row.type, row.asset, row.amount, row.status].map(val => `"${val}"`).join(",")
+      )
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "transactions-export.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <div className="mx-auto w-full max-w-[1024px] mt-8 space-y-6">
@@ -34,7 +127,10 @@ export default function TransactionsPage() {
           <h1 className="text-[22px] font-bold tracking-tight text-[#0A0F2C]">Transactions</h1>
           <p className="text-[14px] text-[#718096]">View and manage your transaction history</p>
         </div>
-        <button className="flex h-10 shrink-0 items-center justify-center gap-2 rounded-[12px] border border-gray-200 bg-white px-4 text-[14px] font-bold text-[#0A0F2C] shadow-sm hover:bg-gray-50 transition-colors">
+        <button 
+          onClick={handleExportCSV}
+          className="flex h-10 shrink-0 items-center justify-center gap-2 rounded-[12px] border border-gray-200 bg-white px-4 text-[14px] font-bold text-[#0A0F2C] shadow-sm hover:bg-gray-50 transition-colors"
+        >
           <Download className="h-4 w-4" strokeWidth={2} />
           Export CSV
         </button>
@@ -78,9 +174,19 @@ export default function TransactionsPage() {
         </div>
       </div>
 
-      {/* Transactions Table (Below the filter card, keeping functionality intact) */}
+      {/* Transactions Table */}
       <div className="rounded-[20px] border border-gray-100 bg-white p-6 shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
-        <TransactionTable rows={filteredTransactions} />
+        {isLoading ? (
+          <div className="flex py-12 justify-center items-center">
+            <Loader2 className="h-8 w-8 animate-spin text-[#113285]" />
+          </div>
+        ) : filteredTransactions.length > 0 ? (
+          <TransactionTable rows={filteredTransactions} />
+        ) : (
+          <div className="py-12 text-center text-sm font-medium text-gray-500">
+            No transactions found.
+          </div>
+        )}
       </div>
     </div>
   );
