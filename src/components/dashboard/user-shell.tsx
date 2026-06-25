@@ -25,6 +25,12 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+const FREEZE_SUPPORT_PATH = "/help-support";
+
+function isFreezeSupportPath(href: string) {
+  return href === FREEZE_SUPPORT_PATH || href.startsWith(`${FREEZE_SUPPORT_PATH}/`);
+}
+
 const sidebarNav = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Wallets", href: "/wallets", icon: Wallet },
@@ -43,6 +49,7 @@ export function UserShell({ children }: { children: React.ReactNode }) {
   
   const [userProfile, setUserProfile] = useState<{ email: string, fullName: string, initials: string, isKycVerified: boolean, kycStatus: string | null } | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
+  const [isFrozen, setIsFrozen] = useState(false);
   const [dbNotifications, setDbNotifications] = useState<any[]>([]);
   const [notificationsLoading, setNotificationsLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -97,7 +104,7 @@ export function UserShell({ children }: { children: React.ReactNode }) {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
-        
+
         const { data: profile } = await supabase
           .from("profiles")
           .select("full_name, kyc_verified")
@@ -138,6 +145,45 @@ export function UserShell({ children }: { children: React.ReactNode }) {
       }
     }
     loadUser();
+  }, [supabase]);
+
+  useEffect(() => {
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+
+    async function initFreezeWatch() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data } = await supabase
+        .from("profiles")
+        .select("is_frozen")
+        .eq("id", user.id)
+        .single();
+
+      setIsFrozen(data?.is_frozen ?? false);
+
+      channel = supabase
+        .channel("freeze-watch")
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "profiles",
+            filter: `id=eq.${user.id}`,
+          },
+          (payload) => {
+            setIsFrozen((payload.new as { is_frozen?: boolean }).is_frozen ?? false);
+          }
+        )
+        .subscribe();
+    }
+
+    initFreezeWatch();
+
+    return () => {
+      if (channel) supabase.removeChannel(channel);
+    };
   }, [supabase]);
 
   useEffect(() => {
@@ -210,13 +256,28 @@ export function UserShell({ children }: { children: React.ReactNode }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const showFreezeOverlay = isFrozen && !isFreezeSupportPath(pathname);
+
+  const handleFrozenNav = (href: string, e: React.MouseEvent) => {
+    if (isFrozen && !isFreezeSupportPath(href)) {
+      e.preventDefault();
+    }
+  };
+
+  const frozenNavClass = (href: string) =>
+    isFrozen && !isFreezeSupportPath(href) ? "pointer-events-none opacity-40 cursor-not-allowed" : "";
+
   return (
     <div className="min-h-screen bg-[#F8F9FA] text-[#0A0F2C] lg:grid lg:grid-cols-[240px_1fr]">
       {/* Sidebar */}
-      <aside className="hidden border-r border-gray-100 bg-white lg:block">
+      <aside className={cn("hidden border-r border-gray-100 bg-white lg:block", showFreezeOverlay && "pointer-events-none")}>
         <div className="sticky top-0 flex h-screen flex-col">
           <div className="flex items-center justify-center h-[88px] px-6 bg-white">
-            <Link href="/" className="flex items-center justify-center w-full">
+            <Link
+              href="/"
+              onClick={(e) => handleFrozenNav("/", e)}
+              className={cn("flex items-center justify-center w-full", frozenNavClass("/"))}
+            >
               <Image 
                 src="/bluelogo.png" 
                 alt="CDNT" 
@@ -232,17 +293,20 @@ export function UserShell({ children }: { children: React.ReactNode }) {
           {/* Nav Links */}
           <nav className="flex-1 space-y-1.5 px-4">
             {sidebarNav.map((item) => {
-              const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+              const href = isFrozen && item.label === "Help & Support" ? FREEZE_SUPPORT_PATH : item.href;
+              const active = pathname === href || pathname.startsWith(`${href}/`);
               const Icon = item.icon;
               return (
                 <Link
                   key={item.href}
-                  href={item.href}
+                  href={href}
+                  onClick={(e) => handleFrozenNav(href, e)}
                   className={cn(
                     "flex items-center gap-3.5 rounded-xl px-4 py-3 text-[14px] font-medium transition-colors",
                     active 
                       ? "bg-[#113285] text-white shadow-md shadow-blue-900/10" 
-                      : "text-[#4A5568] hover:bg-gray-50 hover:text-[#0A0F2C]"
+                      : "text-[#4A5568] hover:bg-gray-50 hover:text-[#0A0F2C]",
+                    frozenNavClass(href)
                   )}
                 >
                   <Icon className="h-[18px] w-[18px]" strokeWidth={active ? 2.5 : 2} />
@@ -256,8 +320,17 @@ export function UserShell({ children }: { children: React.ReactNode }) {
           <div className="p-4 mb-4">
             <button 
               suppressHydrationWarning
-              onClick={handleSignOut}
-              className="flex w-full items-center gap-3.5 rounded-xl px-4 py-3 text-[14px] font-medium text-[#E53E3E] hover:bg-red-50 transition-colors"
+              onClick={(e) => {
+                if (isFrozen) {
+                  e.preventDefault();
+                  return;
+                }
+                handleSignOut();
+              }}
+              className={cn(
+                "flex w-full items-center gap-3.5 rounded-xl px-4 py-3 text-[14px] font-medium text-[#E53E3E] hover:bg-red-50 transition-colors",
+                isFrozen && "pointer-events-none opacity-40 cursor-not-allowed"
+              )}
             >
               <LogOut className="h-[18px] w-[18px]" strokeWidth={2} />
               Sign Out
@@ -269,7 +342,7 @@ export function UserShell({ children }: { children: React.ReactNode }) {
       {/* Main Content Area */}
       <div className="min-w-0 pb-20 lg:pb-0">
         {/* Top Header */}
-        <header className="sticky top-0 z-30 flex h-[88px] items-center justify-between border-b border-gray-100 bg-white px-4 sm:px-6 md:px-8">
+        <header className={cn("sticky top-0 z-30 flex h-[88px] items-center justify-between border-b border-gray-100 bg-white px-4 sm:px-6 md:px-8", showFreezeOverlay && "pointer-events-none")}>
           <div className="flex flex-col justify-center min-w-0 mr-4">
             <h1 className="text-[16px] sm:text-[20px] font-bold text-[#0A0F2C] truncate">
               Welcome back, {userProfile?.fullName.split(' ')[0] || 'User'}
@@ -283,7 +356,11 @@ export function UserShell({ children }: { children: React.ReactNode }) {
             <div className="relative" ref={notificationsRef}>
               <button 
                 suppressHydrationWarning
-                onClick={() => {
+                onClick={(e) => {
+                  if (isFrozen) {
+                    e.preventDefault();
+                    return;
+                  }
                   const wasOpen = isNotificationsOpen;
                   setIsNotificationsOpen(!wasOpen);
                   if (!wasOpen) {
@@ -293,7 +370,8 @@ export function UserShell({ children }: { children: React.ReactNode }) {
                 }}
                 className={cn(
                   "relative text-[#4A5568] hover:text-[#0A0F2C] transition-colors p-2 rounded-lg border",
-                  isNotificationsOpen ? "bg-gray-50 border-gray-100" : "border-transparent hover:bg-gray-50 hover:border-gray-100"
+                  isNotificationsOpen ? "bg-gray-50 border-gray-100" : "border-transparent hover:bg-gray-50 hover:border-gray-100",
+                  isFrozen && "pointer-events-none opacity-40 cursor-not-allowed"
                 )}
                 aria-label="Notifications"
               >
@@ -358,8 +436,14 @@ export function UserShell({ children }: { children: React.ReactNode }) {
                   <div className="py-1 px-2">
                     <Link 
                       href="/notifications" 
-                      onClick={() => setIsNotificationsOpen(false)}
-                      className="block text-center py-2 text-xs font-bold text-[#113285] hover:bg-blue-50/50 rounded-lg transition-colors"
+                      onClick={(e) => {
+                        handleFrozenNav("/notifications", e);
+                        if (!e.defaultPrevented) setIsNotificationsOpen(false);
+                      }}
+                      className={cn(
+                        "block text-center py-2 text-xs font-bold text-[#113285] hover:bg-blue-50/50 rounded-lg transition-colors",
+                        frozenNavClass("/notifications")
+                      )}
                     >
                       View all notifications
                     </Link>
@@ -373,10 +457,17 @@ export function UserShell({ children }: { children: React.ReactNode }) {
             <div className="relative" ref={dropdownRef}>
               <button 
                 suppressHydrationWarning
-                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                onClick={(e) => {
+                  if (isFrozen) {
+                    e.preventDefault();
+                    return;
+                  }
+                  setIsDropdownOpen(!isDropdownOpen);
+                }}
                 className={cn(
                   "flex items-center gap-3 px-2 py-1.5 rounded-lg transition-colors border",
-                  isDropdownOpen ? "bg-gray-50 border-gray-100" : "border-transparent hover:bg-gray-50 hover:border-gray-100"
+                  isDropdownOpen ? "bg-gray-50 border-gray-100" : "border-transparent hover:bg-gray-50 hover:border-gray-100",
+                  isFrozen && "pointer-events-none opacity-40 cursor-not-allowed"
                 )}
               >
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#113285] text-[13px] font-bold text-white">
@@ -395,15 +486,15 @@ export function UserShell({ children }: { children: React.ReactNode }) {
                     <p className="text-[12px] text-[#718096] truncate">{userProfile?.email || 'Loading...'}</p>
                   </div>
                   <div className="py-1">
-                    <Link href="/settings" className="group flex items-center px-4 py-2 text-[13px] text-[#4A5568] hover:bg-gray-50 hover:text-[#0A0F2C]">
+                    <Link href="/settings" onClick={(e) => handleFrozenNav("/settings", e)} className={cn("group flex items-center px-4 py-2 text-[13px] text-[#4A5568] hover:bg-gray-50 hover:text-[#0A0F2C]", frozenNavClass("/settings"))}>
                       <User className="mr-3 h-4 w-4 text-[#718096] group-hover:text-[#113285]" />
                       Profile
                     </Link>
-                    <Link href="/settings/security" className="group flex items-center px-4 py-2 text-[13px] text-[#4A5568] hover:bg-gray-50 hover:text-[#0A0F2C]">
+                    <Link href="/settings/security" onClick={(e) => handleFrozenNav("/settings/security", e)} className={cn("group flex items-center px-4 py-2 text-[13px] text-[#4A5568] hover:bg-gray-50 hover:text-[#0A0F2C]", frozenNavClass("/settings/security"))}>
                       <Shield className="mr-3 h-4 w-4 text-[#718096] group-hover:text-[#113285]" />
                       Security
                     </Link>
-                    <Link href="/kyc" className="group flex items-center px-4 py-2 text-[13px] text-[#4A5568] hover:bg-gray-50 hover:text-[#0A0F2C]">
+                    <Link href="/kyc" onClick={(e) => handleFrozenNav("/kyc", e)} className={cn("group flex items-center px-4 py-2 text-[13px] text-[#4A5568] hover:bg-gray-50 hover:text-[#0A0F2C]", frozenNavClass("/kyc"))}>
                       <FileCheck className="mr-3 h-4 w-4 text-[#718096] group-hover:text-[#113285]" />
                       Verification/KYC
                     </Link>
@@ -411,8 +502,17 @@ export function UserShell({ children }: { children: React.ReactNode }) {
                   <div className="py-1">
                     <button 
                       suppressHydrationWarning
-                      onClick={handleSignOut}
-                      className="group flex w-full items-center px-4 py-2 text-[13px] text-[#E53E3E] hover:bg-red-50"
+                      onClick={(e) => {
+                        if (isFrozen) {
+                          e.preventDefault();
+                          return;
+                        }
+                        handleSignOut();
+                      }}
+                      className={cn(
+                        "group flex w-full items-center px-4 py-2 text-[13px] text-[#E53E3E] hover:bg-red-50",
+                        isFrozen && "pointer-events-none opacity-40 cursor-not-allowed"
+                      )}
                     >
                       <LogOut className="mr-3 h-4 w-4 text-[#E53E3E]" />
                       Logout
@@ -425,7 +525,7 @@ export function UserShell({ children }: { children: React.ReactNode }) {
         </header>
 
         {/* Page Content */}
-        <main className="mx-auto w-full p-4 md:p-8">
+        <main className={cn("mx-auto w-full p-4 md:p-8", showFreezeOverlay && "pointer-events-none")}>
           {/* Show KYC warning only when profile indicates not verified */}
        {userProfile && userProfile.kycStatus === null && (
   <div className="mb-6 rounded-xl bg-amber-50 border border-amber-200 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
@@ -438,7 +538,7 @@ export function UserShell({ children }: { children: React.ReactNode }) {
         <p className="text-[13px] text-amber-700 mt-0.5">Please complete your KYC verification to unlock full account features and higher limits.</p>
       </div>
     </div>
-    <Link href="/kyc" className="whitespace-nowrap rounded-lg bg-amber-500 px-4 py-2 text-[13px] font-bold text-white shadow-sm hover:bg-amber-600 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 flex-shrink-0">Complete Verification</Link>
+    <Link href="/kyc" onClick={(e) => handleFrozenNav("/kyc", e)} className={cn("whitespace-nowrap rounded-lg bg-amber-500 px-4 py-2 text-[13px] font-bold text-white shadow-sm hover:bg-amber-600 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 flex-shrink-0", frozenNavClass("/kyc"))}>Complete Verification</Link>
   </div>
 )}
           {children}
@@ -447,12 +547,16 @@ export function UserShell({ children }: { children: React.ReactNode }) {
 
       {/* Mobile Bottom Navigation */}
       <nav 
-        className="fixed bottom-0 left-0 right-0 z-50 flex h-20 items-center border-t border-gray-200 bg-white px-2 shadow-[0_-4px_15px_rgba(0,0,0,0.03)] lg:hidden"
+        className={cn(
+          "fixed bottom-0 left-0 right-0 z-50 flex h-20 items-center border-t border-gray-200 bg-white px-2 shadow-[0_-4px_15px_rgba(0,0,0,0.03)] lg:hidden",
+          showFreezeOverlay && "pointer-events-none"
+        )}
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         <div className="flex w-full items-center justify-between overflow-x-auto gap-1 no-scrollbar sm:px-4">
           {sidebarNav.map((item) => {
-            const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+            const href = isFrozen && item.label === "Help & Support" ? FREEZE_SUPPORT_PATH : item.href;
+            const active = pathname === href || pathname.startsWith(`${href}/`);
             const Icon = item.icon;
             
             // Shorten label for mobile if needed
@@ -461,12 +565,14 @@ export function UserShell({ children }: { children: React.ReactNode }) {
             return (
               <Link
                 key={item.href}
-                href={item.href}
+                href={href}
+                onClick={(e) => handleFrozenNav(href, e)}
                 className={cn(
                   "flex flex-1 min-w-[64px] flex-col items-center justify-center gap-1 rounded-xl p-1 transition-colors",
                   active 
                     ? "text-[#113285]" 
-                    : "text-[#718096] hover:bg-gray-50 hover:text-[#0A0F2C]"
+                    : "text-[#718096] hover:bg-gray-50 hover:text-[#0A0F2C]",
+                  frozenNavClass(href)
                 )}
               >
                 <div className={cn(
@@ -486,6 +592,27 @@ export function UserShell({ children }: { children: React.ReactNode }) {
           })}
         </div>
       </nav>
+
+      {showFreezeOverlay && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 pointer-events-auto">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+          <div className="relative w-full max-w-md rounded-2xl bg-white p-8 shadow-xl text-center">
+            <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
+              <AlertCircle className="h-7 w-7 text-[#E53E3E]" strokeWidth={2.5} />
+            </div>
+            <h2 className="text-[18px] font-bold text-[#0A0F2C]">Account Frozen</h2>
+            <p className="mt-3 text-[14px] leading-relaxed text-[#718096]">
+              Your account has been temporarily frozen. Please contact support.
+            </p>
+            <Link
+              href={FREEZE_SUPPORT_PATH}
+              className="mt-6 inline-flex items-center justify-center rounded-lg bg-[#113285] px-5 py-2.5 text-[14px] font-bold text-white shadow-sm hover:bg-[#0d2668] transition-colors"
+            >
+              Contact Support
+            </Link>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

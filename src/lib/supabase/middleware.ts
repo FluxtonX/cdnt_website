@@ -58,6 +58,7 @@ export async function updateSession(request: NextRequest) {
     '/referral',
     '/statements',
     '/support',
+    '/help-support',
     '/ui-completion'
   ];
 

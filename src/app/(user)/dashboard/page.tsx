@@ -9,10 +9,11 @@ import {
   TrendingUp
 } from "lucide-react";
 import {
-  LineChart,
-  Line,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
+  CartesianGrid,
   ResponsiveContainer,
   Tooltip,
   PieChart,
@@ -39,8 +40,23 @@ function formatRelativeTime(date: Date): string {
   return `${diffDays} days ago`;
 }
 
+type PerformanceTimeRange = "1D" | "1W" | "1M" | "3M" | "YTD" | "1Y" | "MAX";
+
+const PERFORMANCE_TIME_RANGES: PerformanceTimeRange[] = ["1D", "1W", "1M", "3M", "YTD", "1Y", "MAX"];
+
+const PERFORMANCE_LABELS: Record<PerformanceTimeRange, string[]> = {
+  "1D": ["9a", "11a", "1p", "3p", "5p", "7p", "9p"],
+  "1W": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+  "1M": ["W1", "W2", "W3", "W4", "W5", "W6", "Now"],
+  "3M": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Now"],
+  "YTD": ["Jan", "Mar", "May", "Jul", "Sep", "Nov", "Now"],
+  "1Y": ["Q1", "Q2", "Q3", "Q4", "Q1", "Q2", "Now"],
+  "MAX": ["Y1", "Y2", "Y3", "Y4", "Y5", "Y6", "Now"],
+};
+
 export default function DashboardPage() {
   const [hideBalance, setHideBalance] = useState(false);
+  const [performanceRange, setPerformanceRange] = useState<PerformanceTimeRange>("1W");
   const { data: metrics, isLoading: loadingBalance } = useDashboardMetrics();
   const { data: transactions = [], isLoading: loadingTx } = useRecentTransactions();
 
@@ -90,6 +106,30 @@ export default function DashboardPage() {
     ];
   }, [portfolioValue]);
 
+  const chartPerformanceData = useMemo(() => {
+    const labels = PERFORMANCE_LABELS[performanceRange];
+    return performanceData.map((point, index) => ({
+      ...point,
+      name: labels[index] ?? point.name,
+    }));
+  }, [performanceData, performanceRange]);
+
+  const yAxisDomain = useMemo(() => {
+    const values = chartPerformanceData.map((point) => point.value);
+    if (values.length === 0) return [0, 100];
+    const minValue = Math.min(...values);
+    const maxValue = Math.max(...values);
+    return [minValue * 0.9, maxValue * 1.1];
+  }, [chartPerformanceData]);
+
+  const formatYAxisTick = (value: number) => {
+    if (value >= 1000) return `$${(value / 1000).toFixed(0)}k`;
+    return `$${value.toFixed(0)}`;
+  };
+
+  const formatCadTooltip = (value: number) =>
+    `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
   return (
     <div className="space-y-6">
 
@@ -134,36 +174,73 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
-        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-          <h2 className="text-[15px] font-bold text-[#0A0F2C] mb-6">Portfolio Performance</h2>
+        <div
+          className="rounded-2xl p-6 shadow-sm"
+          style={{ background: "#0d1b3e", border: "1px solid rgba(255,255,255,0.1)" }}
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+            <h2 className="text-[15px] font-bold text-white">Portfolio Performance</h2>
+            <div className="flex flex-wrap gap-1.5">
+              {PERFORMANCE_TIME_RANGES.map((range) => (
+                <button
+                  key={range}
+                  type="button"
+                  onClick={() => setPerformanceRange(range)}
+                  className={cn(
+                    "px-2.5 py-1 rounded-md text-[11px] font-bold transition-colors",
+                    performanceRange === range
+                      ? "bg-[#113285] text-white"
+                      : "text-slate-400 hover:text-white hover:bg-white/10"
+                  )}
+                >
+                  {range}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="h-[240px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={performanceData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <AreaChart data={chartPerformanceData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" vertical={false} />
                 <XAxis
                   dataKey="name"
-                  axisLine={true}
+                  axisLine={false}
                   tickLine={false}
-                  tick={{ fontSize: 11, fill: '#A0AEC0' }}
+                  tick={{ fontSize: 11, fill: "#94a3b8" }}
                   dy={10}
                 />
                 <YAxis
-                  axisLine={true}
+                  axisLine={false}
                   tickLine={false}
-                  tick={{ fontSize: 11, fill: '#A0AEC0' }}
+                  tick={{ fontSize: 11, fill: "#94a3b8" }}
+                  domain={yAxisDomain}
+                  tickFormatter={formatYAxisTick}
                 />
                 <Tooltip
-                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  labelStyle={{ display: 'none' }}
+                  contentStyle={{
+                    borderRadius: "8px",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    backgroundColor: "#0a1628",
+                    color: "#f8fafc",
+                  }}
+                  labelStyle={{ color: "#94a3b8" }}
+                  formatter={(value: number) => [formatCadTooltip(value), "CAD Value"]}
                 />
-                <Line
+                <Area
                   type="monotone"
                   dataKey="value"
-                  stroke="#113285"
-                  strokeWidth={3}
-                  dot={{ r: 4, fill: "#113285", strokeWidth: 0 }}
-                  activeDot={{ r: 6, fill: "#113285" }}
+                  stroke="#3b82f6"
+                  strokeWidth={2}
+                  fill="url(#colorValue)"
+                  dot={false}
                 />
-              </LineChart>
+              </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
