@@ -4,7 +4,6 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { LucideIcon } from "lucide-react";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { performancePoints } from "@/data/mock";
 import { cn } from "@/lib/utils";
 
 export function PageTitle({

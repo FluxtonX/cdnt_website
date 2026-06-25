@@ -49,6 +49,12 @@ export function NotificationCenter() {
     async function fetchNotifications() {
       setLoading(true);
       try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          setDbNotifications([]);
+          return;
+        }
+
         const { data, error } = await supabase
           .from("notifications")
           .select("*")

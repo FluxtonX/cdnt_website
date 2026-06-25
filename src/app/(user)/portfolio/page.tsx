@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowUpRight, TrendingUp, ShieldAlert, BarChart3, Info } from "lucide-react";
+import { ArrowUpRight, TrendingUp, ShieldAlert, Info } from "lucide-react";
 
 import { PageTitle, Panel, PerformanceChart } from "@/components/dashboard/blocks";
 import { AllocationDonut, PortfolioInsightStrip } from "@/components/dashboard/portfolio-insights";

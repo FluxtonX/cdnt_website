@@ -1,5 +1,5 @@
 import { SiteShell } from "@/components/public/site-shell";
-import { Shield, Eye, Lock, FileText, Globe, Clock } from "lucide-react";
+import { Shield, Eye, Lock, FileText } from "lucide-react";
 
 export default function PrivacyPage() {
   return (

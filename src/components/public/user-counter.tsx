@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useMotionValue, useTransform, animate } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
 export function UserCounter() {
   const count = useMotionValue(0);

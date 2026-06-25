@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, Download, Calendar, Search, Filter, Info } from "lucide-react";
+import { Download, Calendar, Search, Filter, Info } from "lucide-react";
 
 import { PageTitle, Panel } from "@/components/dashboard/blocks";
 

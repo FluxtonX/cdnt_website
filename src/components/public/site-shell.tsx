@@ -11,8 +11,7 @@ import {
   Twitter,
   Linkedin,
   Facebook,
-  Instagram,
-  Youtube
+  Instagram
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MegaMenu, MenuSection } from "./mega-menu";

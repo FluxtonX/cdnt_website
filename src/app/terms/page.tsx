@@ -1,5 +1,5 @@
 import { SiteShell } from "@/components/public/site-shell";
-import { Scale, AlertCircle, CheckCircle2, Info } from "lucide-react";
+import { Scale, AlertCircle, CheckCircle2 } from "lucide-react";
 
 export default function TermsPage() {
   return (

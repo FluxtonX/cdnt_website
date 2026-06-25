@@ -497,7 +497,7 @@ const nextStep = () => {
         <div className="text-[14px] font-bold text-[#0A0F2C] mb-2">Front of ID</div>
         {filePreviews.idFront ? (
           <div className="relative rounded-2xl border border-gray-200 overflow-hidden group">
-            <img src={filePreviews.idFront} className="w-full h-40 object-cover" />
+            <img src={filePreviews.idFront} alt="" className="w-full h-40 object-cover" />
             <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
               <button onClick={() => {
                 setFilePreviews(prev => ({ ...prev, idFront: "" }));
@@ -528,7 +528,7 @@ const nextStep = () => {
         <div className="text-[14px] font-bold text-[#0A0F2C] mb-2">Back of ID</div>
         {filePreviews.idBack ? (
           <div className="relative rounded-2xl border border-gray-200 overflow-hidden group">
-            <img src={filePreviews.idBack} className="w-full h-40 object-cover" />
+            <img src={filePreviews.idBack} alt="" className="w-full h-40 object-cover" />
             <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
               <button onClick={() => {
                 setFilePreviews(prev => ({ ...prev, idBack: "" }));
@@ -586,7 +586,7 @@ const nextStep = () => {
       <div className="w-full">
         {filePreviews.selfie ? (
           <div className="relative w-48 h-48 mx-auto rounded-full border border-gray-200 overflow-hidden group">
-            <img src={filePreviews.selfie} className="w-full h-full object-cover" />
+            <img src={filePreviews.selfie} alt="" className="w-full h-full object-cover" />
             <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
               <button onClick={() => {
                 setFilePreviews(prev => ({ ...prev, selfie: "" }));
