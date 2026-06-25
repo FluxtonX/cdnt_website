@@ -354,6 +354,7 @@ export function useClientWallets() {
         const ethData = await ethRes.json();
         ethPrice = Number(ethData.lastPrice);
       }
+      const cadRates = await fetchLiveCADRates();
 
       const platformAddressMap = (platformWallets || []).reduce((acc: Record<string, string>, w: { crypto: string; address: string }) => {
         acc[w.crypto] = w.address;
@@ -404,7 +405,7 @@ export function useClientWallets() {
           symbol: "BTC",
           balance: btcBalance.toFixed(8),
           rawBalance: btcBalance,
-          value: `$${(btcBalance * btcPrice).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+          value: `$${(btcBalance * cadRates.btcCAD).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
           change: "Live",
           changeType: "positive",
           network: "Bitcoin Network",
@@ -418,7 +419,7 @@ export function useClientWallets() {
           symbol: "ETH",
           balance: ethBalance.toFixed(8),
           rawBalance: ethBalance,
-          value: `$${(ethBalance * ethPrice).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+          value: `$${(ethBalance * cadRates.ethCAD).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
           change: "Live",
           changeType: "positive",
           network: "Ethereum Mainnet",
@@ -432,7 +433,7 @@ export function useClientWallets() {
           symbol: "USDT",
           balance: usdtBalance.toFixed(2),
           rawBalance: usdtBalance,
-          value: `$${usdtBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+          value: `$${(usdtBalance * cadRates.usdtCAD).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
           change: "Stable",
           changeType: "neutral",
           network: "ERC-20",
