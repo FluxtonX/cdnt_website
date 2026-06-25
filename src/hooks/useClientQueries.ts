@@ -37,6 +37,7 @@ async function fetchMarketPrices() {
 
 export type DashboardMetrics = {
   prices: Record<string, number>;
+  cadRates: Record<string, number>;
   btcBalance: number;
   ethBalance: number;
   usdtBalance: number;
@@ -51,6 +52,7 @@ export function useDashboardMetrics() {
     queryKey: clientQueryKeys.dashboard(),
     queryFn: async (): Promise<DashboardMetrics> => {
       const { supabase, user } = await getAuthenticatedUserId();
+      const liveCadRates = await fetchLiveCADRates();
 
       const pricePromise = fetchMarketPrices();
       const walletsPromise = supabase.from("user_wallets").select("*").eq("user_id", user.id);
@@ -74,11 +76,10 @@ export function useDashboardMetrics() {
       let cadBalance = 0;
 
       if (!walletsErr && userWallets) {
-        const rates = await fetchLiveCADRates();
         btcBalance = Number(userWallets.find((w: { currency: string }) => w.currency === "BTC")?.balance || 0);
         ethBalance = Number(userWallets.find((w: { currency: string }) => w.currency === "ETH")?.balance || 0);
         usdtBalance = Number(userWallets.find((w: { currency: string }) => w.currency === "USDT")?.balance || 0);
-        portfolioValue = calculateCADBalance(userWallets, rates);
+        portfolioValue = calculateCADBalance(userWallets, liveCadRates);
         cadBalance = portfolioValue;
       }
 
@@ -109,6 +110,7 @@ export function useDashboardMetrics() {
 
       return {
         prices,
+        cadRates: { BTC: liveCadRates.btcCAD, ETH: liveCadRates.ethCAD, USDT: liveCadRates.usdtCAD },
         btcBalance,
         ethBalance,
         usdtBalance,

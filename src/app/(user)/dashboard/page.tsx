@@ -49,6 +49,7 @@ export default function DashboardPage() {
   const usdtLogo = "https://cryptologos.cc/logos/tether-usdt-logo.png";
 
   const prices = metrics?.prices ?? { BTC: 60000, ETH: 3000, USDT: 1 };
+  const cadRates = metrics?.cadRates ?? { BTC: 95000, ETH: 3500, USDT: 1.36 };
   const btcBalance = metrics?.btcBalance ?? 0;
   const ethBalance = metrics?.ethBalance ?? 0;
   const usdtBalance = metrics?.usdtBalance ?? 0;
@@ -57,9 +58,9 @@ export default function DashboardPage() {
   const thisMonthDeposits = metrics?.thisMonthDeposits ?? 0;
   const percentChange = metrics?.percentChange ?? 0;
 
-  const btcValue = btcBalance * prices.BTC;
-  const ethValue = ethBalance * prices.ETH;
-  const usdtValue = usdtBalance;
+  const btcValue = btcBalance * cadRates.BTC;
+  const ethValue = ethBalance * cadRates.ETH;
+  const usdtValue = usdtBalance * cadRates.USDT;
 
   const allocationData = useMemo(() => {
     if (portfolioValue === 0) {
