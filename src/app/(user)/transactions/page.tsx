@@ -1,16 +1,18 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Download, Search, Loader2 } from "lucide-react";
+import { Download, Search, Loader2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TransactionTable } from "@/components/dashboard/blocks";
-import { useClientTransactions } from "@/hooks/useClientQueries";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { useClientTransactions, type TransactionRow } from "@/hooks/useClientQueries";
 
-const FILTERS = ["All", "Deposits", "Withdrawals"];
+const FILTERS = ["All", "Deposits", "Withdrawals", "Fees", "Pending", "Rejected"];
 
 export default function TransactionsPage() {
   const [activeFilter, setActiveFilter] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedTransaction, setSelectedTransaction] = useState<TransactionRow | null>(null);
   const { data: transactions = [], isLoading } = useClientTransactions();
 
   const filteredTransactions = useMemo(() => {
@@ -18,6 +20,9 @@ export default function TransactionsPage() {
       let matchesType = true;
       if (activeFilter === "Deposits") matchesType = row.type === "deposit";
       if (activeFilter === "Withdrawals") matchesType = row.type === "withdrawal";
+      if (activeFilter === "Fees") matchesType = row.type === "fee";
+      if (activeFilter === "Pending") matchesType = row.status === "pending";
+      if (activeFilter === "Rejected") matchesType = row.status === "rejected";
 
       const haystack = `${row.description} ${row.id} ${row.type} ${row.asset} ${row.status} ${row.amount}`.toLowerCase();
       const matchesSearch = haystack.includes(searchQuery.toLowerCase());
@@ -76,7 +81,7 @@ export default function TransactionsPage() {
             />
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-nowrap gap-2 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {FILTERS.map((filter) => {
               const isActive = activeFilter === filter;
               return (
@@ -84,7 +89,7 @@ export default function TransactionsPage() {
                   key={filter}
                   onClick={() => setActiveFilter(filter)}
                   className={cn(
-                    "h-[44px] rounded-[14px] px-5 text-[14px] font-bold transition-all whitespace-nowrap",
+                    "h-[44px] shrink-0 rounded-[14px] px-5 text-[14px] font-bold transition-all whitespace-nowrap",
                     isActive
                       ? "bg-[#113285] text-white"
                       : "border border-gray-200 bg-white text-[#4A5568] hover:bg-gray-50"
@@ -104,13 +109,75 @@ export default function TransactionsPage() {
             <Loader2 className="h-8 w-8 animate-spin text-[#113285]" />
           </div>
         ) : filteredTransactions.length > 0 ? (
-          <TransactionTable rows={filteredTransactions} />
+          <TransactionTable
+            rows={filteredTransactions}
+            onViewRow={(row) => {
+              const full = transactions.find((tx) => tx.id === row.id);
+              if (full) setSelectedTransaction(full);
+            }}
+          />
         ) : (
           <div className="py-12 text-center text-sm font-medium text-gray-500">
             No transactions found.
           </div>
         )}
       </div>
+
+      {selectedTransaction && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={() => setSelectedTransaction(null)}
+        >
+          <div
+            className="w-full max-w-md rounded-[20px] border border-gray-100 bg-white p-6 shadow-[0_2px_10px_rgba(0,0,0,0.02)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-6 flex items-center justify-between">
+              <h2 className="text-[18px] font-bold text-[#0A0F2C]">Transaction Details</h2>
+              <button
+                type="button"
+                onClick={() => setSelectedTransaction(null)}
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-[#718096] hover:bg-gray-50"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <p className="text-[12px] font-semibold uppercase tracking-wide text-[#718096]">Type</p>
+                <p className="mt-1 text-[14px] font-bold capitalize text-[#0A0F2C]">{selectedTransaction.type}</p>
+              </div>
+              <div>
+                <p className="text-[12px] font-semibold uppercase tracking-wide text-[#718096]">Amount</p>
+                <p className="mt-1 text-[14px] font-bold text-[#0A0F2C]">{selectedTransaction.amount}</p>
+              </div>
+              <div>
+                <p className="text-[12px] font-semibold uppercase tracking-wide text-[#718096]">Crypto</p>
+                <p className="mt-1 text-[14px] font-bold text-[#0A0F2C]">{selectedTransaction.asset}</p>
+              </div>
+              <div>
+                <p className="text-[12px] font-semibold uppercase tracking-wide text-[#718096]">Status</p>
+                <div className="mt-1">
+                  <StatusBadge status={selectedTransaction.status} />
+                </div>
+              </div>
+              <div>
+                <p className="text-[12px] font-semibold uppercase tracking-wide text-[#718096]">Date</p>
+                <p className="mt-1 text-[14px] font-bold text-[#0A0F2C]">
+                  {selectedTransaction.rawDate.toLocaleString()}
+                </p>
+              </div>
+              <div>
+                <p className="text-[12px] font-semibold uppercase tracking-wide text-[#718096]">Transaction Hash</p>
+                <p className="mt-1 break-all text-[14px] font-medium text-[#0A0F2C]">
+                  {selectedTransaction.txHash || "N/A"}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

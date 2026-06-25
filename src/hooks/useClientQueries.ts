@@ -221,6 +221,7 @@ export type TransactionRow = {
   description?: string;
   rawDate: Date;
   rawAmount: number;
+  txHash?: string;
 };
 
 export function useClientTransactions() {
@@ -232,11 +233,11 @@ export function useClientTransactions() {
       const [depositsRes, withdrawalsRes] = await Promise.all([
         supabase
           .from("deposit_requests")
-          .select("id, created_at, amount, currency, status")
+          .select("id, created_at, amount, currency, status, tx_hash")
           .eq("user_id", user.id),
         supabase
           .from("withdrawal_requests")
-          .select("id, created_at, amount, method, status")
+          .select("id, created_at, amount, method, status, wallet_address, interac_email")
           .eq("user_id", user.id),
       ]);
 
@@ -251,6 +252,7 @@ export function useClientTransactions() {
         date: new Date(d.created_at).toLocaleDateString(),
         description: `TXN-${d.id.substring(0, 8).toUpperCase()}`,
         rawDate: new Date(d.created_at),
+        txHash: d.tx_hash || undefined,
       }));
 
       const withdrawals: TransactionRow[] = (withdrawalsRes.data || []).map((w) => ({
@@ -264,6 +266,7 @@ export function useClientTransactions() {
         date: new Date(w.created_at).toLocaleDateString(),
         description: `TXN-${w.id.substring(0, 8).toUpperCase()}`,
         rawDate: new Date(w.created_at),
+        txHash: w.wallet_address || w.interac_email || undefined,
       }));
 
       return [...deposits, ...withdrawals].sort((a, b) => b.rawDate.getTime() - a.rawDate.getTime());

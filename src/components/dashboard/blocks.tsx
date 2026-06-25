@@ -364,6 +364,7 @@ export function AccountHealth() {
 
 export function TransactionTable({
   rows,
+  onViewRow,
 }: {
   rows: Array<{
     id: string;
@@ -375,6 +376,16 @@ export function TransactionTable({
     date: string;
     description?: string;
   }>;
+  onViewRow?: (row: {
+    id: string;
+    type: string;
+    asset: string;
+    amount: string;
+    fiat: string;
+    status: string;
+    date: string;
+    description?: string;
+  }) => void;
 }) {
   return (
     <div className="overflow-x-auto">
@@ -387,6 +398,7 @@ export function TransactionTable({
             <th className="py-3 font-semibold">Asset</th>
             <th className="py-3 font-semibold">Amount</th>
             <th className="py-3 font-semibold">Status</th>
+            {onViewRow && <th className="py-3 font-semibold">Actions</th>}
           </tr>
         </thead>
         <tbody>
@@ -403,6 +415,17 @@ export function TransactionTable({
               <td className="py-4">{row.asset}</td>
               <td className="py-4 font-bold text-banking-text">{row.amount}</td>
               <td className="py-4"><StatusBadge status={row.status} /></td>
+              {onViewRow && (
+                <td className="py-4">
+                  <button
+                    type="button"
+                    onClick={() => onViewRow(row)}
+                    className="text-sm font-semibold text-banking-blue hover:underline"
+                  >
+                    View
+                  </button>
+                </td>
+              )}
             </tr>
           ))}
         </tbody>
