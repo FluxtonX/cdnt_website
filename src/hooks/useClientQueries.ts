@@ -233,7 +233,7 @@ export function useClientTransactions() {
       const [depositsRes, withdrawalsRes] = await Promise.all([
         supabase
           .from("deposit_requests")
-          .select("id, created_at, amount, currency, status, tx_hash")
+          .select("id, created_at, expected_amount, asset, status, tx_hash")
           .eq("user_id", user.id),
         supabase
           .from("withdrawal_requests")
@@ -241,12 +241,19 @@ export function useClientTransactions() {
           .eq("user_id", user.id),
       ]);
 
+      if (depositsRes.error) {
+        console.error("Failed to fetch deposit_requests:", depositsRes.error);
+      }
+      if (withdrawalsRes.error) {
+        console.error("Failed to fetch withdrawal_requests:", withdrawalsRes.error);
+      }
+
       const deposits: TransactionRow[] = (depositsRes.data || []).map((d) => ({
         id: d.id,
         type: "deposit",
-        asset: d.currency || "USD",
-        amount: String(d.amount),
-        rawAmount: Number(d.amount),
+        asset: d.asset || "USD",
+        amount: String(d.expected_amount),
+        rawAmount: Number(d.expected_amount),
         fiat: "USD",
         status: d.status,
         date: new Date(d.created_at).toLocaleDateString(),
