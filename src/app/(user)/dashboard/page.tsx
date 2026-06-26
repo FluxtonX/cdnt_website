@@ -32,7 +32,7 @@ import {
 } from "@/hooks/useClientQueries";
 import { CoinLogo } from "@/components/market/CoinLogo";
 import { getCoinBySymbol } from "@/config/coins";
-import { cn } from "@/lib/utils";
+import { cn, COIN_COLORS } from "@/lib/utils";
 
 function formatRelativeTime(date: Date): string {
   const now = new Date();
@@ -73,16 +73,25 @@ const ASSET_GRADIENTS: Record<
   CAD: { id: "gradCad", light: "#60a5fa", dark: "#2563eb", dot: "#3b82f6", label: "CAD" },
 };
 
+// Dynamic gradient builder for any currency
+function buildAssetGradient(symbol: string) {
+  const color = COIN_COLORS[symbol] || "#6b7280";
+  return {
+    id: `grad${symbol}`,
+    light: color,
+    dark: color,
+    dot: color,
+    label: symbol,
+  };
+}
+
 function txToCad(
   tx: TransactionRow,
-  cadRates: { BTC: number; ETH: number; USDT: number },
+  cadRates: Record<string, number>,
 ): number {
   const sym = (tx.asset || "CAD").toUpperCase();
   if (sym === "CAD") return tx.rawAmount;
-  if (sym === "BTC") return tx.rawAmount * cadRates.BTC;
-  if (sym === "ETH") return tx.rawAmount * cadRates.ETH;
-  if (sym === "USDT" || sym === "USDC") return tx.rawAmount * cadRates.USDT;
-  return tx.rawAmount * cadRates.USDT;
+  return tx.rawAmount * (cadRates[sym] || cadRates.USDT || 1.36);
 }
 
 function getRangeBounds(
@@ -246,31 +255,20 @@ export default function DashboardPage() {
   const { data: transactions = [], isLoading: loadingTx } = useRecentTransactions();
   const { data: allTransactions = [] } = useClientTransactions();
 
-  const btcLogo = getCoinBySymbol("BTCUSDT")?.logoUrl;
-  const ethLogo = getCoinBySymbol("ETHUSDT")?.logoUrl;
-  const usdtLogo = "https://cryptologos.cc/logos/tether-usdt-logo.png";
-
-  const cadRates = useMemo((): { BTC: number; ETH: number; USDT: number } => ({
+  const cadRates = useMemo((): Record<string, number> => ({
     BTC: metrics?.cadRates?.BTC ?? 95000,
     ETH: metrics?.cadRates?.ETH ?? 3500,
     USDT: metrics?.cadRates?.USDT ?? 1.36,
   }), [metrics?.cadRates]);
-  const btcBalance = metrics?.btcBalance ?? 0;
-  const ethBalance = metrics?.ethBalance ?? 0;
-  const usdtBalance = metrics?.usdtBalance ?? 0;
+  const wallets = metrics?.wallets ?? [];
   const portfolioValue = metrics?.portfolioValue ?? 0;
   const cadBalance = metrics?.cadBalance ?? 0;
   const thisMonthDeposits = metrics?.thisMonthDeposits ?? 0;
   const percentChange = metrics?.percentChange ?? 0;
 
-  const btcValue = btcBalance * cadRates.BTC;
-  const ethValue = ethBalance * cadRates.ETH;
-  const usdtValue = usdtBalance * cadRates.USDT;
-  const cadOnlyValue = Math.max(0, portfolioValue - btcValue - ethValue - usdtValue);
-
   const allocationData = useMemo(() => {
     const buildItem = (symbol: string, value: number) => {
-      const grad = ASSET_GRADIENTS[symbol];
+      const grad = ASSET_GRADIENTS[symbol] || buildAssetGradient(symbol);
       return {
         name: grad.label,
         symbol,
@@ -280,7 +278,7 @@ export default function DashboardPage() {
       };
     };
 
-    if (portfolioValue === 0) {
+    if (portfolioValue === 0 || wallets.length === 0) {
       return [
         buildItem("BTC", 25000),
         buildItem("ETH", 18750),
@@ -288,13 +286,12 @@ export default function DashboardPage() {
       ];
     }
 
-    return [
-      buildItem("BTC", btcValue),
-      buildItem("ETH", ethValue),
-      buildItem("USDT", usdtValue),
-      ...(cadOnlyValue > 0 ? [buildItem("CAD", cadOnlyValue)] : []),
-    ].filter((item) => item.value > 0);
-  }, [btcValue, ethValue, usdtValue, cadOnlyValue, portfolioValue]);
+    return wallets.map((w) => {
+      const rate = cadRates[w.currency] || cadRates.USDT || 1.36;
+      const value = w.balance * rate;
+      return buildItem(w.currency, value);
+    }).filter((item) => item.value > 0);
+  }, [wallets, cadRates, portfolioValue]);
 
   const allocationTotal = useMemo(
     () => allocationData.reduce((sum, item) => sum + item.value, 0),
@@ -640,53 +637,79 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex flex-col">
-          <div className="flex items-start justify-between mb-4">
-            <CoinLogo src={btcLogo} symbol="BTC" className="h-10 w-10 p-1.5" />
-            <div className="bg-green-50 text-[#10B981] px-2 py-0.5 rounded text-[11px] font-bold border border-green-100">
-              +12.3%
+        {wallets.length > 0 ? wallets.map((w) => {
+          const rate = cadRates[w.currency] || cadRates.USDT || 1.36;
+          const value = w.balance * rate;
+          const decimals = w.currency === "USDT" || w.currency === "USDC" ? 2 : 8;
+          const isStable = w.currency === "USDT" || w.currency === "USDC";
+          return (
+            <div key={w.currency} className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex flex-col">
+              <div className="flex items-start justify-between mb-4">
+                <CoinLogo src={getCoinBySymbol(`${w.currency}USDT`)?.logoUrl} symbol={w.currency} className="h-10 w-10 p-1.5" />
+                <div className={isStable ? "bg-gray-100 text-[#718096] px-2 py-0.5 rounded text-[11px] font-bold" : "bg-green-50 text-[#10B981] px-2 py-0.5 rounded text-[11px] font-bold border border-green-100"}>
+                  {isStable ? "0.0%" : "+12.3%"}
+                </div>
+              </div>
+              <h3 className="text-[15px] font-bold text-[#0A0F2C] mb-1">{w.currency}</h3>
+              <div className="text-[20px] font-bold text-[#0A0F2C] mb-0.5">
+                ${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+              <div className="text-[11px] text-[#A0AEC0] font-medium">
+                {w.balance.toLocaleString(undefined, { maximumFractionDigits: decimals })} {w.currency}
+              </div>
             </div>
-          </div>
-          <h3 className="text-[15px] font-bold text-[#0A0F2C] mb-1">Bitcoin</h3>
-          <div className="text-[20px] font-bold text-[#0A0F2C] mb-0.5">
-            ${btcValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </div>
-          <div className="text-[11px] text-[#A0AEC0] font-medium">
-            {btcBalance.toLocaleString(undefined, { maximumFractionDigits: 8 })} BTC
-          </div>
-        </div>
+          );
+        }) : (
+          <>
+            <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex flex-col">
+              <div className="flex items-start justify-between mb-4">
+                <CoinLogo src={btcLogo} symbol="BTC" className="h-10 w-10 p-1.5" />
+                <div className="bg-green-50 text-[#10B981] px-2 py-0.5 rounded text-[11px] font-bold border border-green-100">
+                  +12.3%
+                </div>
+              </div>
+              <h3 className="text-[15px] font-bold text-[#0A0F2C] mb-1">Bitcoin</h3>
+              <div className="text-[20px] font-bold text-[#0A0F2C] mb-0.5">
+                $0.00
+              </div>
+              <div className="text-[11px] text-[#A0AEC0] font-medium">
+                0.00000000 BTC
+              </div>
+            </div>
 
-        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex flex-col">
-          <div className="flex items-start justify-between mb-4">
-            <CoinLogo src={ethLogo} symbol="ETH" className="h-10 w-10 p-1.5" />
-            <div className="bg-green-50 text-[#10B981] px-2 py-0.5 rounded text-[11px] font-bold border border-green-100">
-              +8.37%
+            <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex flex-col">
+              <div className="flex items-start justify-between mb-4">
+                <CoinLogo src={ethLogo} symbol="ETH" className="h-10 w-10 p-1.5" />
+                <div className="bg-green-50 text-[#10B981] px-2 py-0.5 rounded text-[11px] font-bold border border-green-100">
+                  +8.37%
+                </div>
+              </div>
+              <h3 className="text-[15px] font-bold text-[#0A0F2C] mb-1">Ethereum</h3>
+              <div className="text-[20px] font-bold text-[#0A0F2C] mb-0.5">
+                $0.00
+              </div>
+              <div className="text-[11px] text-[#A0AEC0] font-medium">
+                0.00000000 ETH
+              </div>
             </div>
-          </div>
-          <h3 className="text-[15px] font-bold text-[#0A0F2C] mb-1">Ethereum</h3>
-          <div className="text-[20px] font-bold text-[#0A0F2C] mb-0.5">
-            ${ethValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </div>
-          <div className="text-[11px] text-[#A0AEC0] font-medium">
-            {ethBalance.toLocaleString(undefined, { maximumFractionDigits: 8 })} ETH
-          </div>
-        </div>
 
-        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex flex-col">
-          <div className="flex items-start justify-between mb-4">
-            <CoinLogo src={usdtLogo} symbol="USDT" className="h-10 w-10 p-1.5" />
-            <div className="bg-gray-100 text-[#718096] px-2 py-0.5 rounded text-[11px] font-bold">
-              0.0%
+            <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex flex-col">
+              <div className="flex items-start justify-between mb-4">
+                <CoinLogo src={usdtLogo} symbol="USDT" className="h-10 w-10 p-1.5" />
+                <div className="bg-gray-100 text-[#718096] px-2 py-0.5 rounded text-[11px] font-bold">
+                  0.0%
+                </div>
+              </div>
+              <h3 className="text-[15px] font-bold text-[#0A0F2C] mb-1">Tether</h3>
+              <div className="text-[20px] font-bold text-[#0A0F2C] mb-0.5">
+                $0.00
+              </div>
+              <div className="text-[11px] text-[#A0AEC0] font-medium">
+                0.00 USDT
+              </div>
             </div>
-          </div>
-          <h3 className="text-[15px] font-bold text-[#0A0F2C] mb-1">Tether</h3>
-          <div className="text-[20px] font-bold text-[#0A0F2C] mb-0.5">
-            ${usdtValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </div>
-          <div className="text-[11px] text-[#A0AEC0] font-medium">
-            {usdtBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })} USDT
-          </div>
-        </div>
+          </>
+        )}
       </div>
 
       <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">

@@ -38,9 +38,7 @@ async function fetchMarketPrices() {
 export type DashboardMetrics = {
   prices: Record<string, number>;
   cadRates: Record<string, number>;
-  btcBalance: number;
-  ethBalance: number;
-  usdtBalance: number;
+  wallets: Array<{ currency: string; balance: number }>;
   portfolioValue: number;
   cadBalance: number;
   thisMonthDeposits: number;
@@ -52,9 +50,7 @@ export function useDashboardMetrics() {
     queryKey: clientQueryKeys.dashboard(),
     queryFn: async (): Promise<DashboardMetrics> => {
       const { supabase, user } = await getAuthenticatedUserId();
-      const liveCadRates = await fetchLiveCADRates();
 
-      const pricePromise = fetchMarketPrices();
       const walletsPromise = supabase.from("user_wallets").select("*").eq("user_id", user.id);
       const ledgerPromise = supabase
         .from("wallet_ledger")
@@ -63,22 +59,33 @@ export function useDashboardMetrics() {
         .eq("type", "DEPOSIT")
         .gte("created_at", new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).toISOString());
 
-      const [prices, { data: userWallets, error: walletsErr }, { data: ledger }] = await Promise.all([
-        pricePromise,
+      const [{ data: userWallets, error: walletsErr }, { data: ledger }] = await Promise.all([
         walletsPromise,
         ledgerPromise,
       ]);
 
-      let btcBalance = 0;
-      let ethBalance = 0;
-      let usdtBalance = 0;
+      // Extract unique currencies for dynamic rate fetching
+      const uniqueCurrencies = new Set<string>();
+      (userWallets || []).forEach((w: any) => {
+        if (w.currency) uniqueCurrencies.add(w.currency.toUpperCase());
+      });
+      const currencySymbols = Array.from(uniqueCurrencies);
+      const liveCadRates = await fetchLiveCADRates(currencySymbols.length > 0 ? currencySymbols : ["BTC", "ETH", "USDT"]);
+
+      const pricePromise = fetchMarketPrices();
+      const prices = await pricePromise;
+
       let portfolioValue = 0;
       let cadBalance = 0;
+      const wallets: Array<{ currency: string; balance: number }> = [];
 
       if (!walletsErr && userWallets) {
-        btcBalance = Number(userWallets.find((w: { currency: string }) => w.currency === "BTC")?.balance || 0);
-        ethBalance = Number(userWallets.find((w: { currency: string }) => w.currency === "ETH")?.balance || 0);
-        usdtBalance = Number(userWallets.find((w: { currency: string }) => w.currency === "USDT")?.balance || 0);
+        userWallets.forEach((w: any) => {
+          const balance = Number(w.balance || 0);
+          if (balance > 0) {
+            wallets.push({ currency: w.currency, balance });
+          }
+        });
         portfolioValue = calculateCADBalance(userWallets, liveCadRates);
         cadBalance = portfolioValue;
       }
@@ -87,7 +94,7 @@ export function useDashboardMetrics() {
       let percentChange = 0;
 
       if (ledger) {
-        const rates = { BTC: prices.BTC, ETH: prices.ETH, USDT: 1, CAD: 1, USDC: 1 };
+        const rates = { ...prices, CAD: 1, USDC: 1 };
         let thisMonth = 0;
         let lastMonth = 0;
         const now = new Date();
@@ -110,10 +117,8 @@ export function useDashboardMetrics() {
 
       return {
         prices,
-        cadRates: { BTC: liveCadRates.btcCAD, ETH: liveCadRates.ethCAD, USDT: liveCadRates.usdtCAD },
-        btcBalance,
-        ethBalance,
-        usdtBalance,
+        cadRates: liveCadRates,
+        wallets,
         portfolioValue,
         cadBalance,
         thisMonthDeposits,
@@ -320,16 +325,12 @@ export function useClientWallets() {
         ledgerRes,
         depositsRes,
         withdrawalsRes,
-        btcRes,
-        ethRes,
       ] = await Promise.all([
         supabase.from("user_wallets").select("*").eq("user_id", user.id),
         supabase.from("platform_wallets").select("*").eq("type", "Hot"),
         supabase.from("wallet_ledger").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
         supabase.from("deposit_requests").select("*").eq("user_id", user.id).eq("status", "pending").order("created_at", { ascending: false }),
         supabase.from("withdrawal_requests").select("*").eq("user_id", user.id).eq("status", "pending").order("created_at", { ascending: false }),
-        fetch("/api/market/ticker?symbol=BTCUSDT").catch(() => null),
-        fetch("/api/market/ticker?symbol=ETHUSDT").catch(() => null),
       ]);
 
       if (userWalletsRes.error) throw userWalletsRes.error;
@@ -344,17 +345,13 @@ export function useClientWallets() {
       const deposits = depositsRes.data;
       const withdrawals = withdrawalsRes.data;
 
-      let btcPrice = 60000;
-      let ethPrice = 3000;
-      if (btcRes && btcRes.ok) {
-        const btcData = await btcRes.json();
-        btcPrice = Number(btcData.lastPrice);
-      }
-      if (ethRes && ethRes.ok) {
-        const ethData = await ethRes.json();
-        ethPrice = Number(ethData.lastPrice);
-      }
-      const cadRates = await fetchLiveCADRates();
+      // Extract unique currencies for dynamic rate fetching
+      const uniqueCurrencies = new Set<string>();
+      (userWallets || []).forEach((w: any) => {
+        if (w.currency) uniqueCurrencies.add(w.currency.toUpperCase());
+      });
+      const currencySymbols = Array.from(uniqueCurrencies);
+      const cadRates = await fetchLiveCADRates(currencySymbols.length > 0 ? currencySymbols : ["BTC", "ETH", "USDT"]);
 
       const platformAddressMap = (platformWallets || []).reduce((acc: Record<string, string>, w: { crypto: string; address: string }) => {
         acc[w.crypto] = w.address;
@@ -394,54 +391,32 @@ export function useClientWallets() {
         })),
       ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
-      const btcBalance = Number(userWallets?.find((w: { currency: string }) => w.currency === "BTC")?.balance || 0);
-      const ethBalance = Number(userWallets?.find((w: { currency: string }) => w.currency === "ETH")?.balance || 0);
-      const usdtBalance = Number(userWallets?.find((w: { currency: string }) => w.currency === "USDT")?.balance || 0);
+      // Dynamically create wallet entries for each currency
+      const mappedWallets: MappedWallet[] = [];
+      (userWallets || []).forEach((w: any) => {
+        const currency = w.currency?.toUpperCase();
+        const balance = Number(w.balance || 0);
+        if (balance > 0) {
+          const rate = cadRates[currency] || cadRates.USDT || 1.36;
+          const decimals = currency === "USDT" || currency === "USDC" ? 2 : 8;
+          mappedWallets.push({
+            id: currency.toLowerCase(),
+            name: currency,
+            symbol: currency,
+            balance: balance.toFixed(decimals),
+            rawBalance: balance,
+            value: `$${(balance * rate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+            change: currency === "USDT" || currency === "USDC" ? "Stable" : "Live",
+            changeType: currency === "USDT" || currency === "USDC" ? "neutral" : "positive",
+            network: `${currency} Network`,
+            address: platformAddressMap[currency] || `${currency.toLowerCase()}...address`,
+            image: getCoinBySymbol(`${currency}USDT`)?.logoUrl,
+            activities: allActivities.filter((act) => act.currency === currency).slice(0, 5),
+          });
+        }
+      });
 
-      return [
-        {
-          id: "bitcoin",
-          name: "Bitcoin",
-          symbol: "BTC",
-          balance: btcBalance.toFixed(8),
-          rawBalance: btcBalance,
-          value: `$${(btcBalance * cadRates.btcCAD).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-          change: "Live",
-          changeType: "positive",
-          network: "Bitcoin Network",
-          address: platformAddressMap["BTC"] || "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
-          image: getCoinBySymbol("BTCUSDT")?.logoUrl,
-          activities: allActivities.filter((act) => act.currency === "BTC").slice(0, 5),
-        },
-        {
-          id: "ethereum",
-          name: "Ethereum",
-          symbol: "ETH",
-          balance: ethBalance.toFixed(8),
-          rawBalance: ethBalance,
-          value: `$${(ethBalance * cadRates.ethCAD).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-          change: "Live",
-          changeType: "positive",
-          network: "Ethereum Mainnet",
-          address: platformAddressMap["ETH"] || "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
-          image: getCoinBySymbol("ETHUSDT")?.logoUrl,
-          activities: allActivities.filter((act) => act.currency === "ETH").slice(0, 5),
-        },
-        {
-          id: "tether",
-          name: "Tether",
-          symbol: "USDT",
-          balance: usdtBalance.toFixed(2),
-          rawBalance: usdtBalance,
-          value: `$${(usdtBalance * cadRates.usdtCAD).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-          change: "Stable",
-          changeType: "neutral",
-          network: "ERC-20",
-          address: platformAddressMap["USDT"] || "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
-          image: "https://cryptologos.cc/logos/tether-usdt-logo.png",
-          activities: allActivities.filter((act) => act.currency === "USDT").slice(0, 5),
-        },
-      ];
+      return mappedWallets.length > 0 ? mappedWallets : [];
     },
   });
 }
