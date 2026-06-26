@@ -508,7 +508,7 @@ export default function DashboardPage() {
                     <stop offset="100%" stopColor="#60a5fa" stopOpacity={0} />
                   </linearGradient>
                   <filter id="lineGlow" x="-20%" y="-20%" width="140%" height="140%">
-                    <feDropShadow dx="0" dy="0" stdDeviation="4" floodColor="#60a5fa" floodOpacity="0.8" />
+                    <feDropShadow dx="0" dy="0" stdDeviation="6" floodColor="#60a5fa" floodOpacity="1" />
                   </filter>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={false} />
@@ -562,7 +562,7 @@ export default function DashboardPage() {
           <div className="flex-1 flex flex-col justify-between">
             <div
               className="h-[200px] w-full relative"
-              style={{ transform: "perspective(800px) rotateX(30deg)", transformOrigin: "center 70%" }}
+              style={{ transform: "perspective(800px) rotateX(25deg)", transformOrigin: "center 70%" }}
             >
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
