@@ -11,7 +11,7 @@ export default function AboutPage() {
         <section className="pt-24 pb-16 px-6">
           <div className="mx-auto max-w-7xl text-center">
             <h1 className="text-4xl md:text-5xl font-bold text-[#1A3FBB] mb-6 tracking-tight">
-              About Canadian Digital National Trust Bank
+              About Canadian National Trust Bank
             </h1>
             <p className="text-lg md:text-xl text-[#6B7280] leading-relaxed max-w-3xl mx-auto font-medium">
               We're building the future of banking in Canada—where traditional finance meets cryptocurrency innovation, creating a secure and accessible platform for everyone.
@@ -50,7 +50,7 @@ export default function AboutPage() {
         <section className="px-6 py-24 bg-white">
           <div className="mx-auto max-w-7xl">
             <div className="text-center mb-16">
-              <h2 className="text-4xl font-bold text-[#0A0F2C] mb-4">Why Choose Canadian Digital National Trust Bank</h2>
+              <h2 className="text-4xl font-bold text-[#0A0F2C] mb-4">Why Choose Canadian National Trust Bank</h2>
               <p className="text-lg text-[#6B7280]">Built with trust, security, and simplicity at the core</p>
             </div>
 
@@ -148,7 +148,7 @@ export default function AboutPage() {
           <div className="mx-auto max-w-7xl text-center">
             <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">Ready to Get Started?</h2>
             <p className="text-lg text-white/90 mb-10 font-medium">
-              Join thousands of Canadians who trust Canadian Digital National Trust Bank for their crypto banking needs
+              Join thousands of Canadians who trust Canadian National Trust Bank for their crypto banking needs
             </p>
             <Link 
               href="/register" 

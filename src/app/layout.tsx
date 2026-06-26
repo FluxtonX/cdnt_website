@@ -17,7 +17,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Canadian Digital National Trust Bank — Banking Meets Crypto Intelligence",
+  title: "Canadian National Trust Bank — Banking Meets Crypto Intelligence",
   description: "A regulated Canadian digital bank with a built-in crypto engine.",
 };
 

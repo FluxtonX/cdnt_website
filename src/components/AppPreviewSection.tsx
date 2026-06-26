@@ -62,7 +62,7 @@ export default function AppPreviewSection() {
             >
               <Image
                 src="/assets/phone-light.png"
-                alt="Canadian Digital National Trust Bank App Interface"
+                alt="Canadian National Trust Bank App Interface"
                 width={300}
                 height={600}
                 className="w-full h-auto drop-shadow-2xl rounded-[2.5rem]"

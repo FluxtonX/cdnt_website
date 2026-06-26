@@ -151,7 +151,7 @@ export default function PricingPage() {
               <div className="bg-white rounded-2xl p-8 border border-gray-100 shadow-[0_4px_20px_rgb(0,0,0,0.02)]">
                 <h3 className="text-lg font-bold text-[#0A0F2C] mb-3">Are there any monthly or annual fees?</h3>
                 <p className="text-[#6B7280] text-sm leading-relaxed">
-                  Canadian Digital National Trust Bank does not charge any monthly, annual, or account maintenance fees. You only pay transaction fees when you move funds.
+                  Canadian National Trust Bank does not charge any monthly, annual, or account maintenance fees. You only pay transaction fees when you move funds.
                 </p>
               </div>
 
@@ -159,7 +159,7 @@ export default function PricingPage() {
               <div className="bg-white rounded-2xl p-8 border border-gray-100 shadow-[0_4px_20px_rgb(0,0,0,0.02)]">
                 <h3 className="text-lg font-bold text-[#0A0F2C] mb-3">What are network fees?</h3>
                 <p className="text-[#6B7280] text-sm leading-relaxed">
-                  Canadian Digital National Trust Bank does not charge any monthly, annual, or account maintenance fees. You only pay transaction fees when you move funds.
+                  Canadian National Trust Bank does not charge any monthly, annual, or account maintenance fees. You only pay transaction fees when you move funds.
                 </p>
               </div>
 

@@ -42,7 +42,7 @@ export default function Footer() {
             
               <Image
                 src="/bluelogo.png"
-                alt="Canadian Digital National Trust Bank Logo"
+                alt="Canadian National Trust Bank Logo"
                 width={120}
                 height={40}
                 quality={100}
@@ -102,10 +102,10 @@ export default function Footer() {
         {/* Bottom Bar */}
         <div className="border-t border-gray-100 pt-8 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 lg:gap-12">
           <p className="text-[#64748b] text-xs shrink-0">
-            © 2026 Canadian Digital National Trust Bank, Inc. All rights reserved.
+            © 2026 Canadian National Trust Bank, Inc. All rights reserved.
           </p>
           <p className="text-[#94a3b8] text-xs leading-relaxed lg:text-right max-w-3xl">
-            Canadian Digital National Trust Bank is a federally regulated Canadian financial institution. FINTRAC #M24-0042001. Deposits insured up to $100,000 CAD under CDIC-style coverage. Crypto assets are not insured by the CDIC and may lose value.
+            Canadian National Trust Bank is a federally regulated Canadian financial institution. FINTRAC #M24-0042001. Deposits insured up to $100,000 CAD under CDIC-style coverage. Crypto assets are not insured by the CDIC and may lose value.
           </p>
         </div>
 
