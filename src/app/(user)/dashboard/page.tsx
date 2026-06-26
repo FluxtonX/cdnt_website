@@ -172,7 +172,7 @@ function buildPerformanceChartData(
     return sum + (tx.type === "deposit" ? cad : -cad);
   }, 0);
 
-  let baseline = Math.max(0, val - netInPeriod);
+  const baseline = Math.max(0, val - netInPeriod);
 
   if (txsInRange.length === 0) {
     const multipliers = [0.93, 0.94, 0.95, 0.96, 0.97, 0.98, 1];
@@ -250,7 +250,7 @@ export default function DashboardPage() {
   const ethLogo = getCoinBySymbol("ETHUSDT")?.logoUrl;
   const usdtLogo = "https://cryptologos.cc/logos/tether-usdt-logo.png";
 
-  const cadRates = metrics?.cadRates ?? { BTC: 95000, ETH: 3500, USDT: 1.36 };
+  const cadRates = useMemo(() => metrics?.cadRates ?? { BTC: 95000, ETH: 3500, USDT: 1.36 }, [metrics?.cadRates]);
   const btcBalance = metrics?.btcBalance ?? 0;
   const ethBalance = metrics?.ethBalance ?? 0;
   const usdtBalance = metrics?.usdtBalance ?? 0;
