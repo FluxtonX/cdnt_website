@@ -250,7 +250,11 @@ export default function DashboardPage() {
   const ethLogo = getCoinBySymbol("ETHUSDT")?.logoUrl;
   const usdtLogo = "https://cryptologos.cc/logos/tether-usdt-logo.png";
 
-  const cadRates = useMemo(() => metrics?.cadRates ?? { BTC: 95000, ETH: 3500, USDT: 1.36 }, [metrics?.cadRates]);
+  const cadRates = useMemo((): { BTC: number; ETH: number; USDT: number } => ({
+    BTC: metrics?.cadRates?.BTC ?? 95000,
+    ETH: metrics?.cadRates?.ETH ?? 3500,
+    USDT: metrics?.cadRates?.USDT ?? 1.36,
+  }), [metrics?.cadRates]);
   const btcBalance = metrics?.btcBalance ?? 0;
   const ethBalance = metrics?.ethBalance ?? 0;
   const usdtBalance = metrics?.usdtBalance ?? 0;
@@ -341,14 +345,14 @@ export default function DashboardPage() {
     outerRadius,
     percent,
   }: {
-    cx: number;
-    cy: number;
-    midAngle: number;
-    innerRadius: number;
-    outerRadius: number;
-    percent: number;
+    cx?: number;
+    cy?: number;
+    midAngle?: number;
+    innerRadius?: number;
+    outerRadius?: number;
+    percent?: number;
   }) => {
-    if (percent < 0.05) return null;
+    if (!cx || !cy || !midAngle || !innerRadius || !outerRadius || !percent || percent < 0.05) return null;
     const RADIAN = Math.PI / 180;
     const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
     const x = cx + radius * Math.cos(-midAngle * RADIAN);
@@ -471,7 +475,7 @@ export default function DashboardPage() {
             <div className="flex flex-wrap items-center gap-3 mb-4">
               <DatePicker
                 selected={customStartDate}
-                onChange={(date) => setCustomStartDate(date)}
+                onChange={(date: Date | null) => setCustomStartDate(date)}
                 selectsStart
                 startDate={customStartDate}
                 endDate={customEndDate}
@@ -483,7 +487,7 @@ export default function DashboardPage() {
               <span className="text-white/50 text-xs">→</span>
               <DatePicker
                 selected={customEndDate}
-                onChange={(date) => setCustomEndDate(date)}
+                onChange={(date: Date | null) => setCustomEndDate(date)}
                 selectsEnd
                 startDate={customStartDate}
                 endDate={customEndDate}
@@ -587,7 +591,6 @@ export default function DashboardPage() {
                     isAnimationActive
                     animationDuration={1000}
                     animationEasing="ease-out"
-                    activeIndex={activeAllocationIndex}
                     activeShape={AllocationActiveShape}
                     onMouseEnter={(_, index) => setActiveAllocationIndex(index)}
                     onMouseLeave={() => setActiveAllocationIndex(undefined)}
