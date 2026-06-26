@@ -163,7 +163,7 @@ function buildPerformanceChartData(
   allTxs: TransactionRow[],
   range: PerformanceTimeRange,
   portfolioValue: number,
-  cadRates: { BTC: number; ETH: number; USDT: number },
+  cadRates: Record<string, number>,
   customStart: Date | null,
   customEnd: Date | null,
 ): { name: string; value: number }[] {
@@ -251,6 +251,9 @@ export default function DashboardPage() {
   const [customStartDate, setCustomStartDate] = useState<Date | null>(null);
   const [customEndDate, setCustomEndDate] = useState<Date | null>(null);
   const [activeAllocationIndex, setActiveAllocationIndex] = useState<number | undefined>(undefined);
+  const btcLogo = getCoinBySymbol("BTCUSDT")?.logoUrl;
+  const ethLogo = getCoinBySymbol("ETHUSDT")?.logoUrl;
+  const usdtLogo = "https://cryptologos.cc/logos/tether-usdt-logo.png";
   const { data: metrics, isLoading: loadingBalance } = useDashboardMetrics();
   const { data: transactions = [], isLoading: loadingTx } = useRecentTransactions();
   const { data: allTransactions = [] } = useClientTransactions();
@@ -260,7 +263,7 @@ export default function DashboardPage() {
     ETH: metrics?.cadRates?.ETH ?? 3500,
     USDT: metrics?.cadRates?.USDT ?? 1.36,
   }), [metrics?.cadRates]);
-  const wallets = metrics?.wallets ?? [];
+  const wallets = useMemo(() => metrics?.wallets ?? [], [metrics?.wallets]);
   const portfolioValue = metrics?.portfolioValue ?? 0;
   const cadBalance = metrics?.cadBalance ?? 0;
   const thisMonthDeposits = metrics?.thisMonthDeposits ?? 0;
