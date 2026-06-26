@@ -270,9 +270,9 @@ export function UserShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-[#F8F9FA] text-[#0A0F2C] lg:grid lg:grid-cols-[240px_1fr]">
       {/* Sidebar */}
-      <aside className={cn("hidden border-r border-gray-100 bg-white lg:block", showFreezeOverlay && "pointer-events-none")}>
+      <aside className={cn("hidden border-r border-gray-100 bg-blue-50 lg:block", showFreezeOverlay && "pointer-events-none")}>
         <div className="sticky top-0 flex h-screen flex-col">
-          <div className="flex items-center justify-center h-[88px] px-6 bg-white">
+          <div className="flex items-center justify-center h-[88px] px-6 bg-blue-50">
             <Link
               href="/"
               onClick={(e) => handleFrozenNav("/", e)}
