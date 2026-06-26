@@ -230,7 +230,10 @@ export default function DashboardPage() {
                     color: "#f8fafc",
                   }}
                   labelStyle={{ color: "#94a3b8" }}
-                  formatter={(value: number) => [formatCadTooltip(value), "CAD Value"]}
+                  formatter={(value) => [
+                    formatCadTooltip(typeof value === "number" ? value : 0),
+                    "CAD Value",
+                  ]}
                 />
                 <Area
                   type="monotone"
