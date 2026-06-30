@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/ui/toast";
 import { useRouter } from "next/navigation";
-import { useWithdrawBalance, useCreateWithdrawalRequest } from "@/hooks/useClientQueries";
+import { useDashboardMetrics, useCreateWithdrawalRequest } from "@/hooks/useClientQueries";
 
 export function WithdrawWorkspace() {
   const [step, setStep] = useState(1);
@@ -18,11 +18,21 @@ export function WithdrawWorkspace() {
   const [twoFa, setTwoFa] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [selectedAsset, setSelectedAsset] = useState<string>("USDT");
 
   const supabase = createClient();
   const { notify } = useToast();
   const router = useRouter();
-  const { data: availableBalance = null, isLoading: balanceLoading } = useWithdrawBalance();
+  
+  const { data: metrics, isLoading: metricsLoading } = useDashboardMetrics();
+  const wallets = metrics?.wallets || [];
+  const cadRates = metrics?.cadRates || {};
+  
+  // Compute available balance based on selected asset
+  const selectedWallet = wallets.find(w => w.currency === selectedAsset) || { currency: selectedAsset, balance: 0 };
+  const selectedRate = cadRates[selectedAsset] || 1.36; // Fallback rate if missing
+  const availableBalance = selectedWallet.balance * selectedRate;
+
   const createWithdrawal = useCreateWithdrawalRequest();
 
   const fee = 2.50;
@@ -94,6 +104,7 @@ export function WithdrawWorkspace() {
       }
 
       await createWithdrawal.mutateAsync({
+        asset: selectedAsset,
         amount: numAmount,
         interacEmail: email,
         securityQuestion: question,
@@ -167,11 +178,33 @@ export function WithdrawWorkspace() {
           </div>
         </div>
 
-        {/* Step 1: Enter Amount */}
+        {/* Step 1: Select Asset & Enter Amount */}
         {step === 1 && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
-            <h2 className="mb-8 text-center text-[18px] font-bold text-[#0A0F2C]">Enter Amount</h2>
+            <h2 className="mb-8 text-center text-[18px] font-bold text-[#0A0F2C]">Withdraw Funds</h2>
             
+            <div className="mb-6">
+              <label className="mb-2 block text-[14px] font-bold text-[#0A0F2C]">Select Asset</label>
+              <select
+                value={selectedAsset}
+                onChange={(e) => {
+                  setSelectedAsset(e.target.value);
+                  setAmount("");
+                  setErrorMsg(null);
+                }}
+                className="w-full rounded-[14px] border border-gray-200 bg-white px-5 py-4 text-[16px] font-medium text-[#0A0F2C] outline-none transition-all focus:border-[#113285] focus:ring-1 focus:ring-[#113285]"
+              >
+                {wallets.length === 0 && (
+                  <option value="USDT">USDT (No balance)</option>
+                )}
+                {wallets.map((w) => (
+                  <option key={w.currency} value={w.currency}>
+                    {w.currency} - {w.balance.toFixed(6)} 
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <div className="mb-4">
               <label className="mb-2 block text-[14px] font-bold text-[#0A0F2C]">Withdrawal Amount (CAD)</label>
               <input 
@@ -184,10 +217,18 @@ export function WithdrawWorkspace() {
             </div>
             
             <p className="mb-6 text-center text-[14px] text-[#718096]">
-              {balanceLoading ? (
+              {metricsLoading ? (
                 "Loading balance..."
               ) : (
-                `Available balance: $${(availableBalance ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+                <>
+                  Available {selectedAsset} balance: 
+                  <span className="font-bold text-[#0A0F2C] ml-1">
+                    {selectedWallet.balance.toFixed(6)}
+                  </span> 
+                  <span className="ml-1">
+                    (${(availableBalance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CAD)
+                  </span>
+                </>
               )}
             </p>
 
@@ -230,8 +271,8 @@ export function WithdrawWorkspace() {
 
             <button 
               onClick={() => {
-                if (numAmount > (availableBalance || 0)) {
-                  setErrorMsg("Amount exceeds available balance.");
+                if (numAmount > availableBalance) {
+                  setErrorMsg(`Amount exceeds available ${selectedAsset} balance in CAD.`);
                   return;
                 }
                 if (numAmount < 10) {
@@ -241,7 +282,7 @@ export function WithdrawWorkspace() {
                 setErrorMsg(null);
                 setStep(2);
               }}
-              disabled={!amount || numAmount <= 0 || balanceLoading}
+              disabled={!amount || numAmount <= 0 || metricsLoading}
               className="w-full rounded-[14px] bg-[#113285] py-4 text-[15px] font-bold text-white transition-colors hover:bg-[#0c2461] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Continue

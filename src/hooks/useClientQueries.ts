@@ -477,6 +477,7 @@ export function useWithdrawBalance() {
 }
 
 type CreateWithdrawalInput = {
+  asset: string;
   amount: number;
   interacEmail: string;
   securityQuestion: string;
@@ -496,6 +497,7 @@ export function useCreateWithdrawalRequest() {
 
       const { error: insertError } = await supabase.from("withdrawal_requests").insert({
         user_id: user.id,
+        asset: input.asset,
         amount: input.amount,
         method: "interac",
         interac_email: input.interacEmail,
