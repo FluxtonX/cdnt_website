@@ -137,6 +137,8 @@ export type ClientTransaction = {
   status: string;
   date: Date;
   ref?: string;
+  rejectionReason?: string;
+  adminNote?: string;
 };
 
 export function useWithdrawalRequests() {
@@ -165,11 +167,11 @@ export function useRecentTransactions() {
       const [depositsRes, withdrawalsRes] = await Promise.all([
         supabase
           .from("deposit_requests")
-          .select("id, asset, expected_amount, status, created_at, tx_hash")
+          .select("id, asset, expected_amount, status, created_at, tx_hash, admin_note")
           .eq("user_id", user.id),
         supabase
           .from("withdrawal_requests")
-          .select("id, amount, status, created_at, interac_email, asset, network, wallet_address")
+          .select("id, amount, status, created_at, interac_email, asset, network, wallet_address, rejection_reason, admin_note")
           .eq("user_id", user.id),
       ]);
 
@@ -196,6 +198,8 @@ export function useRecentTransactions() {
           status: d.status,
           date: new Date(d.created_at),
           ref: d.tx_hash,
+          rejectionReason: d.admin_note, // deposit_requests only has admin_note
+          adminNote: d.admin_note,
         });
       });
       (withdrawalsRes.data || []).forEach((w) => {
@@ -207,6 +211,8 @@ export function useRecentTransactions() {
           status: w.status,
           date: new Date(w.created_at),
           ref: w.wallet_address || w.interac_email,
+          rejectionReason: w.rejection_reason,
+          adminNote: w.admin_note,
         });
       });
 
@@ -229,6 +235,8 @@ export type TransactionRow = {
   rawDate: Date;
   rawAmount: number;
   txHash?: string;
+  rejectionReason?: string;
+  adminNote?: string;
 };
 
 export function useClientTransactions() {
@@ -240,11 +248,11 @@ export function useClientTransactions() {
       const [depositsRes, withdrawalsRes] = await Promise.all([
         supabase
           .from("deposit_requests")
-          .select("id, created_at, expected_amount, asset, status, tx_hash")
+          .select("id, created_at, expected_amount, asset, status, tx_hash, admin_note")
           .eq("user_id", user.id),
         supabase
           .from("withdrawal_requests")
-          .select("id, created_at, amount, method, status, wallet_address, interac_email")
+          .select("id, created_at, amount, method, status, wallet_address, interac_email, rejection_reason, admin_note, asset")
           .eq("user_id", user.id),
       ]);
 
@@ -267,12 +275,14 @@ export function useClientTransactions() {
         description: `TXN-${d.id.substring(0, 8).toUpperCase()}`,
         rawDate: new Date(d.created_at),
         txHash: d.tx_hash || undefined,
+        rejectionReason: d.admin_note, // deposit_requests only has admin_note
+        adminNote: d.admin_note,
       }));
 
       const withdrawals: TransactionRow[] = (withdrawalsRes.data || []).map((w) => ({
         id: w.id,
         type: "withdrawal",
-        asset: w.method === "interac" ? "CAD" : "USD",
+        asset: w.asset || (w.method === "interac" ? "CAD" : "USD"),
         amount: String(w.amount),
         rawAmount: Number(w.amount),
         fiat: "USD",
@@ -281,6 +291,8 @@ export function useClientTransactions() {
         description: `TXN-${w.id.substring(0, 8).toUpperCase()}`,
         rawDate: new Date(w.created_at),
         txHash: w.wallet_address || w.interac_email || undefined,
+        rejectionReason: w.rejection_reason,
+        adminNote: w.admin_note,
       }));
 
       return [...deposits, ...withdrawals].sort((a, b) => b.rawDate.getTime() - a.rawDate.getTime());
@@ -495,6 +507,14 @@ export function useCreateWithdrawalRequest() {
       if (insertError) {
         throw new Error(insertError.message);
       }
+
+      await supabase.from("notifications").insert({
+        user_id: user.id,
+        type: "Info",
+        title: "Withdrawal Pending",
+        message: `Your withdrawal request for $${input.amount.toLocaleString()} CAD is pending confirmation.`,
+        is_read: false
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: clientQueryKeys.withdrawalRequests() });

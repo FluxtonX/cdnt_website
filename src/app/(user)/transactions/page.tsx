@@ -5,7 +5,7 @@ import { Download, Search, Loader2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TransactionTable } from "@/components/dashboard/blocks";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { useClientTransactions, type TransactionRow } from "@/hooks/useClientQueries";
+import { useClientTransactions, useDashboardMetrics, type TransactionRow } from "@/hooks/useClientQueries";
 
 const FILTERS = ["All", "Deposits", "Withdrawals", "Fees", "Pending", "Rejected"];
 
@@ -14,6 +14,7 @@ export default function TransactionsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTransaction, setSelectedTransaction] = useState<TransactionRow | null>(null);
   const { data: transactions = [], isLoading } = useClientTransactions();
+  const { data: metrics } = useDashboardMetrics();
 
   const filteredTransactions = useMemo(() => {
     return transactions.filter((row) => {
@@ -150,11 +151,41 @@ export default function TransactionsPage() {
               </div>
               <div>
                 <p className="text-[12px] font-semibold uppercase tracking-wide text-[#718096]">Amount</p>
-                <p className="mt-1 text-[14px] font-bold text-[#0A0F2C]">{selectedTransaction.amount}</p>
+                <p className="mt-1 text-[14px] font-bold text-[#0A0F2C]">
+                  {selectedTransaction.asset !== "CAD" && selectedTransaction.asset !== "USD"
+                    ? `${(Number(selectedTransaction.amount) / (metrics?.cadRates?.[selectedTransaction.asset] || 1)).toFixed(6)} ${selectedTransaction.asset} ($${selectedTransaction.amount} CAD)`
+                    : `${selectedTransaction.amount} ${selectedTransaction.asset}`}
+                </p>
               </div>
+
               <div>
-                <p className="text-[12px] font-semibold uppercase tracking-wide text-[#718096]">Crypto</p>
-                <p className="mt-1 text-[14px] font-bold text-[#0A0F2C]">{selectedTransaction.asset}</p>
+                <p className="text-[12px] font-semibold uppercase tracking-wide text-[#718096]">
+                  Total Balance Before {selectedTransaction.type}
+                </p>
+                <p className="mt-1 text-[14px] font-bold text-[#0A0F2C]">
+                  ${(
+                    (metrics?.cadBalance || 0) + 
+                    (selectedTransaction.type.toLowerCase() === "withdrawal" 
+                      ? (selectedTransaction.status === "approved" || selectedTransaction.status === "completed" ? Number(selectedTransaction.amount) : 0)
+                      : (selectedTransaction.status === "approved" || selectedTransaction.status === "completed" ? -Number(selectedTransaction.amount) : 0)
+                    )
+                  ).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CAD
+                </p>
+              </div>
+              
+              <div>
+                <p className="text-[12px] font-semibold uppercase tracking-wide text-[#718096]">
+                  {selectedTransaction.type.toLowerCase() === "withdrawal" ? "Remaining" : "New"} Available Balance
+                </p>
+                <p className="mt-1 text-[14px] font-bold text-[#0A0F2C]">
+                  ${(
+                    (metrics?.cadBalance || 0) + 
+                    (selectedTransaction.type.toLowerCase() === "withdrawal"
+                      ? (selectedTransaction.status === "pending" || selectedTransaction.status === "rejected" ? -Number(selectedTransaction.amount) : 0)
+                      : (selectedTransaction.status === "pending" || selectedTransaction.status === "rejected" ? Number(selectedTransaction.amount) : 0)
+                    )
+                  ).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CAD
+                </p>
               </div>
               <div>
                 <p className="text-[12px] font-semibold uppercase tracking-wide text-[#718096]">Status</p>
@@ -174,6 +205,15 @@ export default function TransactionsPage() {
                   {selectedTransaction.txHash || "N/A"}
                 </p>
               </div>
+
+              {selectedTransaction.status === "rejected" && (selectedTransaction.rejectionReason || selectedTransaction.adminNote) && (
+                <div className="rounded-xl bg-red-50 p-4 border border-red-100 mt-6">
+                  <p className="text-[12px] font-semibold uppercase tracking-wide text-red-800 mb-1">Rejection Reason</p>
+                  <p className="text-[14px] text-red-900 leading-relaxed">
+                    {selectedTransaction.rejectionReason || selectedTransaction.adminNote}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>

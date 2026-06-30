@@ -9,6 +9,8 @@ import {
   ArrowDownLeft,
   ArrowUpRight,
   TrendingUp,
+  Info,
+  X,
 } from "lucide-react";
 import {
   AreaChart,
@@ -247,6 +249,7 @@ function AllocationActiveShape(props: PieSectorDataItem) {
 export default function DashboardPage() {
   const [hideBalance, setHideBalance] = useState(false);
   const [performanceRange, setPerformanceRange] = useState<PerformanceTimeRange>("1W");
+  const [selectedTxDetails, setSelectedTxDetails] = useState<ClientTransaction | null>(null);
   const [customStartDate, setCustomStartDate] = useState<Date | null>(null);
   const [customEndDate, setCustomEndDate] = useState<Date | null>(null);
   const [activeAllocationIndex, setActiveAllocationIndex] = useState<number | undefined>(undefined);
@@ -655,9 +658,9 @@ export default function DashboardPage() {
       <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-[15px] font-bold text-[#0A0F2C]">Recent Transactions</h2>
-          <button className="text-[12px] font-bold text-[#4A5568] hover:text-[#0A0F2C] transition-colors">
+          <Link href="/transactions" className="text-[12px] font-bold text-[#4A5568] hover:text-[#0A0F2C] transition-colors">
             View All
-          </button>
+          </Link>
         </div>
 
         <div className="space-y-4">
@@ -694,6 +697,15 @@ export default function DashboardPage() {
                               {tx.status}
                             </span>
                           )}
+                          {(tx.status === "pending" || tx.status === "rejected") && (
+                            <button
+                              onClick={() => setSelectedTxDetails(tx)}
+                              className="text-[10px] font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-1.5 py-0.5 rounded ml-1.5 transition-colors inline-flex items-center gap-1 uppercase"
+                            >
+                              <Info className="w-3 h-3" />
+                              View Details
+                            </button>
+                          )}
                         </div>
                         <div className="text-[12px] text-[#718096]">{tx.asset}</div>
                       </div>
@@ -717,6 +729,92 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+
+      {selectedTxDetails && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={() => setSelectedTxDetails(null)}
+        >
+          <div
+            className="w-full max-w-md rounded-[20px] border border-gray-100 bg-white p-6 shadow-[0_2px_10px_rgba(0,0,0,0.02)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-6 flex items-center justify-between">
+              <h2 className="text-[18px] font-bold text-[#0A0F2C]">Transaction Details</h2>
+              <button
+                type="button"
+                onClick={() => setSelectedTxDetails(null)}
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-[#718096] hover:bg-gray-50"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <p className="text-[12px] font-semibold uppercase tracking-wide text-[#718096]">Amount</p>
+                <p className="mt-1 text-[14px] font-bold text-[#0A0F2C]">
+                  {selectedTxDetails.asset !== "CAD" && selectedTxDetails.asset !== "USD"
+                    ? `${(Number(selectedTxDetails.amount) / (metrics?.cadRates?.[selectedTxDetails.asset] || 1)).toFixed(6)} ${selectedTxDetails.asset} ($${selectedTxDetails.amount} CAD)`
+                    : `${selectedTxDetails.amount} ${selectedTxDetails.asset}`}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-[12px] font-semibold uppercase tracking-wide text-[#718096]">
+                  Total Balance Before {selectedTxDetails.type}
+                </p>
+                <p className="mt-1 text-[14px] font-bold text-[#0A0F2C]">
+                  ${(
+                    (metrics?.cadBalance || 0) + 
+                    (selectedTxDetails.type.toLowerCase() === "withdrawal" 
+                      ? (selectedTxDetails.status === "approved" || selectedTxDetails.status === "completed" ? Number(selectedTxDetails.amount) : 0)
+                      : (selectedTxDetails.status === "approved" || selectedTxDetails.status === "completed" ? -Number(selectedTxDetails.amount) : 0)
+                    )
+                  ).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CAD
+                </p>
+              </div>
+              
+              <div>
+                <p className="text-[12px] font-semibold uppercase tracking-wide text-[#718096]">
+                  {selectedTxDetails.type.toLowerCase() === "withdrawal" ? "Remaining" : "New"} Available Balance
+                </p>
+                <p className="mt-1 text-[14px] font-bold text-[#0A0F2C]">
+                  ${(
+                    (metrics?.cadBalance || 0) + 
+                    (selectedTxDetails.type.toLowerCase() === "withdrawal"
+                      ? (selectedTxDetails.status === "pending" || selectedTxDetails.status === "rejected" ? -Number(selectedTxDetails.amount) : 0)
+                      : (selectedTxDetails.status === "pending" || selectedTxDetails.status === "rejected" ? Number(selectedTxDetails.amount) : 0)
+                    )
+                  ).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CAD
+                </p>
+              </div>
+              <div>
+                <p className="text-[12px] font-semibold uppercase tracking-wide text-[#718096]">Status</p>
+                <div className="mt-1">
+                  <span className={cn(
+                    "inline-flex items-center px-2 py-1 rounded-md text-[10px] font-bold uppercase",
+                    selectedTxDetails.status === "completed" || selectedTxDetails.status === "approved" ? "bg-green-50 text-green-700" :
+                    selectedTxDetails.status === "rejected" ? "bg-red-50 text-red-700" :
+                    "bg-orange-50 text-orange-700"
+                  )}>
+                    {selectedTxDetails.status}
+                  </span>
+                </div>
+              </div>
+
+              {selectedTxDetails.status === "rejected" && (selectedTxDetails.rejectionReason || selectedTxDetails.adminNote) && (
+                <div className="rounded-xl bg-red-50 p-4 border border-red-100 mt-6">
+                  <p className="text-[12px] font-semibold uppercase tracking-wide text-red-800 mb-1">Rejection Reason</p>
+                  <p className="text-[14px] text-red-900 leading-relaxed">
+                    {selectedTxDetails.rejectionReason || selectedTxDetails.adminNote}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
