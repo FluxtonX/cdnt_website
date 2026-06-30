@@ -31,6 +31,7 @@ import {
   useRecentTransactions,
   useClientTransactions,
   type TransactionRow,
+  type ClientTransaction,
 } from "@/hooks/useClientQueries";
 import { CoinLogo } from "@/components/market/CoinLogo";
 import { getCoinBySymbol } from "@/config/coins";
@@ -69,11 +70,11 @@ const ASSET_GRADIENTS: Record<
   string,
   { id: string; light: string; dark: string; dot: string; label: string }
 > = {
-  BTC:  { id: "gradBtc",  light: "#2563EB", dark: "#1D4ED8", dot: "#2563EB", label: "Bitcoin" },
-  ETH:  { id: "gradEth",  light: "#6366f1", dark: "#4f46e5", dot: "#6366f1", label: "Ethereum" },
+  BTC: { id: "gradBtc", light: "#2563EB", dark: "#1D4ED8", dot: "#2563EB", label: "Bitcoin" },
+  ETH: { id: "gradEth", light: "#6366f1", dark: "#4f46e5", dot: "#6366f1", label: "Ethereum" },
   USDT: { id: "gradUsdt", light: "#F59E0B", dark: "#D97706", dot: "#F59E0B", label: "USDT" },
   USDC: { id: "gradUsdc", light: "#3b82f6", dark: "#2563eb", dot: "#3b82f6", label: "USDC" },
-  CAD:  { id: "gradCad",  light: "#10b981", dark: "#059669", dot: "#10b981", label: "CAD" },
+  CAD: { id: "gradCad", light: "#10b981", dark: "#059669", dot: "#10b981", label: "CAD" },
 };
 
 // Dynamic gradient builder for any currency
@@ -568,56 +569,56 @@ export default function DashboardPage() {
                 <p className="text-xs mt-1 opacity-70">Deposit to see your allocation</p>
               </div>
             ) : (
-            <div className="h-[220px] w-full relative">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={allocationData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={62}
-                    outerRadius={92}
-                    paddingAngle={2}
-                    dataKey="value"
-                    stroke="#ffffff"
-                    strokeWidth={3}
-                    isAnimationActive
-                    animationDuration={900}
-                    animationEasing="ease-out"
-                    startAngle={90}
-                    endAngle={-270}
-                  >
-                    {allocationData.map((entry) => (
-                      <Cell key={entry.symbol} fill={entry.dotColor} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
+              <div className="h-[220px] w-full relative">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={allocationData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={62}
+                      outerRadius={92}
+                      paddingAngle={2}
+                      dataKey="value"
+                      stroke="#ffffff"
+                      strokeWidth={3}
+                      isAnimationActive
+                      animationDuration={900}
+                      animationEasing="ease-out"
+                      startAngle={90}
+                      endAngle={-270}
+                    >
+                      {allocationData.map((entry) => (
+                        <Cell key={entry.symbol} fill={entry.dotColor} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
             )}
 
             {allocationData.length > 0 && (
-            <div className="mt-5 space-y-3">
-              {allocationData.map((item, idx) => (
-                <div key={item.symbol}>
-                  {idx > 0 && <div className="h-px bg-gray-100 mb-3" />}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div
-                        className="w-2.5 h-2.5 rounded-full shrink-0"
-                        style={{ backgroundColor: item.dotColor }}
-                      />
-                      <span className="text-[13px] font-medium text-[#374151]">
-                        {item.name}
+              <div className="mt-5 space-y-3">
+                {allocationData.map((item, idx) => (
+                  <div key={item.symbol}>
+                    {idx > 0 && <div className="h-px bg-gray-100 mb-3" />}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-2.5 h-2.5 rounded-full shrink-0"
+                          style={{ backgroundColor: item.dotColor }}
+                        />
+                        <span className="text-[13px] font-medium text-[#374151]">
+                          {item.name}
+                        </span>
+                      </div>
+                      <span className="text-[13px] font-bold text-[#111827]">
+                        ${item.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
                     </div>
-                    <span className="text-[13px] font-bold text-[#111827]">
-                      ${item.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </span>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
             )}
           </div>
         </div>
@@ -766,22 +767,22 @@ export default function DashboardPage() {
                 </p>
                 <p className="mt-1 text-[14px] font-bold text-[#0A0F2C]">
                   ${(
-                    (metrics?.cadBalance || 0) + 
-                    (selectedTxDetails.type.toLowerCase() === "withdrawal" 
+                    (metrics?.cadBalance || 0) +
+                    (selectedTxDetails.type.toLowerCase() === "withdrawal"
                       ? (selectedTxDetails.status === "approved" || selectedTxDetails.status === "completed" ? Number(selectedTxDetails.amount) : 0)
                       : (selectedTxDetails.status === "approved" || selectedTxDetails.status === "completed" ? -Number(selectedTxDetails.amount) : 0)
                     )
                   ).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CAD
                 </p>
               </div>
-              
+
               <div>
                 <p className="text-[12px] font-semibold uppercase tracking-wide text-[#718096]">
                   {selectedTxDetails.type.toLowerCase() === "withdrawal" ? "Remaining" : "New"} Available Balance
                 </p>
                 <p className="mt-1 text-[14px] font-bold text-[#0A0F2C]">
                   ${(
-                    (metrics?.cadBalance || 0) + 
+                    (metrics?.cadBalance || 0) +
                     (selectedTxDetails.type.toLowerCase() === "withdrawal"
                       ? (selectedTxDetails.status === "pending" || selectedTxDetails.status === "rejected" ? -Number(selectedTxDetails.amount) : 0)
                       : (selectedTxDetails.status === "pending" || selectedTxDetails.status === "rejected" ? Number(selectedTxDetails.amount) : 0)
@@ -795,8 +796,8 @@ export default function DashboardPage() {
                   <span className={cn(
                     "inline-flex items-center px-2 py-1 rounded-md text-[10px] font-bold uppercase",
                     selectedTxDetails.status === "completed" || selectedTxDetails.status === "approved" ? "bg-green-50 text-green-700" :
-                    selectedTxDetails.status === "rejected" ? "bg-red-50 text-red-700" :
-                    "bg-orange-50 text-orange-700"
+                      selectedTxDetails.status === "rejected" ? "bg-red-50 text-red-700" :
+                        "bg-orange-50 text-orange-700"
                   )}>
                     {selectedTxDetails.status}
                   </span>
