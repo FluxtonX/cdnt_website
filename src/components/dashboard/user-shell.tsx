@@ -230,9 +230,32 @@ export function UserShell({ children }: { children: React.ReactNode }) {
     };
   }, [supabase]);
 
+  const [deletedIds, setDeletedIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("deleted_notifications");
+    if (saved) {
+      try {
+        setDeletedIds(JSON.parse(saved));
+      } catch (e) {}
+    }
+
+    const handleStorageChange = () => {
+      const updated = localStorage.getItem("deleted_notifications");
+      if (updated) {
+        try {
+          setDeletedIds(JSON.parse(updated));
+        } catch (e) {}
+      }
+    };
+    
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
+
   const visibleNotifications = useMemo(() => {
-    return dbNotifications;
-  }, [dbNotifications]);
+    return dbNotifications.filter(n => !deletedIds.includes(n.id));
+  }, [dbNotifications, deletedIds]);
 
   useEffect(() => {
     if (visibleNotifications.length > 0) {

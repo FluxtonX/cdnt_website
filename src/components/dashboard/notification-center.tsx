@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
-import { Search, Settings, Info, AlertTriangle, ShieldCheck, XCircle } from "lucide-react";
+import { Search, Settings, Info, AlertTriangle, ShieldCheck, XCircle, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
@@ -85,6 +85,23 @@ export function NotificationCenter() {
     };
   }, [supabase]);
 
+  const [deletedIds, setDeletedIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("deleted_notifications");
+    if (saved) {
+      try {
+        setDeletedIds(JSON.parse(saved));
+      } catch (e) {}
+    }
+  }, []);
+
+  const handleDelete = (id: string) => {
+    const newDeleted = [...deletedIds, id];
+    setDeletedIds(newDeleted);
+    localStorage.setItem("deleted_notifications", JSON.stringify(newDeleted));
+  };
+
   const visibleNotifications = useMemo(() => {
     return dbNotifications;
   }, [dbNotifications]);
@@ -109,6 +126,7 @@ export function NotificationCenter() {
       else if (diffMin > 0) timeStr = `${diffMin}m ago`;
 
       return {
+        id: n.id,
         title: n.title,
         body: n.message,
         time: timeStr,
@@ -119,6 +137,7 @@ export function NotificationCenter() {
 
   const rows = useMemo(() => {
     return mergedNotifications.filter((item) => {
+      if (deletedIds.includes(item.id)) return false;
       const text = `${item.title} ${item.body}`.toLowerCase();
       const category =
         item.title.toLowerCase().includes("kyc")
@@ -131,7 +150,7 @@ export function NotificationCenter() {
         (filter === "all" || category === filter)
       );
     });
-  }, [mergedNotifications, query, filter]);
+  }, [mergedNotifications, query, filter, deletedIds]);
 
   return (
     <div className="space-y-4">
@@ -150,15 +169,15 @@ export function NotificationCenter() {
           suppressHydrationWarning
           value={filter}
           onChange={(event) => setFilter(event.target.value)}
-          className="h-11 rounded-md border border-banking-border bg-white px-3 text-sm"
+          className="h-11 rounded-md border border-banking-border bg-white px-3 text-sm cursor-pointer outline-none"
         >
           {filters.map((item) => (
-            <option key={item}>{item}</option>
+            <option key={item} value={item}>{item}</option>
           ))}
         </select>
         <Link
           href="/notifications/preferences"
-          className="inline-flex h-11 items-center justify-center gap-2 rounded-md border border-banking-border bg-white px-4 text-sm font-semibold"
+          className="inline-flex h-11 items-center justify-center gap-2 rounded-md border border-banking-border bg-white px-4 text-sm font-semibold hover:bg-gray-50 transition-colors"
         >
           <Settings className="h-4 w-4" />
           Preferences
@@ -178,15 +197,15 @@ export function NotificationCenter() {
             const Icon = item.icon;
             return (
               <article
-                key={item.title}
-                className="flex gap-4 rounded-md border border-banking-border bg-white p-4"
+                key={item.id}
+                className="group flex gap-4 rounded-md border border-banking-border bg-white p-4 hover:border-gray-300 transition-colors relative"
               >
-                <div className="grid h-11 w-11 place-items-center rounded-md bg-blue-50 text-banking-blue">
+                <div className="grid h-11 w-11 place-items-center rounded-md bg-blue-50 text-banking-blue shrink-0">
                   <Icon className="h-5 w-5" />
                 </div>
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1 pr-10">
                   <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-start">
-                    <h2 className="font-semibold">{item.title}</h2>
+                    <h2 className="font-semibold text-gray-900">{item.title}</h2>
                     <span className="w-fit rounded-full bg-banking-offWhite px-2.5 py-1 text-xs font-semibold text-banking-muted">
                       {item.time}
                     </span>
@@ -195,6 +214,13 @@ export function NotificationCenter() {
                     {item.body}
                   </p>
                 </div>
+                <button
+                  onClick={() => handleDelete(item.id)}
+                  className="absolute right-4 top-4 opacity-0 group-hover:opacity-100 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all cursor-pointer"
+                  title="Delete notification"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
               </article>
             );
           })
