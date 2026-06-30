@@ -1,4 +1,4 @@
-export type DepositAsset = "BTC" | "ETH" | "USDT";
+export type DepositAsset = "BTC" | "ETH" | "USDT" | "Fiat";
 
 export type DepositNetwork = "BTC" | "ETH" | "TRC20" | "ERC20";
 
