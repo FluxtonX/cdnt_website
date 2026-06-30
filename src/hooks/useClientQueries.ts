@@ -514,6 +514,7 @@ export function useCreateWithdrawalRequest() {
           type: "Info",
           title: "Withdrawal Pending",
           message: `Your withdrawal request for $${input.amount.toLocaleString()} CAD is pending confirmation.`,
+          audience: "All",
           is_read: false
         },
         {
