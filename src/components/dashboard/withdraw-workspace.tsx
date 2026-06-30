@@ -195,8 +195,8 @@ export function WithdrawWorkspace() {
               {["100", "500", "1000"].map((preset) => (
                 <button 
                   key={preset}
-                  onClick={() => setAmount(preset)}
-                  className="flex-1 rounded-[12px] border border-gray-200 bg-white py-3 text-[14px] font-bold text-[#0A0F2C] transition-colors hover:bg-gray-50 focus:border-[#113285] focus:ring-1 focus:ring-[#113285] outline-none"
+                  disabled={true}
+                  className="flex-1 rounded-[12px] border border-gray-100 bg-gray-100 py-3 text-[14px] font-bold text-gray-400 cursor-not-allowed outline-none"
                 >
                   ${preset}
                 </button>
