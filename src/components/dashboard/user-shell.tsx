@@ -414,7 +414,27 @@ export function UserShell({ children }: { children: React.ReactNode }) {
                                       n.type === "Warning" ? AlertCircle :
                                       n.type === "Success" ? CheckCircle2 : XCircle;
                         return (
-                          <div key={n.id} className="p-3.5 flex gap-3 hover:bg-gray-50/50 transition-colors">
+                          <div 
+                            key={n.id} 
+                            onClick={(e) => {
+                              markNotificationAsRead(n.id);
+                              // Route to transactions if it's a deposit or withdrawal notification
+                              if ((n.title || '').toLowerCase().includes('deposit') || (n.title || '').toLowerCase().includes('withdraw')) {
+                                handleFrozenNav("/transactions", e);
+                                if (!e.defaultPrevented) {
+                                  setIsNotificationsOpen(false);
+                                  router.push('/transactions');
+                                }
+                              } else if (n.link) {
+                                handleFrozenNav(n.link, e);
+                                if (!e.defaultPrevented) {
+                                  setIsNotificationsOpen(false);
+                                  router.push(n.link);
+                                }
+                              }
+                            }}
+                            className="p-3.5 flex gap-3 hover:bg-gray-50/50 transition-colors cursor-pointer"
+                          >
                             <div className={cn("grid h-8 w-8 place-items-center rounded-lg shrink-0", 
                               n.type === "Info" ? "bg-blue-50 text-[#113285]" :
                               n.type === "Warning" ? "bg-amber-50 text-amber-600" :
@@ -423,10 +443,15 @@ export function UserShell({ children }: { children: React.ReactNode }) {
                               <Icon className="h-4 w-4" />
                             </div>
                             <div className="min-w-0 flex-1">
-                              <p className="text-xs font-bold text-[#0A0F2C] leading-snug line-clamp-1">{n.title}</p>
+                              <p className={`text-xs leading-snug line-clamp-1 ${!n.is_read ? 'font-bold text-[#0A0F2C]' : 'font-semibold text-gray-700'}`}>{n.title}</p>
                               <p className="text-[11px] text-[#718096] mt-0.5 leading-relaxed line-clamp-2">{n.message}</p>
                               <span className="text-[9px] text-[#A0AEC0] font-semibold mt-1 block font-mono">{formatTime(n.created_at)}</span>
                             </div>
+                            {!n.is_read && (
+                              <div className="flex items-center">
+                                <span className="h-2 w-2 rounded-full bg-blue-500"></span>
+                              </div>
+                            )}
                           </div>
                         );
                       })

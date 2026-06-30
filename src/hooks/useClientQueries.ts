@@ -508,13 +508,23 @@ export function useCreateWithdrawalRequest() {
         throw new Error(insertError.message);
       }
 
-      await supabase.from("notifications").insert({
-        user_id: user.id,
-        type: "Info",
-        title: "Withdrawal Pending",
-        message: `Your withdrawal request for $${input.amount.toLocaleString()} CAD is pending confirmation.`,
-        is_read: false
-      });
+      await supabase.from("notifications").insert([
+        {
+          user_id: user.id,
+          type: "Info",
+          title: "Withdrawal Pending",
+          message: `Your withdrawal request for $${input.amount.toLocaleString()} CAD is pending confirmation.`,
+          is_read: false
+        },
+        {
+          audience: "Admin",
+          type: "Info",
+          title: "New Withdrawal Request",
+          message: `A user has submitted a new withdrawal request for $${input.amount.toLocaleString()} CAD.`,
+          is_read: false,
+          link: "/dashboard/withdrawals"
+        }
+      ]);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: clientQueryKeys.withdrawalRequests() });

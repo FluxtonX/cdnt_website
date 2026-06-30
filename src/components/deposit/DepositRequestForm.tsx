@@ -66,6 +66,16 @@ export function DepositRequestForm({ config, amount }: { config: DepositAddressC
       return;
     }
 
+    // Insert admin notification
+    await supabase.from("notifications").insert({
+      audience: "Admin",
+      type: "Info",
+      title: "New Deposit Request",
+      message: `A user has submitted a new manual deposit request for ${amount} ${config.asset}.`,
+      is_read: false,
+      link: "/dashboard/transactions"
+    });
+
     setTxHash("");
     notify({
       title: "Deposit request submitted successfully! Awaiting admin approval.",

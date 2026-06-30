@@ -78,6 +78,20 @@ export async function POST(req: Request) {
       );
     }
 
+    // Insert admin notification
+    try {
+      await supabaseAdmin.from("notifications").insert({
+        audience: "Admin",
+        type: "Info",
+        title: "New Deposit Request",
+        message: `A user has submitted a new Binance Pay deposit request for ${numericAmount} ${asset}.`,
+        is_read: false,
+        link: "/dashboard/transactions"
+      });
+    } catch (notifErr) {
+      console.error("Failed to write admin notification:", notifErr);
+    }
+
     try {
       const { data: profile } = await supabaseAdmin
         .from("profiles")
