@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Copy, QrCode, TriangleAlert, ArrowDownLeft, ArrowUpRight, Check } from "lucide-react";
 import { CoinLogo } from "@/components/market/CoinLogo";
@@ -9,9 +9,23 @@ import { QRCodeSVG } from "qrcode.react";
 
 export default function WalletsPage() {
   const { data: wallets = [], isLoading: loading } = useClientWallets();
-  const [selectedWalletId, setSelectedWalletId] = useState("bitcoin");
+  const [selectedWalletId, setSelectedWalletId] = useState("");
   const [copied, setCopied] = useState(false);
   const [showQr, setShowQr] = useState(false);
+  const [selectedNetworkIndex, setSelectedNetworkIndex] = useState(0);
+
+  // Auto-select the first wallet once data loads
+  useEffect(() => {
+    if (wallets.length > 0 && !wallets.find(w => w.id === selectedWalletId)) {
+      setSelectedWalletId(wallets[0].id);
+    }
+  }, [wallets]);
+
+  // Reset network selection when wallet changes
+  useEffect(() => {
+    setSelectedNetworkIndex(0);
+    setShowQr(false);
+  }, [selectedWalletId]);
 
   const selectedWallet = wallets.find(w => w.id === selectedWalletId);
 
@@ -106,16 +120,35 @@ export default function WalletsPage() {
               </div>
 
               <div>
+                {/* Network tab switcher — shown when wallet has multiple networks (e.g. USDT TRC20/ERC20) */}
+                {selectedWallet.addresses.length > 1 && (
+                  <div className="flex gap-2 mb-4">
+                    {selectedWallet.addresses.map((net, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => { setSelectedNetworkIndex(idx); setShowQr(false); setCopied(false); }}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
+                          selectedNetworkIndex === idx
+                            ? "bg-primary-blue text-white border-primary-blue"
+                            : "bg-gray-50 text-gray-600 border-gray-200 hover:border-gray-300"
+                        }`}
+                      >
+                        {net.network}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
                 <p className="text-sm font-semibold text-gray-900 mb-2">Your Platform {selectedWallet.name} Deposit Address</p>
                 <div className="flex gap-3">
                   <input
                     type="text"
                     readOnly
-                    value={selectedWallet.address}
+                    value={selectedWallet.addresses[selectedNetworkIndex]?.address || selectedWallet.address}
                     className="flex-1 bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-mono text-gray-600 focus:outline-none"
                   />
                   <button
-                    onClick={() => handleCopy(selectedWallet.address)}
+                    onClick={() => handleCopy(selectedWallet.addresses[selectedNetworkIndex]?.address || selectedWallet.address)}
                     className="p-3 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-gray-600"
                     title="Copy Address"
                   >
@@ -133,8 +166,8 @@ export default function WalletsPage() {
 
               {showQr && (
                 <div className="mt-5 flex flex-col items-center justify-center p-4 border border-dashed border-gray-200 rounded-xl bg-gray-50/50">
-                  <QRCodeSVG value={selectedWallet.address} size={160} />
-                  <p className="mt-3 text-xs text-gray-500 font-mono font-bold">{selectedWallet.address}</p>
+                  <QRCodeSVG value={selectedWallet.addresses[selectedNetworkIndex]?.address || selectedWallet.address} size={160} />
+                  <p className="mt-3 text-xs text-gray-500 font-mono font-bold">{selectedWallet.addresses[selectedNetworkIndex]?.address || selectedWallet.address}</p>
                 </div>
               )}
 

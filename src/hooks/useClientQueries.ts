@@ -289,6 +289,11 @@ export function useClientTransactions() {
   });
 }
 
+export type WalletNetworkAddress = {
+  network: string;
+  address: string;
+};
+
 export type MappedWallet = {
   id: string;
   name: string;
@@ -300,6 +305,7 @@ export type MappedWallet = {
   changeType: string;
   network: string;
   address: string;
+  addresses: WalletNetworkAddress[];
   image?: string;
   activities: Array<{
     id: string;
@@ -353,6 +359,16 @@ export function useClientWallets() {
       const currencySymbols = Array.from(uniqueCurrencies);
       const cadRates = await fetchLiveCADRates(currencySymbols.length > 0 ? currencySymbols : ["BTC", "ETH", "USDT"]);
 
+      // Hardcoded fallback addresses (used when platform_wallets table has no entry)
+      const FALLBACK_ADDRESSES: Record<string, WalletNetworkAddress[]> = {
+        BTC: [{ network: "Bitcoin Network", address: "bc1q7q50t9edden65k94vjzqef0lx3vfjjv4klz5zy" }],
+        ETH: [{ network: "Ethereum (ERC20)", address: "0x150B3BB98224598e20821De1A516A9fcC3bB65f9" }],
+        USDT: [
+          { network: "TRC20 (Tron)", address: "TVphkS3RjtbYV5TQAyNnc27Ae4BKFrV7QK" },
+          { network: "ERC20 (Ethereum)", address: "0x150B3BB98224598e20821De1A516A9fcC3bB65f9" },
+        ],
+      };
+
       const platformAddressMap = (platformWallets || []).reduce((acc: Record<string, string>, w: { crypto: string; address: string }) => {
         acc[w.crypto] = w.address;
         return acc;
@@ -396,24 +412,32 @@ export function useClientWallets() {
       (userWallets || []).forEach((w: any) => {
         const currency = w.currency?.toUpperCase();
         const balance = Number(w.balance || 0);
-        if (balance > 0) {
-          const rate = cadRates[currency] || cadRates.USDT || 1.36;
-          const decimals = currency === "USDT" || currency === "USDC" ? 2 : 8;
-          mappedWallets.push({
-            id: currency.toLowerCase(),
-            name: currency,
-            symbol: currency,
-            balance: balance.toFixed(decimals),
-            rawBalance: balance,
-            value: `$${(balance * rate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-            change: currency === "USDT" || currency === "USDC" ? "Stable" : "Live",
-            changeType: currency === "USDT" || currency === "USDC" ? "neutral" : "positive",
-            network: `${currency} Network`,
-            address: platformAddressMap[currency] || `${currency.toLowerCase()}...address`,
-            image: getCoinBySymbol(`${currency}USDT`)?.logoUrl,
-            activities: allActivities.filter((act) => act.currency === currency).slice(0, 5),
-          });
-        }
+        const rate = cadRates[currency] || cadRates.USDT || 1.36;
+        const decimals = currency === "USDT" || currency === "USDC" ? 2 : 8;
+        // Build addresses: prefer DB entries, fall back to hardcoded
+        const fallbackAddresses = FALLBACK_ADDRESSES[currency] || [];
+        const dbAddress = platformAddressMap[currency];
+        const addresses: WalletNetworkAddress[] = dbAddress
+          ? [{ network: fallbackAddresses[0]?.network || `${currency} Network`, address: dbAddress }]
+          : fallbackAddresses;
+        const primaryAddress = addresses[0]?.address || `${currency.toLowerCase()}...address`;
+        const primaryNetwork = addresses[0]?.network || `${currency} Network`;
+
+        mappedWallets.push({
+          id: currency.toLowerCase(),
+          name: currency,
+          symbol: currency,
+          balance: balance.toFixed(decimals),
+          rawBalance: balance,
+          value: `$${(balance * rate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+          change: currency === "USDT" || currency === "USDC" ? "Stable" : "Live",
+          changeType: currency === "USDT" || currency === "USDC" ? "neutral" : "positive",
+          network: primaryNetwork,
+          address: primaryAddress,
+          addresses,
+          image: getCoinBySymbol(`${currency}USDT`)?.logoUrl,
+          activities: allActivities.filter((act) => act.currency === currency).slice(0, 5),
+        });
       });
 
       return mappedWallets.length > 0 ? mappedWallets : [];
