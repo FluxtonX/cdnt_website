@@ -67,10 +67,11 @@ const ASSET_GRADIENTS: Record<
   string,
   { id: string; light: string; dark: string; dot: string; label: string }
 > = {
-  BTC: { id: "gradBtc", light: "#fb923c", dark: "#ea580c", dot: "#f97316", label: "Bitcoin" },
-  ETH: { id: "gradEth", light: "#a78bfa", dark: "#7c3aed", dot: "#8b5cf6", label: "Ethereum" },
-  USDT: { id: "gradUsdt", light: "#4ade80", dark: "#16a34a", dot: "#22c55e", label: "USDT" },
-  CAD: { id: "gradCad", light: "#60a5fa", dark: "#2563eb", dot: "#3b82f6", label: "CAD" },
+  BTC:  { id: "gradBtc",  light: "#2563EB", dark: "#1D4ED8", dot: "#2563EB", label: "Bitcoin" },
+  ETH:  { id: "gradEth",  light: "#6366f1", dark: "#4f46e5", dot: "#6366f1", label: "Ethereum" },
+  USDT: { id: "gradUsdt", light: "#F59E0B", dark: "#D97706", dot: "#F59E0B", label: "USDT" },
+  USDC: { id: "gradUsdc", light: "#3b82f6", dark: "#2563eb", dot: "#3b82f6", label: "USDC" },
+  CAD:  { id: "gradCad",  light: "#10b981", dark: "#059669", dot: "#10b981", label: "CAD" },
 };
 
 // Dynamic gradient builder for any currency
@@ -168,7 +169,7 @@ function buildPerformanceChartData(
   customEnd: Date | null,
 ): { name: string; value: number }[] {
   const { start, end } = getRangeBounds(range, customStart, customEnd, allTxs);
-  const val = portfolioValue || 51750;
+  const val = portfolioValue || 0;
   const pointCount = 7;
   const duration = Math.max(end.getTime() - start.getTime(), 1);
   const step = duration / (pointCount - 1);
@@ -184,13 +185,11 @@ function buildPerformanceChartData(
   const baseline = Math.max(0, val - netInPeriod);
 
   if (txsInRange.length === 0) {
-    const multipliers = [0.93, 0.94, 0.95, 0.96, 0.97, 0.98, 1];
-    return multipliers.map((m, index) => {
+    // No transactions in this period — show current portfolio value as a flat line.
+    // Only show $0 if the user genuinely has no balance.
+    return Array.from({ length: pointCount }, (_, index) => {
       const bucketDate = new Date(start.getTime() + step * index);
-      return {
-        name: formatBucketLabel(bucketDate, range),
-        value: Math.round(val * m),
-      };
+      return { name: formatBucketLabel(bucketDate, range), value: val };
     });
   }
 
@@ -251,9 +250,6 @@ export default function DashboardPage() {
   const [customStartDate, setCustomStartDate] = useState<Date | null>(null);
   const [customEndDate, setCustomEndDate] = useState<Date | null>(null);
   const [activeAllocationIndex, setActiveAllocationIndex] = useState<number | undefined>(undefined);
-  const btcLogo = getCoinBySymbol("BTCUSDT")?.logoUrl;
-  const ethLogo = getCoinBySymbol("ETHUSDT")?.logoUrl;
-  const usdtLogo = "https://cryptologos.cc/logos/tether-usdt-logo.png";
   const { data: metrics, isLoading: loadingBalance } = useDashboardMetrics();
   const { data: transactions = [], isLoading: loadingTx } = useRecentTransactions();
   const { data: allTransactions = [] } = useClientTransactions();
@@ -282,11 +278,7 @@ export default function DashboardPage() {
     };
 
     if (portfolioValue === 0 || wallets.length === 0) {
-      return [
-        buildItem("BTC", 25000),
-        buildItem("ETH", 18750),
-        buildItem("USDT", 8000),
-      ];
+      return [];
     }
 
     return wallets.map((w) => {
@@ -326,6 +318,11 @@ export default function DashboardPage() {
     if (values.length === 0) return [0, 100];
     const minValue = Math.min(...values);
     const maxValue = Math.max(...values);
+    // If flat line (all same value), provide meaningful padding around it
+    if (minValue === maxValue) {
+      if (minValue === 0) return [0, 100];
+      return [minValue * 0.85, maxValue * 1.15];
+    }
     return [minValue * 0.9, maxValue * 1.1];
   }, [chartPerformanceData]);
 
@@ -500,10 +497,7 @@ export default function DashboardPage() {
             </div>
           )}
 
-          <div
-            className="h-[260px] w-full"
-            style={{ transform: "perspective(1000px) rotateX(2deg)", transformOrigin: "center center" }}
-          >
+          <div className="h-[260px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartPerformanceData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <defs>
@@ -564,77 +558,64 @@ export default function DashboardPage() {
         <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex flex-col">
           <h2 className="text-[15px] font-bold text-[#0A0F2C] mb-4">Asset Allocation</h2>
           <div className="flex-1 flex flex-col justify-between">
-            <div
-              className="h-[200px] w-full relative"
-              style={{ transform: "perspective(800px) rotateX(25deg)", transformOrigin: "center 70%" }}
-            >
+            {allocationData.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-[200px] text-[#A0AEC0]">
+                <svg className="w-12 h-12 mb-3 opacity-40" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M12 3v9l4 4" /></svg>
+                <p className="text-sm font-medium">No assets yet</p>
+                <p className="text-xs mt-1 opacity-70">Deposit to see your allocation</p>
+              </div>
+            ) : (
+            <div className="h-[220px] w-full relative">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <defs>
-                    {Object.values(ASSET_GRADIENTS).map((grad) => (
-                      <linearGradient key={grad.id} id={grad.id} x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stopColor={grad.light} />
-                        <stop offset="100%" stopColor={grad.dark} />
-                      </linearGradient>
-                    ))}
-                  </defs>
                   <Pie
                     data={allocationData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={52}
-                    outerRadius={78}
-                    paddingAngle={3}
+                    innerRadius={62}
+                    outerRadius={92}
+                    paddingAngle={2}
                     dataKey="value"
-                    stroke="rgba(255,255,255,0.8)"
-                    strokeWidth={2}
+                    stroke="#ffffff"
+                    strokeWidth={3}
                     isAnimationActive
-                    animationDuration={1000}
+                    animationDuration={900}
                     animationEasing="ease-out"
-                    activeShape={AllocationActiveShape}
-                    onMouseEnter={(_, index) => setActiveAllocationIndex(index)}
-                    onMouseLeave={() => setActiveAllocationIndex(undefined)}
-                    label={renderAllocationLabel}
-                    labelLine={false}
+                    startAngle={90}
+                    endAngle={-270}
                   >
                     {allocationData.map((entry) => (
-                      <Cell key={entry.symbol} fill={`url(#${entry.gradientId})`} />
+                      <Cell key={entry.symbol} fill={entry.dotColor} />
                     ))}
                   </Pie>
                 </PieChart>
               </ResponsiveContainer>
             </div>
+            )}
 
-            <div className="space-y-2 mt-4">
-              {allocationData.map((item) => {
-                const pct =
-                  allocationTotal > 0
-                    ? ((item.value / allocationTotal) * 100).toFixed(1)
-                    : "0.0";
-                return (
-                  <div
-                    key={item.symbol}
-                    className="flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50/60 px-3 py-2.5"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
+            {allocationData.length > 0 && (
+            <div className="mt-5 space-y-3">
+              {allocationData.map((item, idx) => (
+                <div key={item.symbol}>
+                  {idx > 0 && <div className="h-px bg-gray-100 mb-3" />}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
                       <div
                         className="w-2.5 h-2.5 rounded-full shrink-0"
                         style={{ backgroundColor: item.dotColor }}
                       />
-                      <span className="text-[13px] font-medium text-[#4A5568] truncate">
+                      <span className="text-[13px] font-medium text-[#374151]">
                         {item.name}
                       </span>
                     </div>
-                    <div className="text-right shrink-0 ml-2">
-                      <div className="text-[13px] font-bold text-[#0A0F2C]">
-                        ${item.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </div>
-                      <div className="text-[11px] text-[#718096] font-semibold">{pct}%</div>
-                    </div>
+                    <span className="text-[13px] font-bold text-[#111827]">
+                      ${item.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
+            )}
           </div>
         </div>
       </div>
@@ -650,7 +631,7 @@ export default function DashboardPage() {
               <div className="flex items-start justify-between mb-4">
                 <CoinLogo src={getCoinBySymbol(`${w.currency}USDT`)?.logoUrl} symbol={w.currency} className="h-10 w-10 p-1.5" />
                 <div className={isStable ? "bg-gray-100 text-[#718096] px-2 py-0.5 rounded text-[11px] font-bold" : "bg-green-50 text-[#10B981] px-2 py-0.5 rounded text-[11px] font-bold border border-green-100"}>
-                  {isStable ? "0.0%" : "+12.3%"}
+                  {isStable ? "Stable" : "Live"}
                 </div>
               </div>
               <h3 className="text-[15px] font-bold text-[#0A0F2C] mb-1">{w.currency}</h3>
@@ -663,55 +644,11 @@ export default function DashboardPage() {
             </div>
           );
         }) : (
-          <>
-            <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex flex-col">
-              <div className="flex items-start justify-between mb-4">
-                <CoinLogo src={btcLogo} symbol="BTC" className="h-10 w-10 p-1.5" />
-                <div className="bg-green-50 text-[#10B981] px-2 py-0.5 rounded text-[11px] font-bold border border-green-100">
-                  +12.3%
-                </div>
-              </div>
-              <h3 className="text-[15px] font-bold text-[#0A0F2C] mb-1">Bitcoin</h3>
-              <div className="text-[20px] font-bold text-[#0A0F2C] mb-0.5">
-                $0.00
-              </div>
-              <div className="text-[11px] text-[#A0AEC0] font-medium">
-                0.00000000 BTC
-              </div>
-            </div>
-
-            <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex flex-col">
-              <div className="flex items-start justify-between mb-4">
-                <CoinLogo src={ethLogo} symbol="ETH" className="h-10 w-10 p-1.5" />
-                <div className="bg-green-50 text-[#10B981] px-2 py-0.5 rounded text-[11px] font-bold border border-green-100">
-                  +8.37%
-                </div>
-              </div>
-              <h3 className="text-[15px] font-bold text-[#0A0F2C] mb-1">Ethereum</h3>
-              <div className="text-[20px] font-bold text-[#0A0F2C] mb-0.5">
-                $0.00
-              </div>
-              <div className="text-[11px] text-[#A0AEC0] font-medium">
-                0.00000000 ETH
-              </div>
-            </div>
-
-            <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex flex-col">
-              <div className="flex items-start justify-between mb-4">
-                <CoinLogo src={usdtLogo} symbol="USDT" className="h-10 w-10 p-1.5" />
-                <div className="bg-gray-100 text-[#718096] px-2 py-0.5 rounded text-[11px] font-bold">
-                  0.0%
-                </div>
-              </div>
-              <h3 className="text-[15px] font-bold text-[#0A0F2C] mb-1">Tether</h3>
-              <div className="text-[20px] font-bold text-[#0A0F2C] mb-0.5">
-                $0.00
-              </div>
-              <div className="text-[11px] text-[#A0AEC0] font-medium">
-                0.00 USDT
-              </div>
-            </div>
-          </>
+          <div className="md:col-span-3 bg-white rounded-2xl p-8 border border-gray-100 shadow-sm flex flex-col items-center justify-center text-center">
+            <svg className="w-12 h-12 mb-3 text-[#A0AEC0] opacity-50" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2" /><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" /></svg>
+            <p className="text-sm font-semibold text-[#4A5568]">No wallets yet</p>
+            <p className="text-xs text-[#A0AEC0] mt-1">Make a deposit to get started</p>
+          </div>
         )}
       </div>
 
