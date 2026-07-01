@@ -34,7 +34,7 @@ function formatAmount(value: number, symbol: string) {
 
 export function DepositWorkspace({ initialAsset }: { initialAsset?: string }) {
   const initialConfig = getDepositConfig(initialAsset ?? "BTC");
-  const [asset, setAsset] = useState<DepositAsset | "fiat">(initialConfig.asset);
+  const [asset, setAsset] = useState<DepositAsset | "fiat">(initialAsset === "fiat" ? "fiat" : initialConfig.asset);
   const [network, setNetwork] = useState(initialConfig.network);
   const [amount, setAmount] = useState("");
   const [step, setStep] = useState(0);
