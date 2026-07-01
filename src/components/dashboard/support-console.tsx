@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { MessageSquare, Paperclip, Send, UserRoundCheck, Loader2, Check, CheckCheck, Clock, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 import { createClient } from "@/lib/supabase/client";
+import { cn } from "@/lib/utils";
 
 type MessageStatus = "sending" | "sent" | "delivered" | "seen";
 
