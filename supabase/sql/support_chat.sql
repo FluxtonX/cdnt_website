@@ -15,7 +15,10 @@ create table if not exists public.support_threads (
   unread_count_admin integer not null default 0,
   unread_count_user integer not null default 0,
   last_message_at timestamptz not null default now(),
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  is_ticket boolean not null default false,
+  category text,
+  ticket_id text
 );
 
 -- ═══════════════════════════════════════════════════════════════════

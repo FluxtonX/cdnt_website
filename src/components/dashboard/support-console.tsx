@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { MessageSquare, Paperclip, Send, UserRoundCheck, Loader2, Check, CheckCheck, Clock } from "lucide-react";
+import { MessageSquare, Paperclip, Send, UserRoundCheck, Loader2, Check, CheckCheck, Clock, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 import { createClient } from "@/lib/supabase/client";
 
@@ -22,6 +22,9 @@ export function SupportConsole() {
   const [sending, setSending] = useState(false);
   const [thread, setThread] = useState<any>(null);
   const [user, setUser] = useState<any>(null);
+  const [showConvertModal, setShowConvertModal] = useState(false);
+  const [convertCategory, setConvertCategory] = useState("KYC");
+  const [converting, setConverting] = useState(false);
   const { notify } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -331,6 +334,7 @@ export function SupportConsole() {
   }, []);
 
   // ─── Loading State ────────────────────────────────────────────────────────
+// ─── Loading State ────────────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="flex min-h-[400px] items-center justify-center rounded-lg border border-banking-border bg-white shadow-sm">
@@ -339,8 +343,46 @@ export function SupportConsole() {
     );
   }
 
+  // ─── Convert to Ticket ──────────────────────────────────────────────────
+  async function handleConvertToTicket() {
+    if (!thread) return;
+    setConverting(true);
+    try {
+      const ticket_id = `TKT-${Math.floor(100000 + Math.random() * 900000)}`;
+      
+      const { error } = await supabase
+        .from("support_threads")
+        .update({
+          is_ticket: true,
+          category: convertCategory,
+          ticket_id
+        })
+        .eq("id", thread.id);
+        
+      if (error) throw error;
+      
+      notify({
+        title: "Ticket created",
+        description: `Your conversation has been converted to ticket ${ticket_id}`,
+        type: "success"
+      });
+      
+      setThread((prev: any) => ({ ...prev, is_ticket: true, category: convertCategory, ticket_id }));
+      setShowConvertModal(false);
+    } catch (err) {
+      console.error(err);
+      notify({
+        title: "Error",
+        description: "Failed to convert to ticket.",
+        type: "error"
+      });
+    } finally {
+      setConverting(false);
+    }
+  }
+
   return (
-    <div className="overflow-hidden rounded-lg border border-banking-border bg-white shadow-sm">
+    <div className="flex h-[calc(100vh-140px)] flex-col rounded-xl border border-banking-border bg-banking-card shadow-sm">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-banking-border p-4">
         <div className="flex items-center gap-3">
@@ -422,10 +464,63 @@ export function SupportConsole() {
           {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
         </button>
       </div>
-      <div className="flex items-center gap-2 border-t border-banking-border bg-white px-4 py-3 text-sm text-banking-muted">
-        <MessageSquare className="h-4 w-4" />
-        This chat can be converted into a support ticket.
-      </div>
+      {!thread?.is_ticket ? (
+        <button 
+          onClick={() => setShowConvertModal(true)}
+          className="flex items-center gap-2 border-t border-banking-border bg-white px-4 py-3 text-sm text-banking-blue font-medium hover:bg-banking-offWhite transition-colors text-left"
+        >
+          <MessageSquare className="h-4 w-4" />
+          This chat can be converted into a support ticket.
+        </button>
+      ) : (
+        <div className="flex items-center gap-2 border-t border-banking-border bg-banking-offWhite px-4 py-3 text-sm text-banking-muted font-medium">
+          <CheckCircle2 className="h-4 w-4 text-green-500" />
+          Converted to Ticket ({thread.ticket_id})
+        </div>
+      )}
+
+      {/* Convert to Ticket Modal */}
+      {showConvertModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-xl shadow-lg w-full max-w-sm overflow-hidden">
+            <div className="p-5 border-b border-gray-100">
+              <h3 className="font-bold text-gray-900 text-lg">Convert to Ticket</h3>
+              <p className="text-xs text-gray-500 mt-1">Select a category for your ticket.</p>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-gray-700">Category</label>
+                <select 
+                  value={convertCategory} 
+                  onChange={(e) => setConvertCategory(e.target.value)}
+                  className="w-full border border-gray-200 rounded-lg p-2.5 text-sm outline-none focus:border-banking-blue"
+                >
+                  <option value="KYC">KYC</option>
+                  <option value="Withdrawal">Withdrawal</option>
+                  <option value="Deposit">Deposit</option>
+                  <option value="Account">Account</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 p-4 bg-gray-50">
+              <button 
+                onClick={() => setShowConvertModal(false)}
+                className="flex-1 py-2 text-sm font-semibold text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-100"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleConvertToTicket}
+                disabled={converting}
+                className="flex-1 py-2 text-sm font-semibold text-white bg-banking-blue rounded-lg disabled:opacity-50"
+              >
+                {converting ? "Converting..." : "Confirm"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
