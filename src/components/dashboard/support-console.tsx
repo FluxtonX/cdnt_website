@@ -25,6 +25,8 @@ export function SupportConsole() {
   const [showConvertModal, setShowConvertModal] = useState(false);
   const [convertCategory, setConvertCategory] = useState("KYC");
   const [converting, setConverting] = useState(false);
+  const [showCategorySelection, setShowCategorySelection] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState("");
   const { notify } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -62,6 +64,10 @@ export function SupportConsole() {
         }
 
         if (threadData) {
+          // Check if thread is resolved or closed - if so, show category selection for new conversation
+          if (threadData.status === "Resolved" || threadData.status === "Closed") {
+            setShowCategorySelection(true);
+          }
           setThread(threadData);
 
           // Fetch all messages for this thread
@@ -95,6 +101,9 @@ export function SupportConsole() {
               .update({ unread_count_user: 0 })
               .eq("id", threadData.id);
           }
+        } else {
+          // No thread exists - show category selection
+          setShowCategorySelection(true);
         }
       } catch (err) {
         console.error("Error loading support chat:", err);
@@ -253,7 +262,11 @@ export function SupportConsole() {
       if (!currentThreadId) {
         const { data: newThread, error: threadErr } = await supabase
           .from("support_threads")
-          .insert({ user_id: user.id, status: "Waiting" })
+          .insert({ 
+            user_id: user.id, 
+            status: "Waiting",
+            category: selectedCategory || "Other"
+          })
           .select()
           .single();
 
@@ -261,6 +274,7 @@ export function SupportConsole() {
         if (!newThread) throw new Error("Failed to create support thread");
 
         setThread(newThread);
+        setShowCategorySelection(false);
         currentThreadId = newThread.id;
       }
 
@@ -381,145 +395,213 @@ export function SupportConsole() {
     }
   }
 
+  // ─── Start New Conversation with Category ─────────────────────────────────
+  async function handleStartConversation() {
+    if (!selectedCategory || !user) return;
+    
+    try {
+      const { data: newThread, error: threadErr } = await supabase
+        .from("support_threads")
+        .insert({ 
+          user_id: user.id, 
+          status: "Waiting",
+          category: selectedCategory
+        })
+        .select()
+        .single();
+
+      if (threadErr) throw threadErr;
+      if (!newThread) throw new Error("Failed to create support thread");
+
+      setThread(newThread);
+      setShowCategorySelection(false);
+      setMessages([]);
+    } catch (err) {
+      console.error("Failed to start conversation:", err);
+      notify({
+        title: "Error",
+        description: "Failed to start conversation. Please try again.",
+      });
+    }
+  }
+
   return (
     <div className="flex h-[calc(100vh-140px)] flex-col rounded-xl border border-banking-border bg-banking-card shadow-sm">
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-banking-border p-4">
-        <div className="flex items-center gap-3">
-          <div className="grid h-11 w-11 place-items-center rounded-full bg-emerald-50 text-emerald-700">
-            <UserRoundCheck className="h-5 w-5" />
+      {/* Category Selection Screen */}
+      {showCategorySelection && (
+        <div className="flex flex-col items-center justify-center h-full p-6">
+          <div className="grid h-16 w-16 place-items-center rounded-full bg-emerald-50 text-emerald-700 mb-4">
+            <UserRoundCheck className="h-8 w-8" />
           </div>
-          <div>
-            <h2 className="font-semibold">Support desk</h2>
-            <p className="text-sm text-banking-muted">Average response: under 5 minutes</p>
-          </div>
-        </div>
-        <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-          thread?.status === "Resolved" ? "bg-gray-150 text-gray-700" :
-          thread?.status === "Waiting" ? "bg-amber-50 text-amber-700" :
-          "bg-emerald-50 text-emerald-700"
-        }`}>
-          {thread?.status || "Online"}
-        </span>
-      </div>
-
-      {/* Messages Area */}
-      <div className="max-h-[420px] min-h-[300px] space-y-4 overflow-y-auto bg-banking-offWhite p-4">
-        {messages.length === 0 && (
-          <div className="text-center py-12 text-sm text-banking-muted">
-            No messages yet. Send a message to start chatting with support!
-          </div>
-        )}
-        {messages.map((message) => (
-          <div
-            key={message.id}
-            className={message.from === "user" ? "flex justify-end" : "flex justify-start"}
-          >
-            <div
-              className={
-                message.from === "user"
-                  ? "max-w-[70%] rounded-2xl rounded-br-none bg-banking-blue px-3.5 py-2 text-xs font-semibold leading-relaxed text-white shadow-sm"
-                  : "max-w-[70%] rounded-2xl rounded-bl-none border border-slate-200 bg-slate-100 px-3.5 py-2 text-xs font-semibold leading-relaxed text-slate-900 shadow-sm"
-              }
-              style={message.from === "user" ? { background: "linear-gradient(135deg, #0A3D91 0%, #1650AB 100%)" } : {}}
-            >
-              <p className="break-words">{message.text}</p>
-              <div className="mt-1.5 flex items-center justify-end gap-1.5">
-                <span className={message.from === "user" ? "text-[9px] text-white/70 font-semibold" : "text-[9px] text-slate-500 font-semibold"}>
-                  {message.time}
-                </span>
-                {message.from === "user" && (
-                  <MessageStatusIcon status={message.status} />
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Start a New Conversation</h2>
+          <p className="text-sm text-banking-muted mb-6 text-center">Select a category for your support request</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 w-full max-w-lg">
+            {["KYC", "Withdrawal", "Deposit", "Account", "Other"].map((category) => (
+              <button
+                key={category}
+                onClick={() => setSelectedCategory(category)}
+                className={cn(
+                  "p-4 rounded-xl border-2 text-center transition-all",
+                  selectedCategory === category
+                    ? "border-banking-blue bg-blue-50 text-banking-blue"
+                    : "border-gray-200 bg-white text-gray-700 hover:border-banking-blue hover:bg-blue-50"
                 )}
-              </div>
-            </div>
+              >
+                <span className="font-semibold">{category}</span>
+              </button>
+            ))}
           </div>
-        ))}
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Compose Area */}
-      <div className="flex items-center gap-2 border-t border-banking-border p-3">
-        <button className="grid h-10 w-10 place-items-center rounded-md text-banking-muted hover:bg-banking-offWhite">
-          <Paperclip className="h-5 w-5" />
-        </button>
-        <input
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" && !event.shiftKey) {
-              event.preventDefault();
-              sendMessage();
-            }
-          }}
-          className="h-10 flex-1 rounded-md border border-transparent px-3 outline-none focus:border-banking-border text-sm"
-          placeholder={thread?.status === "Resolved" ? "Type to reopen conversation..." : "Write a message"}
-          disabled={sending}
-        />
-        <button
-          onClick={sendMessage}
-          disabled={!draft.trim() || sending}
-          className="grid h-10 w-10 place-items-center rounded-md bg-banking-blue text-white disabled:opacity-50"
-        >
-          {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
-        </button>
-      </div>
-      {!thread?.is_ticket ? (
-        <button 
-          onClick={() => setShowConvertModal(true)}
-          className="flex items-center gap-2 border-t border-banking-border bg-white px-4 py-3 text-sm text-banking-blue font-medium hover:bg-banking-offWhite transition-colors text-left"
-        >
-          <MessageSquare className="h-4 w-4" />
-          This chat can be converted into a support ticket.
-        </button>
-      ) : (
-        <div className="flex items-center gap-2 border-t border-banking-border bg-banking-offWhite px-4 py-3 text-sm text-banking-muted font-medium">
-          <CheckCircle2 className="h-4 w-4 text-green-500" />
-          Converted to Ticket ({thread.ticket_id})
+          <button
+            onClick={handleStartConversation}
+            disabled={!selectedCategory}
+            className="mt-6 px-8 py-3 rounded-xl bg-banking-blue text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Start Chat
+          </button>
         </div>
       )}
 
-      {/* Convert to Ticket Modal */}
-      {showConvertModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-xl shadow-lg w-full max-w-sm overflow-hidden">
-            <div className="p-5 border-b border-gray-100">
-              <h3 className="font-bold text-gray-900 text-lg">Convert to Ticket</h3>
-              <p className="text-xs text-gray-500 mt-1">Select a category for your ticket.</p>
-            </div>
-            <div className="p-5 space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-gray-700">Category</label>
-                <select 
-                  value={convertCategory} 
-                  onChange={(e) => setConvertCategory(e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg p-2.5 text-sm outline-none focus:border-banking-blue"
-                >
-                  <option value="KYC">KYC</option>
-                  <option value="Withdrawal">Withdrawal</option>
-                  <option value="Deposit">Deposit</option>
-                  <option value="Account">Account</option>
-                  <option value="Other">Other</option>
-                </select>
+      {!showCategorySelection && (
+        <>
+          {/* Header */}
+          <div className="flex items-center justify-between border-b border-banking-border p-4">
+            <div className="flex items-center gap-3">
+              <div className="grid h-11 w-11 place-items-center rounded-full bg-emerald-50 text-emerald-700">
+                <UserRoundCheck className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="font-semibold">Support desk</h2>
+                <p className="text-sm text-banking-muted">Average response: under 5 minutes</p>
               </div>
             </div>
-            <div className="flex items-center gap-3 p-4 bg-gray-50">
-              <button 
-                onClick={() => setShowConvertModal(false)}
-                className="flex-1 py-2 text-sm font-semibold text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-100"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={handleConvertToTicket}
-                disabled={converting}
-                className="flex-1 py-2 text-sm font-semibold text-white bg-banking-blue rounded-lg disabled:opacity-50"
-              >
-                {converting ? "Converting..." : "Confirm"}
-              </button>
-            </div>
+            <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+              thread?.status === "Resolved" ? "bg-gray-150 text-gray-700" :
+              thread?.status === "Waiting" ? "bg-amber-50 text-amber-700" :
+              "bg-emerald-50 text-emerald-700"
+            }`}>
+              {thread?.status || "Online"}
+            </span>
           </div>
-        </div>
+
+          {/* Messages Area */}
+          <div className="max-h-[420px] min-h-[300px] space-y-4 overflow-y-auto bg-banking-offWhite p-4">
+            {messages.length === 0 && (
+              <div className="text-center py-12 text-sm text-banking-muted">
+                No messages yet. Send a message to start chatting with support!
+              </div>
+            )}
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={message.from === "user" ? "flex justify-end" : "flex justify-start"}
+              >
+                <div
+                  className={
+                    message.from === "user"
+                      ? "max-w-[70%] rounded-2xl rounded-br-none bg-banking-blue px-3.5 py-2 text-xs font-semibold leading-relaxed text-white shadow-sm"
+                      : "max-w-[70%] rounded-2xl rounded-bl-none border border-slate-200 bg-slate-100 px-3.5 py-2 text-xs font-semibold leading-relaxed text-slate-900 shadow-sm"
+                  }
+                  style={message.from === "user" ? { background: "linear-gradient(135deg, #0A3D91 0%, #1650AB 100%)" } : {}}
+                >
+                  <p className="break-words">{message.text}</p>
+                  <div className="mt-1.5 flex items-center justify-end gap-1.5">
+                    <span className={message.from === "user" ? "text-[9px] text-white/70 font-semibold" : "text-[9px] text-slate-500 font-semibold"}>
+                      {message.time}
+                    </span>
+                    {message.from === "user" && (
+                      <MessageStatusIcon status={message.status} />
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Compose Area */}
+          <div className="flex items-center gap-2 border-t border-banking-border p-3">
+            <button className="grid h-10 w-10 place-items-center rounded-md text-banking-muted hover:bg-banking-offWhite">
+              <Paperclip className="h-5 w-5" />
+            </button>
+            <input
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && !event.shiftKey) {
+                  event.preventDefault();
+                  sendMessage();
+                }
+              }}
+              className="h-10 flex-1 rounded-md border border-transparent px-3 outline-none focus:border-banking-border text-sm"
+              placeholder={thread?.status === "Resolved" ? "Type to reopen conversation..." : "Write a message"}
+              disabled={sending}
+            />
+            <button
+              onClick={sendMessage}
+              disabled={!draft.trim() || sending}
+              className="grid h-10 w-10 place-items-center rounded-md bg-banking-blue text-white disabled:opacity-50"
+            >
+              {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
+            </button>
+          </div>
+          {!thread?.is_ticket ? (
+            <button 
+              onClick={() => setShowConvertModal(true)}
+              className="flex items-center gap-2 border-t border-banking-border bg-white px-4 py-3 text-sm text-banking-blue font-medium hover:bg-banking-offWhite transition-colors text-left"
+            >
+              <MessageSquare className="h-4 w-4" />
+              This chat can be converted into a support ticket.
+            </button>
+          ) : (
+            <div className="flex items-center gap-2 border-t border-banking-border bg-banking-offWhite px-4 py-3 text-sm text-banking-muted font-medium">
+              <CheckCircle2 className="h-4 w-4 text-green-500" />
+              Converted to Ticket ({thread.ticket_id})
+            </div>
+          )}
+
+          {/* Convert to Ticket Modal */}
+          {showConvertModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+              <div className="bg-white rounded-xl shadow-lg w-full max-w-sm overflow-hidden">
+                <div className="p-5 border-b border-gray-100">
+                  <h3 className="font-bold text-gray-900 text-lg">Convert to Ticket</h3>
+                  <p className="text-xs text-gray-500 mt-1">Select a category for your ticket.</p>
+                </div>
+                <div className="p-5 space-y-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-gray-700">Category</label>
+                    <select 
+                      value={convertCategory} 
+                      onChange={(e) => setConvertCategory(e.target.value)}
+                      className="w-full border border-gray-200 rounded-lg p-2.5 text-sm outline-none focus:border-banking-blue"
+                    >
+                      <option value="KYC">KYC</option>
+                      <option value="Withdrawal">Withdrawal</option>
+                      <option value="Deposit">Deposit</option>
+                      <option value="Account">Account</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-4 bg-gray-50">
+                  <button 
+                    onClick={() => setShowConvertModal(false)}
+                    className="flex-1 py-2 text-sm font-semibold text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-100"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={handleConvertToTicket}
+                    disabled={converting}
+                    className="flex-1 py-2 text-sm font-semibold text-white bg-banking-blue rounded-lg disabled:opacity-50"
+                  >
+                    {converting ? "Converting..." : "Confirm"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
