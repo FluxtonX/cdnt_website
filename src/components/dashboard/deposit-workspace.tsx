@@ -165,7 +165,7 @@ export function DepositWorkspace({ initialAsset }: { initialAsset?: string }) {
                   onClick={() => handleAssetChange("fiat")}
                   className={cn(
                     "flex min-w-[170px] items-center gap-3 rounded-2xl border p-4 text-left transition-all lg:min-w-0",
-                    asset === "fiat"
+                    (asset as DepositAsset | "fiat") === "fiat"
                       ? "border-[#113285] bg-[#EEF4FF] shadow-sm"
                       : "border-gray-100 bg-[#F8FAFC] hover:border-gray-200 hover:bg-white",
                   )}
