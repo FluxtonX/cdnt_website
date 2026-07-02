@@ -96,10 +96,23 @@ export function NotificationCenter() {
     }
   }, []);
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     const newDeleted = [...deletedIds, id];
     setDeletedIds(newDeleted);
     localStorage.setItem("deleted_notifications", JSON.stringify(newDeleted));
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      await supabase
+        .from("notifications")
+        .delete()
+        .eq("id", id)
+        .eq("user_id", user.id);
+    } catch (e) {
+      console.error("Error deleting notification:", e);
+    }
   };
 
   const visibleNotifications = useMemo(() => {
