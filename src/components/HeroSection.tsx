@@ -92,7 +92,7 @@ export default function HeroSection() {
             transition={{ duration: 0.5, delay: 0.9 }}
           >
             <div>
-              <p className="text-[22px] font-bold text-gray-900 leading-none">100k+</p>
+              <p className="text-[22px] font-bold text-gray-900 leading-none">2M+</p>
               <p className="text-[13px] text-gray-500 mt-1">Canadians onboard</p>
             </div>
             <div>

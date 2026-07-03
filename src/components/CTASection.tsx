@@ -29,7 +29,7 @@ export default function CTASection() {
             </h2>
             
             <p className="text-lg md:text-xl text-gray-300 leading-relaxed mb-10 max-w-2xl mx-auto">
-              Join 100,000+ Canadians saving, banking and investing — with the 
+              Join 2M+ Canadians saving, banking and investing — with the 
               confidence of regulation and the speed of crypto.
             </p>
             

@@ -105,7 +105,7 @@ export default function Footer() {
             © 2026 Canadian National Trust Bank, Inc. All rights reserved.
           </p>
           <p className="text-[#94a3b8] text-xs leading-relaxed lg:text-right max-w-3xl">
-            Canadian National Trust Bank is a federally regulated Canadian financial institution. FINTRAC #M24-0042001. Deposits insured up to $100,000 CAD under CDIC-style coverage. Crypto assets are not insured by the CDIC and may lose value.
+           Canadian National Trust Bank is a federally regulated Canadian financial institution. FINTRAC #M24-0042001.  
           </p>
         </div>
 

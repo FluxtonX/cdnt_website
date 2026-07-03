@@ -429,6 +429,15 @@ export function useClientWallets() {
       // Get all currencies from user wallets plus defaults
       const allCurrencies = Array.from(new Set([...defaultCurrencies, ...Array.from(userWalletCurrencies)]));
       
+      // Calculate total portfolio value in CAD
+      let totalPortfolioValue = 0;
+      (userWallets || []).forEach((w: any) => {
+        const currency = w.currency?.toUpperCase();
+        const balance = Number(w.balance || 0);
+        const rate = cadRates[currency] || cadRates.USDT || 1.36;
+        totalPortfolioValue += balance * rate;
+      });
+      
       allCurrencies.forEach((currency) => {
         const userWallet = (userWallets || []).find((w: any) => w.currency?.toUpperCase() === currency);
         const balance = Number(userWallet?.balance || 0);
@@ -465,6 +474,23 @@ export function useClientWallets() {
           image: getCoinBySymbol(`${currency}USDT`)?.logoUrl,
           activities: allActivities.filter((act) => act.currency === currency).slice(0, 5),
         });
+      });
+
+      // Add CAD wallet with total portfolio value
+      mappedWallets.push({
+        id: "cad",
+        name: "CAD",
+        symbol: "CAD",
+        balance: totalPortfolioValue.toFixed(2),
+        rawBalance: totalPortfolioValue,
+        value: `$${totalPortfolioValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        change: "Fiat",
+        changeType: "neutral",
+        network: "Canadian Dollar",
+        address: "",
+        addresses: [],
+        image: undefined,
+        activities: [],
       });
 
       return mappedWallets;

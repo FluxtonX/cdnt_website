@@ -90,10 +90,18 @@ export default function WalletsPage() {
                     }`}
                 >
                   <div className="flex justify-between items-start mb-6">
-                    <CoinLogo src={wallet.image} symbol={wallet.symbol} className="h-10 w-10 p-1.5" />
+                    {wallet.symbol === "CAD" ? (
+                      <div className="w-10 h-10 rounded-full bg-[#DCFCE7] flex items-center justify-center">
+                        <span className="text-[#16A34A] font-bold text-lg">$</span>
+                      </div>
+                    ) : (
+                      <CoinLogo src={wallet.image} symbol={wallet.symbol} className="h-10 w-10 p-1.5" />
+                    )}
                     <div className={`px-2.5 py-1 rounded-full text-xs font-semibold ${wallet.changeType === "positive"
                         ? "bg-[#DCFCE7] text-[#16A34A]"
-                        : "bg-gray-100 text-gray-500"
+                        : wallet.change === "Fiat"
+                          ? "bg-[#E0E7FF] text-primary-blue"
+                          : "bg-gray-100 text-gray-500"
                       }`}>
                       {wallet.change}
                     </div>
@@ -110,93 +118,128 @@ export default function WalletsPage() {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
             <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-lg font-semibold text-gray-900">Wallet Address</h2>
-                <div className="px-3 py-1 bg-[#FFF9EE] text-[#E8A020] rounded-full text-xs font-medium">
-                  {selectedWallet?.network}
-                </div>
-              </div>
-
-              <div>
-                {/* Network tab switcher — shown when wallet has multiple networks (e.g. USDT TRC20/ERC20) */}
-                {selectedWallet?.addresses && selectedWallet.addresses.length > 1 && (
-                  <div className="flex gap-2 mb-4">
-                    {selectedWallet?.addresses.map((net, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => { setSelectedNetworkIndex(idx); setShowQr(false); setCopied(false); }}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${selectedNetworkIndex === idx
-                            ? "bg-primary-blue text-white border-primary-blue"
-                            : "bg-gray-50 text-gray-600 border-gray-200 hover:border-gray-300"
-                          }`}
-                      >
-                        {net.network}
-                      </button>
-                    ))}
+              {selectedWallet?.symbol === "CAD" ? (
+                // CAD-specific view
+                <>
+                  <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-lg font-semibold text-gray-900">CAD Wallet</h2>
+                    <div className="px-3 py-1 bg-[#E0E7FF] text-primary-blue rounded-full text-xs font-medium">
+                      Fiat
+                    </div>
                   </div>
-                )}
 
-                <p className="text-sm font-semibold text-gray-900 mb-2">Your Platform {selectedWallet?.name} Deposit Address</p>
-                <div className="flex gap-3">
-                  <input
-                    type="text"
-                    readOnly
-                    value={selectedWallet?.addresses[selectedNetworkIndex]?.address || selectedWallet?.address || ""}
-                    className="flex-1 bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-mono text-gray-600 focus:outline-none"
-                  />
-                  <button
-                    onClick={() => handleCopy(selectedWallet?.addresses[selectedNetworkIndex]?.address || selectedWallet?.address || "")}
-                    className="p-3 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-gray-600"
-                    title="Copy Address"
-                  >
-                    {copied ? <Check className="w-5 h-5 text-emerald-600" /> : <Copy className="w-5 h-5" />}
-                  </button>
-                  <button
-                    onClick={() => setShowQr(!showQr)}
-                    className={`p-3 border rounded-xl transition-colors ${showQr ? "bg-blue-50 border-primary-blue text-primary-blue" : "border-gray-200 hover:bg-gray-50 text-gray-600"}`}
-                    title="Show QR Code"
-                  >
-                    <QrCode className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
+                  <div className="bg-[#E0E7FF] rounded-xl p-6 border border-blue-100/50 mb-6">
+                    <div className="flex items-center gap-2 text-primary-blue font-semibold text-sm mb-3">
+                      <TriangleAlert className="w-4 h-4" />
+                      Withdrawal Only
+                    </div>
+                    <p className="text-sm text-gray-700 leading-relaxed">
+                      This wallet is only suitable for withdrawals. CAD deposits are not accepted on this platform due to Canadian regulations.
+                    </p>
+                  </div>
 
-              {showQr && (
-                <div className="mt-5 flex flex-col items-center justify-center p-4 border border-dashed border-gray-200 rounded-xl bg-gray-50/50">
-                  <QRCodeSVG value={selectedWallet?.addresses[selectedNetworkIndex]?.address || selectedWallet?.address || ""} size={160} />
-                  <p className="mt-3 text-xs text-gray-500 font-mono font-bold">{selectedWallet?.addresses[selectedNetworkIndex]?.address || selectedWallet?.address || ""}</p>
-                </div>
+                  <div className="mt-6">
+                    <Link
+                      href="/withdraw"
+                      className="w-full bg-primary-blue hover:bg-blue-800 text-white font-semibold rounded-xl py-3.5 flex items-center justify-center gap-2 transition-colors text-center"
+                    >
+                      <ArrowUpRight className="w-5 h-5" />
+                      Withdraw CAD
+                    </Link>
+                  </div>
+                </>
+              ) : (
+                // Crypto wallet view
+                <>
+                  <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-lg font-semibold text-gray-900">Wallet Address</h2>
+                    <div className="px-3 py-1 bg-[#FFF9EE] text-[#E8A020] rounded-full text-xs font-medium">
+                      {selectedWallet?.network}
+                    </div>
+                  </div>
+
+                  <div>
+                    {/* Network tab switcher — shown when wallet has multiple networks (e.g. USDT TRC20/ERC20) */}
+                    {selectedWallet?.addresses && selectedWallet.addresses.length > 1 && (
+                      <div className="flex gap-2 mb-4">
+                        {selectedWallet?.addresses.map((net, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => { setSelectedNetworkIndex(idx); setShowQr(false); setCopied(false); }}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${selectedNetworkIndex === idx
+                                ? "bg-primary-blue text-white border-primary-blue"
+                                : "bg-gray-50 text-gray-600 border-gray-200 hover:border-gray-300"
+                              }`}
+                          >
+                            {net.network}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    <p className="text-sm font-semibold text-gray-900 mb-2">Your Platform {selectedWallet?.name} Deposit Address</p>
+                    <div className="flex gap-3">
+                      <input
+                        type="text"
+                        readOnly
+                        value={selectedWallet?.addresses[selectedNetworkIndex]?.address || selectedWallet?.address || ""}
+                        className="flex-1 bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-mono text-gray-600 focus:outline-none"
+                      />
+                      <button
+                        onClick={() => handleCopy(selectedWallet?.addresses[selectedNetworkIndex]?.address || selectedWallet?.address || "")}
+                        className="p-3 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-gray-600"
+                        title="Copy Address"
+                      >
+                        {copied ? <Check className="w-5 h-5 text-emerald-600" /> : <Copy className="w-5 h-5" />}
+                      </button>
+                      <button
+                        onClick={() => setShowQr(!showQr)}
+                        className={`p-3 border rounded-xl transition-colors ${showQr ? "bg-blue-50 border-primary-blue text-primary-blue" : "border-gray-200 hover:bg-gray-50 text-gray-600"}`}
+                        title="Show QR Code"
+                      >
+                        <QrCode className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {showQr && (
+                    <div className="mt-5 flex flex-col items-center justify-center p-4 border border-dashed border-gray-200 rounded-xl bg-gray-50/50">
+                      <QRCodeSVG value={selectedWallet?.addresses[selectedNetworkIndex]?.address || selectedWallet?.address || ""} size={160} />
+                      <p className="mt-3 text-xs text-gray-500 font-mono font-bold">{selectedWallet?.addresses[selectedNetworkIndex]?.address || selectedWallet?.address || ""}</p>
+                    </div>
+                  )}
+
+                  <div className="mt-6 bg-[#FFF9EE] rounded-xl p-5 border border-orange-100/50">
+                    <div className="flex items-center gap-2 text-[#E8A020] font-semibold text-sm">
+                      <TriangleAlert className="w-4 h-4" />
+                      Important Instructions
+                    </div>
+                    <ul className="mt-3 space-y-2 text-sm text-gray-500 list-disc pl-5">
+                      <li>Only send {selectedWallet?.name} to this address</li>
+                      <li>Minimum deposit: {selectedWallet?.symbol === "BTC" ? "0.0005" : selectedWallet?.symbol === "ETH" ? "0.01" : "5.0"} {selectedWallet?.symbol}</li>
+                      <li>Requires 3 network confirmations</li>
+                      <li>Submit transaction hash on deposit request page after sending</li>
+                    </ul>
+                  </div>
+
+                  <div className="mt-6 flex gap-4">
+                    <Link
+                      href={`/deposit?asset=${selectedWallet?.symbol}`}
+                      className="flex-1 bg-primary-blue hover:bg-blue-800 text-white font-semibold rounded-xl py-3.5 flex items-center justify-center gap-2 transition-colors text-center"
+                    >
+                      <ArrowDownLeft className="w-5 h-5" />
+                      Deposit {selectedWallet?.symbol}
+                    </Link>
+                    <Link
+                      href="/withdraw"
+                      className="flex-1 bg-white border border-gray-200 hover:bg-gray-50 text-gray-900 font-semibold rounded-xl py-3.5 flex items-center justify-center gap-2 transition-colors text-center"
+                    >
+                      <ArrowUpRight className="w-5 h-5" />
+                      Withdraw {selectedWallet?.symbol}
+                    </Link>
+                  </div>
+                </>
               )}
-
-              <div className="mt-6 bg-[#FFF9EE] rounded-xl p-5 border border-orange-100/50">
-                <div className="flex items-center gap-2 text-[#E8A020] font-semibold text-sm">
-                  <TriangleAlert className="w-4 h-4" />
-                  Important Instructions
-                </div>
-                <ul className="mt-3 space-y-2 text-sm text-gray-500 list-disc pl-5">
-                  <li>Only send {selectedWallet?.name} to this address</li>
-                  <li>Minimum deposit: {selectedWallet?.symbol === "BTC" ? "0.0005" : selectedWallet?.symbol === "ETH" ? "0.01" : "5.0"} {selectedWallet?.symbol}</li>
-                  <li>Requires 3 network confirmations</li>
-                  <li>Submit transaction hash on deposit request page after sending</li>
-                </ul>
-              </div>
-
-              <div className="mt-6 flex gap-4">
-                <Link
-                  href={`/deposit?asset=${selectedWallet?.symbol}`}
-                  className="flex-1 bg-primary-blue hover:bg-blue-800 text-white font-semibold rounded-xl py-3.5 flex items-center justify-center gap-2 transition-colors text-center"
-                >
-                  <ArrowDownLeft className="w-5 h-5" />
-                  Deposit {selectedWallet?.symbol}
-                </Link>
-                <Link
-                  href="/withdraw"
-                  className="flex-1 bg-white border border-gray-200 hover:bg-gray-50 text-gray-900 font-semibold rounded-xl py-3.5 flex items-center justify-center gap-2 transition-colors text-center"
-                >
-                  <ArrowUpRight className="w-5 h-5" />
-                  Withdraw {selectedWallet?.symbol}
-                </Link>
-              </div>
             </div>
 
             <div className="lg:col-span-1 bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">

@@ -59,9 +59,12 @@ export default function ExchangePage() {
   const [orderPanelOpen, setOrderPanelOpen] = React.useState(true);
   const [side, setSide] = React.useState<"buy" | "sell">("buy");
   const [amount, setAmount] = React.useState("");
+  const [baseCurrency, setBaseCurrency] = React.useState<"USDT" | "CAD" | "USD">("USDT");
 
   const [balances, setBalances] = React.useState<Record<string, number>>({
     USDT: 0,
+    CAD: 0,
+    USD: 0,
     BTC: 0,
     ETH: 0,
   });
@@ -74,6 +77,14 @@ export default function ExchangePage() {
     BTC: 0,
     ETH: 0,
     USDT: 1,
+    CAD: 0,
+    USD: 1,
+  });
+
+  // Exchange rates for fiat conversions
+  const [exchangeRates, setExchangeRates] = React.useState<Record<string, number>>({
+    CAD_TO_USDT: 1.36,
+    USD_TO_USDT: 1,
   });
 
   const loadBalances = React.useCallback(async () => {
@@ -151,16 +162,26 @@ export default function ExchangePage() {
   const coinSymbol = selectedCoin.baseAsset;
   const assetBalance = balances[coinSymbol] ?? 0;
 
-  const estimatedCrypto = side === "buy" && amountValue > 0 && livePrice > 0 ? amountValue / livePrice : 0;
+  // Convert base currency to USDT for calculations
+  const baseToUsdtRate = baseCurrency === "CAD" ? exchangeRates.CAD_TO_USDT : baseCurrency === "USD" ? exchangeRates.USD_TO_USDT : 1;
+  const amountInUsdt = amountValue * baseToUsdtRate;
+
+  const estimatedCrypto = side === "buy" && amountInUsdt > 0 && livePrice > 0 ? amountInUsdt / livePrice : 0;
   const estimatedUsd = side === "sell" && amountValue > 0 ? amountValue * livePrice : 0;
-  const fee = side === "buy" ? amountValue * 0.005 : estimatedUsd * 0.004;
-  const total = side === "buy" ? amountValue + fee : Math.max(0, estimatedUsd - fee);
+  const fee = side === "buy" ? amountInUsdt * 0.005 : estimatedUsd * 0.004;
+  const totalInUsdt = side === "buy" ? amountInUsdt + fee : Math.max(0, estimatedUsd - fee);
+  const total = totalInUsdt / baseToUsdtRate;
 
   // Dynamically calculate portfolio total in USD
   const totalPortfolioValue = (balances["USDT"] || 0) + ((balances["BTC"] || 0) * (coinSymbol === "BTC" ? livePrice : prices["BTC"])) + ((balances["ETH"] || 0) * (coinSymbol === "ETH" ? livePrice : prices["ETH"]));
 
   function switchSide(nextSide: "buy" | "sell") {
     setSide(nextSide);
+    setAmount("");
+  }
+
+  function switchBaseCurrency(currency: "USDT" | "CAD" | "USD") {
+    setBaseCurrency(currency);
     setAmount("");
   }
 
@@ -174,8 +195,8 @@ export default function ExchangePage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Please log in first.");
 
-      const usdVal = side === "buy" ? Number(amount) : Number(amount) * livePrice;
-      const cryptoVal = side === "buy" ? Number(amount) / livePrice : Number(amount);
+      const usdVal = side === "buy" ? amountInUsdt : Number(amount) * livePrice;
+      const cryptoVal = side === "buy" ? amountInUsdt / livePrice : Number(amount);
 
       // Call transaction-safe RPC function
       const { error } = await supabase.rpc("execute_trade", {
@@ -393,6 +414,19 @@ export default function ExchangePage() {
                 </button>
               </div>
 
+              <div className="mt-3 grid grid-cols-3 rounded-xl bg-slate-50 p-1">
+                {(["USDT", "CAD", "USD"] as const).map((currency) => (
+                  <button
+                    key={currency}
+                    type="button"
+                    onClick={() => switchBaseCurrency(currency)}
+                    className={cn("rounded-lg py-2 text-xs font-black transition-colors", baseCurrency === currency ? "bg-white text-[#113285] shadow-sm" : "text-slate-500")}
+                  >
+                    {currency}
+                  </button>
+                ))}
+              </div>
+
               <div className="mt-4">
                 <p className="text-xs font-bold uppercase tracking-widest text-[#718096]">
                   {side === "buy" ? "Buy mode" : "Sell mode"}
@@ -409,14 +443,14 @@ export default function ExchangePage() {
                 </div>
                 <p className="mt-2 text-lg font-black text-[#113285]">
                   {side === "buy" 
-                    ? loadingBalances ? "--" : formatCurrency(balances["USDT"] || 0)
+                    ? loadingBalances ? "--" : `${balances[baseCurrency]?.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || "0.00"} ${baseCurrency}`
                     : loadingBalances ? "--" : `${assetBalance.toLocaleString("en-US", { maximumFractionDigits: 8 })} ${selectedCoin.baseAsset}`
                   }
                 </p>
               </div>
 
               <label className="mt-5 block text-sm font-black text-[#0A0F2C]">
-                {side === "buy" ? "Amount in USDT" : `Amount in ${selectedCoin.baseAsset}`}
+                {side === "buy" ? `Amount in ${baseCurrency}` : `Amount in ${selectedCoin.baseAsset}`}
               </label>
               <input
                 value={amount}
@@ -449,12 +483,12 @@ export default function ExchangePage() {
                     }}
                     className="rounded-lg border border-slate-200 px-2 py-2 text-xs font-bold text-[#0A0F2C] hover:border-[#113285]"
                   >
-                    {side === "buy" ? `$${value}` : `${value}%`}
+                    {side === "buy" ? `${value}` : `${value}%`}
                   </button>
                 ))}
                 <button
                   type="button"
-                  onClick={() => setAmount(side === "buy" ? String(balances["USDT"] || 0) : assetBalance.toFixed(selectedCoin.baseAsset === "BTC" ? 8 : 4))}
+                  onClick={() => setAmount(side === "buy" ? String(balances[baseCurrency] || 0) : assetBalance.toFixed(selectedCoin.baseAsset === "BTC" ? 8 : 4))}
                   className="rounded-lg border border-slate-200 px-2 py-2 text-xs font-bold text-[#0A0F2C] hover:border-[#113285]"
                 >
                   Max
@@ -468,11 +502,11 @@ export default function ExchangePage() {
                 </div>
                 <div className="flex justify-between gap-3">
                   <span className="font-semibold text-[#718096]">Fee ({side === "buy" ? "0.50" : "0.40"}%)</span>
-                  <span className="font-black text-[#0A0F2C]">{formatCurrency(fee)}</span>
+                  <span className="font-black text-[#0A0F2C]">{side === "buy" ? `${fee.toFixed(2)} ${baseCurrency}` : formatCurrency(fee)}</span>
                 </div>
                 <div className="flex justify-between gap-3 border-t border-slate-200 pt-3">
                   <span className="font-black text-[#0A0F2C]">{side === "buy" ? "Total Cost" : "Net Proceeds"}</span>
-                  <span className="font-black text-[#0A0F2C]">{formatCurrency(total)}</span>
+                  <span className="font-black text-[#0A0F2C]">{side === "buy" ? `${total.toFixed(2)} ${baseCurrency}` : formatCurrency(total)}</span>
                 </div>
               </div>
 
