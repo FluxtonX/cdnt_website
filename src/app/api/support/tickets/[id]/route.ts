@@ -113,3 +113,56 @@ export async function POST(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+
+export async function DELETE(
+  request: Request,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { id: threadId } = await context.params;
+
+    // Verify the thread belongs to this user
+    const { data: thread, error: threadError } = await supabase
+      .from("support_threads")
+      .select("id")
+      .eq("id", threadId)
+      .eq("user_id", user.id)
+      .single();
+
+    if (threadError) throw threadError;
+    if (!thread) {
+      return NextResponse.json({ error: "Ticket not found" }, { status: 404 });
+    }
+
+    // Delete messages first
+    const { error: deleteMessagesError } = await supabase
+      .from("support_messages")
+      .delete()
+      .eq("thread_id", threadId);
+    
+    if (deleteMessagesError) throw deleteMessagesError;
+
+    // Delete the thread
+    const { error: deleteThreadError } = await supabase
+      .from("support_threads")
+      .delete()
+      .eq("id", threadId);
+
+    if (deleteThreadError) throw deleteThreadError;
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error("Error deleting support ticket:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}

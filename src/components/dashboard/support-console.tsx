@@ -51,11 +51,14 @@ export function SupportConsole() {
         }
         setUser(authUser);
 
-        // Fetch existing thread for this user
+        // Fetch the latest active or waiting thread for this user
         const { data: threadData, error: threadErr } = await supabase
           .from("support_threads")
           .select("*")
           .eq("user_id", authUser.id)
+          .in("status", ["Active", "Waiting"])
+          .order("created_at", { ascending: false })
+          .limit(1)
           .maybeSingle();
 
         if (threadErr) {
@@ -205,12 +208,20 @@ export function SupportConsole() {
             );
           }
 
-          // Notify if ticket was just resolved
-          if (payload.old && (payload.old as any).status !== "Resolved" && updatedThread.status === "Resolved") {
-            notify({
-              title: "Ticket Resolved",
-              description: "This support conversation has been marked as resolved.",
-            });
+          // Notify if ticket was just resolved or closed
+          if (payload.old) {
+            const oldStatus = (payload.old as any).status;
+            if (oldStatus !== "Resolved" && updatedThread.status === "Resolved") {
+              notify({
+                title: "Ticket Resolved",
+                description: "This support conversation has been marked as resolved.",
+              });
+            } else if (oldStatus !== "Closed" && updatedThread.status === "Closed") {
+              notify({
+                title: "Ticket Closed",
+                description: "This support conversation has been closed by an administrator.",
+              });
+            }
           }
         }
       )
@@ -439,45 +450,61 @@ export function SupportConsole() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Compose Area */}
-      <div className="flex items-center gap-2 border-t border-banking-border p-3">
-        <button className="grid h-10 w-10 place-items-center rounded-md text-banking-muted hover:bg-banking-offWhite">
-          <Paperclip className="h-5 w-5" />
-        </button>
-        <input
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" && !event.shiftKey) {
-              event.preventDefault();
-              sendMessage();
-            }
-          }}
-          className="h-10 flex-1 rounded-md border border-transparent px-3 outline-none focus:border-banking-border text-sm"
-          placeholder={thread?.status === "Resolved" ? "Type to reopen conversation..." : "Write a message"}
-          disabled={sending}
-        />
-        <button
-          onClick={sendMessage}
-          disabled={!draft.trim() || sending}
-          className="grid h-10 w-10 place-items-center rounded-md bg-banking-blue text-white disabled:opacity-50"
-        >
-          {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
-        </button>
-      </div>
-      {!thread?.is_ticket ? (
-        <button 
-          onClick={() => setShowConvertModal(true)}
-          className="flex items-center gap-2 border-t border-banking-border bg-white px-4 py-3 text-sm text-banking-blue font-medium hover:bg-banking-offWhite transition-colors text-left"
-        >
-          <MessageSquare className="h-4 w-4" />
-          This chat can be converted into a support ticket.
-        </button>
-      ) : (
-        <div className="flex items-center gap-2 border-t border-banking-border bg-banking-offWhite px-4 py-3 text-sm text-banking-muted font-medium">
-          <CheckCircle2 className="h-4 w-4 text-green-500" />
-          Converted to Ticket ({thread.ticket_id})
+      {/* Compose Area or Closed Status */}
+      {thread?.status === "Resolved" || thread?.status === "Closed" ? (
+        <div className="flex flex-col items-center justify-center p-6 border-t border-banking-border bg-white text-center">
+          <p className="text-sm font-semibold text-banking-muted mb-3">
+            This conversation has been {thread.status.toLowerCase()}.
+          </p>
+          <button 
+            onClick={() => { setThread(null); setMessages([]); }}
+            className="rounded-md bg-banking-blue px-5 py-2 text-sm font-semibold text-white shadow-sm hover:opacity-90"
+          >
+            Start New Conversation
+          </button>
         </div>
+      ) : (
+        <>
+          <div className="flex items-center gap-2 border-t border-banking-border p-3">
+            <button className="grid h-10 w-10 place-items-center rounded-md text-banking-muted hover:bg-banking-offWhite">
+              <Paperclip className="h-5 w-5" />
+            </button>
+            <input
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && !event.shiftKey) {
+                  event.preventDefault();
+                  sendMessage();
+                }
+              }}
+              className="h-10 flex-1 rounded-md border border-transparent px-3 outline-none focus:border-banking-border text-sm"
+              placeholder="Write a message"
+              disabled={sending}
+            />
+            <button
+              onClick={sendMessage}
+              disabled={!draft.trim() || sending}
+              className="grid h-10 w-10 place-items-center rounded-md bg-banking-blue text-white disabled:opacity-50"
+            >
+              {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
+            </button>
+          </div>
+          {!thread?.is_ticket ? (
+            <button 
+              onClick={() => setShowConvertModal(true)}
+              className="flex items-center gap-2 border-t border-banking-border bg-white px-4 py-3 text-sm text-banking-blue font-medium hover:bg-banking-offWhite transition-colors text-left"
+            >
+              <MessageSquare className="h-4 w-4" />
+              This chat can be converted into a support ticket.
+            </button>
+          ) : (
+            <div className="flex items-center gap-2 border-t border-banking-border bg-banking-offWhite px-4 py-3 text-sm text-banking-muted font-medium">
+              <CheckCircle2 className="h-4 w-4 text-green-500" />
+              Converted to Ticket ({thread.ticket_id})
+            </div>
+          )}
+        </>
       )}
 
       {/* Convert to Ticket Modal */}

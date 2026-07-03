@@ -8,9 +8,24 @@ import { SupportConsole } from "@/components/dashboard/support-console";
 
 import { StatusBadge } from "@/components/ui/status-badge";
 
+import { createClient } from "@/lib/supabase/server";
+import { DeleteTicketButton } from "@/components/dashboard/delete-ticket-button";
 
+export default async function SupportPage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
-export default function SupportPage() {
+  let tickets: any[] = [];
+  if (user) {
+    const { data } = await supabase
+      .from("support_threads")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("is_ticket", true)
+      .order("created_at", { ascending: false });
+    
+    if (data) tickets = data;
+  }
 
   return (
 
@@ -57,13 +72,24 @@ export default function SupportPage() {
         <SupportConsole />
 
         <Panel title="Latest tickets">
-
           <div className="space-y-3">
-
-            <p className="text-sm text-banking-muted text-center py-4">View your ticket history in the Tickets page</p>
-
+            {tickets.length === 0 ? (
+              <p className="text-sm text-banking-muted text-center py-4">No tickets yet.</p>
+            ) : (
+              tickets.map((t) => (
+                <div key={t.id} className="flex justify-between items-center p-3 border border-banking-border rounded-lg bg-banking-offWhite/50 hover:bg-banking-offWhite transition-colors">
+                  <div>
+                    <p className="font-semibold text-sm">{t.ticket_id}</p>
+                    <p className="text-xs text-banking-muted mt-1">{t.category} • {new Date(t.created_at).toLocaleDateString()}</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <StatusBadge status={t.status === "Waiting" ? "pending" : t.status === "Closed" ? "failed" : t.status === "Resolved" ? "completed" : "pending"} />
+                    <DeleteTicketButton id={t.id} />
+                  </div>
+                </div>
+              ))
+            )}
           </div>
-
         </Panel>
 
       </div>
