@@ -345,7 +345,7 @@ export function useClientWallets() {
         withdrawalsRes,
       ] = await Promise.all([
         supabase.from("user_wallets").select("*").eq("user_id", user.id),
-        supabase.from("platform_wallets").select("*").eq("type", "Hot"),
+        supabase.from("platform_wallets").select("crypto, network, address"),
         supabase.from("wallet_ledger").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
         supabase.from("deposit_requests").select("*").eq("user_id", user.id).eq("status", "pending").order("created_at", { ascending: false }),
         supabase.from("withdrawal_requests").select("*").eq("user_id", user.id).eq("status", "pending").order("created_at", { ascending: false }),
@@ -421,11 +421,26 @@ export function useClientWallets() {
 
       // Dynamically create wallet entries for each currency
       const mappedWallets: MappedWallet[] = [];
-      (userWallets || []).forEach((w: any) => {
-        const currency = w.currency?.toUpperCase();
-        const balance = Number(w.balance || 0);
+      const userWalletCurrencies = new Set((userWallets || []).map((w: any) => w.currency?.toUpperCase()));
+
+      // Default currencies to show even with 0 balance
+      const defaultCurrencies = ["BTC", "ETH", "USDT"];
+      
+      // Get all currencies from user wallets plus defaults
+      const allCurrencies = Array.from(new Set([...defaultCurrencies, ...Array.from(userWalletCurrencies)]));
+      
+      allCurrencies.forEach((currency) => {
+        const userWallet = (userWallets || []).find((w: any) => w.currency?.toUpperCase() === currency);
+        const balance = Number(userWallet?.balance || 0);
+
+        // Only show wallets for default currencies or if balance > 0
+        if (!defaultCurrencies.includes(currency) && balance === 0) {
+          return;
+        }
+
         const rate = cadRates[currency] || cadRates.USDT || 1.36;
         const decimals = currency === "USDT" || currency === "USDC" ? 2 : 8;
+        
         // Build addresses: prefer DB entries, fall back to hardcoded
         const fallbackAddresses = FALLBACK_ADDRESSES[currency] || [];
         const dbAddress = platformAddressMap[currency];
@@ -452,7 +467,7 @@ export function useClientWallets() {
         });
       });
 
-      return mappedWallets.length > 0 ? mappedWallets : [];
+      return mappedWallets;
     },
   });
 }

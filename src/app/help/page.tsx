@@ -181,16 +181,16 @@ export default function HelpPage() {
               </div>
 
               {/* Phone Support */}
-              <div className="bg-white rounded-3xl p-10 text-center shadow-[0_4px_20px_rgb(0,0,0,0.02)] border border-gray-100">
-                <div className="h-16 w-16 rounded-full bg-[#1A3FBB] flex items-center justify-center mx-auto mb-6 shadow-md shadow-blue-500/20">
+              <div className="bg-white rounded-3xl p-10 text-center shadow-[0_4px_20px_rgb(0,0,0,0.02)] border border-gray-100 opacity-60">
+                <div className="h-16 w-16 rounded-full bg-gray-400 flex items-center justify-center mx-auto mb-6 shadow-md">
                   <Phone className="h-7 w-7 text-white" strokeWidth={2} />
                 </div>
                 <h3 className="text-xl font-bold text-[#0A0F2C] mb-3">Phone Support</h3>
                 <p className="text-[#6B7280] text-sm mb-8 leading-relaxed h-10">
-                  Call us Monday-Friday, 9am-5pm EST
+                  Available for premium customers only
                 </p>
-                <button className="w-full bg-white hover:bg-gray-50 text-[#0A0F2C] border border-gray-200 font-bold py-3.5 px-6 rounded-xl transition-colors duration-300">
-                  1-800-555-1234
+                <button className="w-full bg-gray-100 text-gray-400 font-bold py-3.5 px-6 rounded-xl cursor-not-allowed" disabled>
+                  Premium Feature
                 </button>
               </div>
             </div>

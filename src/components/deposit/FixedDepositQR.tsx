@@ -6,7 +6,15 @@ import { AlertTriangle, ClipboardCheck, Copy, QrCode } from "lucide-react";
 import { CoinLogo } from "@/components/market/CoinLogo";
 import type { DepositAddressConfig } from "@/config/depositAddresses";
 
-export function FixedDepositQR({ config }: { config?: DepositAddressConfig | null }) {
+interface FixedDepositQRProps {
+  config?: DepositAddressConfig | null;
+  /** When provided, overrides config.address / config.qrValue with a live DB address */
+  liveAddress?: string | null;
+  /** When true, shows an error that the address is unavailable */
+  addressError?: boolean;
+}
+
+export function FixedDepositQR({ config, liveAddress, addressError }: FixedDepositQRProps) {
   const [copied, setCopied] = useState(false);
 
   if (!config) {
@@ -17,8 +25,24 @@ export function FixedDepositQR({ config }: { config?: DepositAddressConfig | nul
     );
   }
 
+  // Use live DB address if available, otherwise fall back to config address
+  const displayAddress = liveAddress ?? config.address;
+
+  if (addressError || !displayAddress) {
+    return (
+      <div className="rounded-2xl border border-red-200 bg-red-50 p-6">
+        <div className="flex gap-3">
+          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
+          <p className="text-sm font-semibold text-red-800">
+            Deposit address temporarily unavailable. Please contact support.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(config.address);
+    await navigator.clipboard.writeText(displayAddress);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1800);
   };
@@ -42,7 +66,7 @@ export function FixedDepositQR({ config }: { config?: DepositAddressConfig | nul
 
       <div className="flex justify-center rounded-2xl bg-white p-5">
         <QRCodeSVG
-          value={config.qrValue}
+          value={displayAddress}
           size={220}
           level="H"
           includeMargin
@@ -54,8 +78,8 @@ export function FixedDepositQR({ config }: { config?: DepositAddressConfig | nul
         onClick={handleCopy}
         className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-bold text-[#0A0F2C] transition-colors hover:bg-blue-50"
       >
-        {copied ? <ClipboardCheck className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
-        {copied ? "Address copied" : "Copy deposit address"}
+        {copied ? <ClipboardCheck className="h-4 w-4 shrink-0 text-emerald-600" /> : <Copy className="h-4 w-4 shrink-0" />}
+        <span className="truncate">{displayAddress}</span>
       </button>
 
       <div className="mt-4 rounded-2xl border border-amber-300/25 bg-amber-300/10 p-4">

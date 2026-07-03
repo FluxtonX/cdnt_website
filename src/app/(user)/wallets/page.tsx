@@ -68,14 +68,14 @@ export default function WalletsPage() {
               <div className="w-full h-12 bg-gray-200 rounded-xl" />
             </div>
             <div className="lg:col-span-1 bg-white rounded-2xl border border-gray-200 p-6 shadow-sm h-[400px] animate-pulse">
-               <div className="w-48 h-6 bg-gray-200 rounded mb-6" />
-               <div className="space-y-6">
-                 {[1,2,3,4,5].map(i => <div key={i} className="w-full h-10 bg-gray-200 rounded" />)}
-               </div>
+              <div className="w-48 h-6 bg-gray-200 rounded mb-6" />
+              <div className="space-y-6">
+                {[1, 2, 3, 4, 5].map(i => <div key={i} className="w-full h-10 bg-gray-200 rounded" />)}
+              </div>
             </div>
           </div>
         </>
-      ) : selectedWallet ? (
+      ) : wallets.length > 0 ? (
         <>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             {wallets.map(wallet => {
@@ -84,19 +84,17 @@ export default function WalletsPage() {
                 <div
                   key={wallet.id}
                   onClick={() => setSelectedWalletId(wallet.id)}
-                  className={`cursor-pointer bg-white rounded-2xl p-6 transition-all ${
-                    isSelected
+                  className={`cursor-pointer bg-white rounded-2xl p-6 transition-all ${isSelected
                       ? "border-[2px] border-primary-blue shadow-sm"
                       : "border border-gray-200 hover:border-gray-300 shadow-sm"
-                  }`}
+                    }`}
                 >
                   <div className="flex justify-between items-start mb-6">
                     <CoinLogo src={wallet.image} symbol={wallet.symbol} className="h-10 w-10 p-1.5" />
-                    <div className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                      wallet.changeType === "positive"
+                    <div className={`px-2.5 py-1 rounded-full text-xs font-semibold ${wallet.changeType === "positive"
                         ? "bg-[#DCFCE7] text-[#16A34A]"
                         : "bg-gray-100 text-gray-500"
-                    }`}>
+                      }`}>
                       {wallet.change}
                     </div>
                   </div>
@@ -115,23 +113,22 @@ export default function WalletsPage() {
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-lg font-semibold text-gray-900">Wallet Address</h2>
                 <div className="px-3 py-1 bg-[#FFF9EE] text-[#E8A020] rounded-full text-xs font-medium">
-                  {selectedWallet.network}
+                  {selectedWallet?.network}
                 </div>
               </div>
 
               <div>
                 {/* Network tab switcher — shown when wallet has multiple networks (e.g. USDT TRC20/ERC20) */}
-                {selectedWallet.addresses.length > 1 && (
+                {selectedWallet?.addresses && selectedWallet.addresses.length > 1 && (
                   <div className="flex gap-2 mb-4">
-                    {selectedWallet.addresses.map((net, idx) => (
+                    {selectedWallet?.addresses.map((net, idx) => (
                       <button
                         key={idx}
                         onClick={() => { setSelectedNetworkIndex(idx); setShowQr(false); setCopied(false); }}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
-                          selectedNetworkIndex === idx
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${selectedNetworkIndex === idx
                             ? "bg-primary-blue text-white border-primary-blue"
                             : "bg-gray-50 text-gray-600 border-gray-200 hover:border-gray-300"
-                        }`}
+                          }`}
                       >
                         {net.network}
                       </button>
@@ -139,16 +136,16 @@ export default function WalletsPage() {
                   </div>
                 )}
 
-                <p className="text-sm font-semibold text-gray-900 mb-2">Your Platform {selectedWallet.name} Deposit Address</p>
+                <p className="text-sm font-semibold text-gray-900 mb-2">Your Platform {selectedWallet?.name} Deposit Address</p>
                 <div className="flex gap-3">
                   <input
                     type="text"
                     readOnly
-                    value={selectedWallet.addresses[selectedNetworkIndex]?.address || selectedWallet.address}
+                    value={selectedWallet?.addresses[selectedNetworkIndex]?.address || selectedWallet?.address || ""}
                     className="flex-1 bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-mono text-gray-600 focus:outline-none"
                   />
                   <button
-                    onClick={() => handleCopy(selectedWallet.addresses[selectedNetworkIndex]?.address || selectedWallet.address)}
+                    onClick={() => handleCopy(selectedWallet?.addresses[selectedNetworkIndex]?.address || selectedWallet?.address || "")}
                     className="p-3 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-gray-600"
                     title="Copy Address"
                   >
@@ -166,8 +163,8 @@ export default function WalletsPage() {
 
               {showQr && (
                 <div className="mt-5 flex flex-col items-center justify-center p-4 border border-dashed border-gray-200 rounded-xl bg-gray-50/50">
-                  <QRCodeSVG value={selectedWallet.addresses[selectedNetworkIndex]?.address || selectedWallet.address} size={160} />
-                  <p className="mt-3 text-xs text-gray-500 font-mono font-bold">{selectedWallet.addresses[selectedNetworkIndex]?.address || selectedWallet.address}</p>
+                  <QRCodeSVG value={selectedWallet?.addresses[selectedNetworkIndex]?.address || selectedWallet?.address || ""} size={160} />
+                  <p className="mt-3 text-xs text-gray-500 font-mono font-bold">{selectedWallet?.addresses[selectedNetworkIndex]?.address || selectedWallet?.address || ""}</p>
                 </div>
               )}
 
@@ -177,8 +174,8 @@ export default function WalletsPage() {
                   Important Instructions
                 </div>
                 <ul className="mt-3 space-y-2 text-sm text-gray-500 list-disc pl-5">
-                  <li>Only send {selectedWallet.name} to this address</li>
-                  <li>Minimum deposit: {selectedWallet.symbol === "BTC" ? "0.0005" : selectedWallet.symbol === "ETH" ? "0.01" : "5.0"} {selectedWallet.symbol}</li>
+                  <li>Only send {selectedWallet?.name} to this address</li>
+                  <li>Minimum deposit: {selectedWallet?.symbol === "BTC" ? "0.0005" : selectedWallet?.symbol === "ETH" ? "0.01" : "5.0"} {selectedWallet?.symbol}</li>
                   <li>Requires 3 network confirmations</li>
                   <li>Submit transaction hash on deposit request page after sending</li>
                 </ul>
@@ -186,18 +183,18 @@ export default function WalletsPage() {
 
               <div className="mt-6 flex gap-4">
                 <Link
-                  href={`/deposit?asset=${selectedWallet.symbol}`}
+                  href={`/deposit?asset=${selectedWallet?.symbol}`}
                   className="flex-1 bg-primary-blue hover:bg-blue-800 text-white font-semibold rounded-xl py-3.5 flex items-center justify-center gap-2 transition-colors text-center"
                 >
                   <ArrowDownLeft className="w-5 h-5" />
-                  Deposit {selectedWallet.symbol}
+                  Deposit {selectedWallet?.symbol}
                 </Link>
                 <Link
                   href="/withdraw"
                   className="flex-1 bg-white border border-gray-200 hover:bg-gray-50 text-gray-900 font-semibold rounded-xl py-3.5 flex items-center justify-center gap-2 transition-colors text-center"
                 >
                   <ArrowUpRight className="w-5 h-5" />
-                  Withdraw {selectedWallet.symbol}
+                  Withdraw {selectedWallet?.symbol}
                 </Link>
               </div>
             </div>
@@ -207,42 +204,41 @@ export default function WalletsPage() {
               <div className="space-y-5">
                 <div>
                   <p className="text-xs text-gray-500 mb-1">Network</p>
-                  <p className="text-sm font-semibold text-gray-900">{selectedWallet.network}</p>
+                  <p className="text-sm font-semibold text-gray-900">{selectedWallet?.network}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 mb-1">Cryptocurrency</p>
-                  <p className="text-sm font-semibold text-gray-900">{selectedWallet.name}</p>
+                  <p className="text-sm font-semibold text-gray-900">{selectedWallet?.name}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 mb-1">Symbol</p>
-                  <p className="text-sm font-semibold text-gray-900">{selectedWallet.symbol}</p>
+                  <p className="text-sm font-semibold text-gray-900">{selectedWallet?.symbol}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 mb-1">Current Balance</p>
-                  <p className="text-sm font-semibold text-gray-900">{Number(selectedWallet.balance).toLocaleString(undefined, { maximumFractionDigits: 8 })} {selectedWallet.symbol}</p>
+                  <p className="text-sm font-semibold text-gray-900">{Number(selectedWallet?.balance).toLocaleString(undefined, { maximumFractionDigits: 8 })} {selectedWallet?.symbol}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 mb-1">CAD Value</p>
-                  <p className="text-sm font-semibold text-gray-900">{selectedWallet.value}</p>
+                  <p className="text-sm font-semibold text-gray-900">{selectedWallet?.value}</p>
                 </div>
               </div>
             </div>
           </div>
 
           <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm mb-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-6">Recent {selectedWallet.name} Activity</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-6">Recent {selectedWallet?.name} Activity</h2>
             <div className="space-y-6">
-              {selectedWallet.activities.length === 0 ? (
+              {selectedWallet?.activities.length === 0 ? (
                 <div className="text-center py-8 text-sm text-gray-400">
-                  No recent transactions found for {selectedWallet.symbol}.
+                  No recent transactions found for {selectedWallet?.symbol}.
                 </div>
               ) : (
-                selectedWallet.activities.map((activity) => (
+                selectedWallet?.activities.map((activity) => (
                   <div key={activity.id} className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                        activity.type === "Deposit" ? "bg-[#DCFCE7] text-[#16A34A]" : "bg-[#E0E7FF] text-primary-blue"
-                      }`}>
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${activity.type === "Deposit" ? "bg-[#DCFCE7] text-[#16A34A]" : "bg-[#E0E7FF] text-primary-blue"
+                        }`}>
                         {activity.type === "Deposit" ? <ArrowDownLeft className="w-5 h-5" /> : <ArrowUpRight className="w-5 h-5" />}
                       </div>
                       <div>
@@ -251,19 +247,17 @@ export default function WalletsPage() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className={`text-sm font-semibold ${
-                        activity.amountType === "positive" ? "text-[#16A34A]" : "text-gray-900"
-                      }`}>
+                      <p className={`text-sm font-semibold ${activity.amountType === "positive" ? "text-[#16A34A]" : "text-gray-900"
+                        }`}>
                         {activity.amount}
                       </p>
                       <div className="mt-1">
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide ${
-                          activity.status === "Confirmed" || activity.status === "COMPLETED" || activity.status === "PAID"
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide ${activity.status === "Confirmed" || activity.status === "COMPLETED" || activity.status === "PAID"
                             ? "bg-[#DCFCE7] text-[#16A34A]"
                             : activity.status === "Pending Approval"
-                            ? "bg-[#FFF9EE] text-[#E8A020]"
-                            : "bg-red-50 text-red-650"
-                        }`}>
+                              ? "bg-[#FFF9EE] text-[#E8A020]"
+                              : "bg-red-50 text-red-650"
+                          }`}>
                           {activity.status}
                         </span>
                       </div>
@@ -274,7 +268,15 @@ export default function WalletsPage() {
             </div>
           </div>
         </>
-      ) : null}
+      ) : (
+        <div className="bg-white rounded-2xl border border-gray-200 p-12 shadow-sm text-center">
+          <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+            <Copy className="w-8 h-8 text-gray-400" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">No Wallets Found</h3>
+          <p className="text-sm text-gray-500">You don't have any wallets yet. Make a deposit to get started.</p>
+        </div>
+      )}
     </div>
   );
 }

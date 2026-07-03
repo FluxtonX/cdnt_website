@@ -30,7 +30,7 @@ export default function ProfileSettingsPage() {
         setUserId(user.id);
         setEmail(user.email || "");
         setPhone(user.user_metadata?.phone || "");
-        
+
         // Also fetch from profiles table
         const { data: profile } = await supabase
           .from("profiles")
@@ -39,7 +39,7 @@ export default function ProfileSettingsPage() {
           .single();
 
         setFullName(profile?.full_name || user.user_metadata?.full_name || "");
-        
+
         // Let's get actual KYC status if possible, otherwise rely on profile.kyc_verified
         const { data: kyc } = await supabase
           .from("kyc_submissions")
@@ -93,7 +93,7 @@ export default function ProfileSettingsPage() {
       if (profileError) throw profileError;
 
       setMessage({ type: "success", text: "Profile updated successfully. If you changed your email, check your inbox to confirm." });
-      
+
     } catch (error: any) {
       console.error("Update error:", error);
       setMessage({ type: "error", text: error.message || "Failed to update profile." });
@@ -136,11 +136,10 @@ export default function ProfileSettingsPage() {
         </div>
 
         {message && (
-          <div className={`mb-6 p-4 rounded-xl flex items-start gap-3 border ${
-            message.type === 'success' 
-              ? 'bg-green-50 border-green-200 text-green-800' 
+          <div className={`mb-6 p-4 rounded-xl flex items-start gap-3 border ${message.type === 'success'
+              ? 'bg-green-50 border-green-200 text-green-800'
               : 'bg-red-50 border-red-200 text-red-800'
-          }`}>
+            }`}>
             {message.type === 'success' ? (
               <CheckCircle2 className="h-5 w-5 shrink-0 mt-0.5 text-green-600" />
             ) : (
@@ -153,11 +152,11 @@ export default function ProfileSettingsPage() {
         <form className="space-y-5" onSubmit={handleSubmit}>
           <div className="space-y-2">
             <label className="text-[13px] font-bold text-[#0A0F2C]">Full Name</label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
-              className="w-full rounded-xl border border-gray-200 px-4 py-3.5 text-[15px] text-[#0A0F2C] outline-none transition-colors focus:border-[#113285] focus:ring-1 focus:ring-[#113285] disabled:opacity-60 disabled:bg-gray-50" 
+              className="w-full rounded-xl border border-gray-200 px-4 py-3.5 text-[15px] text-[#0A0F2C] outline-none transition-colors focus:border-[#113285] focus:ring-1 focus:ring-[#113285] disabled:opacity-60 disabled:bg-gray-50"
               disabled={isSaving}
               required
             />
@@ -165,11 +164,11 @@ export default function ProfileSettingsPage() {
 
           <div className="space-y-2">
             <label className="text-[13px] font-bold text-[#0A0F2C]">Email Address</label>
-            <input 
-              type="email" 
+            <input
+              type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-xl border border-gray-200 px-4 py-3.5 text-[15px] text-[#0A0F2C] outline-none transition-colors focus:border-[#113285] focus:ring-1 focus:ring-[#113285] disabled:opacity-60 disabled:bg-gray-50" 
+              className="w-full rounded-xl border border-gray-200 px-4 py-3.5 text-[15px] text-[#0A0F2C] outline-none transition-colors focus:border-[#113285] focus:ring-1 focus:ring-[#113285] disabled:opacity-60 disabled:bg-gray-50"
               disabled={isSaving}
               required
             />
@@ -177,18 +176,18 @@ export default function ProfileSettingsPage() {
 
           <div className="space-y-2">
             <label className="text-[13px] font-bold text-[#0A0F2C]">Phone Number</label>
-            <input 
-              type="tel" 
+            <input
+              type="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              className="w-full rounded-xl border border-gray-200 px-4 py-3.5 text-[15px] text-[#0A0F2C] outline-none transition-colors focus:border-[#113285] focus:ring-1 focus:ring-[#113285] disabled:opacity-60 disabled:bg-gray-50" 
+              className="w-full rounded-xl border border-gray-200 px-4 py-3.5 text-[15px] text-[#0A0F2C] outline-none transition-colors focus:border-[#113285] focus:ring-1 focus:ring-[#113285] disabled:opacity-60 disabled:bg-gray-50"
               disabled={isSaving}
               required
             />
           </div>
 
           <div className="flex justify-end pt-2">
-            <button 
+            <button
               type="submit"
               disabled={isSaving}
               className="flex items-center justify-center min-w-[140px] rounded-xl bg-[#113285] px-6 py-3 text-[14px] font-bold text-white shadow-sm transition-colors hover:bg-blue-900 focus:outline-none focus:ring-2 focus:ring-[#113285] focus:ring-offset-2 disabled:opacity-70"
@@ -260,13 +259,13 @@ export default function ProfileSettingsPage() {
           <div className="rounded-xl border border-gray-200 p-5">
             <p className="text-[13px] font-medium text-[#718096]">Daily Withdrawal Limit</p>
             <p className="mt-1 text-[24px] font-black tracking-tight text-[#0A0F2C]">
-              {kycStatus === 'verified' ? '$50,000' : '$1,000'}
+              {kycStatus === 'verified' ? '$5,000,000.00' : '$1,000'}
             </p>
           </div>
           <div className="rounded-xl border border-gray-200 p-5">
             <p className="text-[13px] font-medium text-[#718096]">Monthly Limit</p>
             <p className="mt-1 text-[24px] font-black tracking-tight text-[#0A0F2C]">
-              {kycStatus === 'verified' ? '$500,000' : '$10,000'}
+              {kycStatus === 'verified' ? '$50,000,000.00' : '$10,000'}
             </p>
           </div>
         </div>

@@ -32,6 +32,16 @@ function formatAmount(value: number, symbol: string) {
   })} ${symbol}`;
 }
 
+/** Maps DepositNetwork values to the network column values used in platform_wallets */
+function getDbNetwork(asset: string, network: string): string {
+  const upper = network.toUpperCase();
+  if (upper === "BTC") return "Bitcoin Network";
+  if (upper === "ETH") return "Ethereum Mainnet";
+  if (upper === "TRC20") return "TRC-20";
+  if (upper === "ERC20") return "ERC-20";
+  return network;
+}
+
 export function DepositWorkspace({ initialAsset }: { initialAsset?: string }) {
   const initialConfig = getDepositConfig(initialAsset ?? "BTC");
   const [asset, setAsset] = useState<DepositAsset | "fiat">(initialAsset === "fiat" ? "fiat" : initialConfig.asset);
@@ -41,6 +51,11 @@ export function DepositWorkspace({ initialAsset }: { initialAsset?: string }) {
   const [reference] = useState(() => `NUD-${Date.now().toString(36).toUpperCase()}`);
 
   const [error, setError] = useState<string | null>(null);
+
+  // Live address state fetched from platform_wallets table
+  const [liveAddress, setLiveAddress] = useState<string | null>(null);
+  const [addressLoading, setAddressLoading] = useState(false);
+  const [addressError, setAddressError] = useState(false);
 
   const networks = asset === "fiat" ? [] : getDepositNetworks(asset);
   const config = useMemo<DepositAddressConfig | null>(
@@ -64,7 +79,49 @@ export function DepositWorkspace({ initialAsset }: { initialAsset?: string }) {
       setStep(0);
       setError(null);
     }
+    setLiveAddress(null);
+    setAddressError(false);
   };
+
+  /** Fetch the real deposit address from the public API route when entering step 2 */
+  const fetchLiveAddress = async (cfg: DepositAddressConfig) => {
+    setAddressLoading(true);
+    setAddressError(false);
+    setLiveAddress(null);
+    try {
+      const dbNetwork = getDbNetwork(cfg.asset, cfg.network);
+      
+      const url = new URL("/api/deposit-address", window.location.origin);
+      url.searchParams.set("crypto", cfg.asset);
+      if (dbNetwork) {
+        url.searchParams.set("network", dbNetwork);
+      }
+      
+      const response = await fetch(url.toString());
+      const data = await response.json();
+
+      if (!response.ok || !data.address) {
+        setAddressError(true);
+      } else {
+        setLiveAddress(data.address);
+      }
+    } catch {
+      setAddressError(true);
+    } finally {
+      setAddressLoading(false);
+    }
+  };
+
+  const handleGoToTransfer = async () => {
+    if (!config) return;
+    setStep(2);
+    await fetchLiveAddress(config);
+  };
+
+  // Config updated for DepositRequestForm — inject live address so it's saved correctly
+  const configWithLiveAddress: DepositAddressConfig | null = config
+    ? { ...config, address: liveAddress ?? config.address, qrValue: liveAddress ?? config.qrValue }
+    : null;
 
   return (
     <div className="mx-auto w-full max-w-[1120px]">
@@ -311,7 +368,7 @@ export function DepositWorkspace({ initialAsset }: { initialAsset?: string }) {
                             Edit details
                           </button>
                           <button
-                            onClick={() => setStep(2)}
+                            onClick={handleGoToTransfer}
                             className="flex-1 rounded-2xl bg-[#113285] px-5 py-3.5 text-sm font-bold text-white hover:bg-[#0D2768] flex items-center justify-center gap-2"
                           >
                             Generate QR
@@ -336,8 +393,24 @@ export function DepositWorkspace({ initialAsset }: { initialAsset?: string }) {
                           </div>
                         </div>
 
-                        <FixedDepositQR config={config} />
-                        <DepositRequestForm config={config} amount={numericAmount} />
+                        {addressLoading ? (
+                          <div className="rounded-2xl border border-gray-100 bg-[#0A0F2C] p-8 flex items-center justify-center min-h-[200px]">
+                            <div className="flex flex-col items-center gap-3">
+                              <span className="h-8 w-8 border-4 border-white/20 border-t-white rounded-full animate-spin" />
+                              <p className="text-sm font-semibold text-white/70">Loading deposit address…</p>
+                            </div>
+                          </div>
+                        ) : (
+                          <FixedDepositQR
+                            config={config}
+                            liveAddress={liveAddress}
+                            addressError={addressError}
+                          />
+                        )}
+
+                        {!addressLoading && !addressError && configWithLiveAddress && (
+                          <DepositRequestForm config={configWithLiveAddress} amount={numericAmount} />
+                        )}
                       </div>
 
                       <div className="space-y-5">

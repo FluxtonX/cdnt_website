@@ -89,8 +89,8 @@ export default function PricingPage() {
                     </tr>
                     <tr className="hover:bg-gray-50/50 transition-colors">
                       <td className="px-8 py-5 text-sm font-medium text-[#0A0F2C]">Verified KYC (Standard)</td>
-                      <td className="px-8 py-5 text-sm font-bold text-[#0A0F2C]">$50,000</td>
-                      <td className="px-8 py-5 text-sm font-bold text-[#0A0F2C]">$500,000</td>
+                      <td className="px-8 py-5 text-sm font-bold text-[#0A0F2C]">$5M</td>
+                      <td className="px-8 py-5 text-sm font-bold text-[#0A0F2C]">$50M</td>
                       <td className="px-8 py-5 text-sm text-[#6B7280]">ID and proof of residence required</td>
                     </tr>
                     <tr className="hover:bg-gray-50/50 transition-colors">
