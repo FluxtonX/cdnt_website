@@ -40,6 +40,21 @@ export function WithdrawWorkspace() {
   const numAmount = parseFloat(amount || "0");
   const youReceive = numAmount > fee ? numAmount - fee : 0;
 
+  // Amount threshold validation to prevent unrealistic large amounts
+  const getAmountThreshold = (assetType: string): number => {
+    const upperAsset = assetType.toUpperCase();
+    if (upperAsset === "BTC") return 10;
+    if (upperAsset === "ETH") return 100;
+    if (upperAsset === "USDT" || upperAsset === "USDC") return 100000;
+    return Infinity; // No limit for other assets
+  };
+
+  const amountThreshold = getAmountThreshold(selectedAsset);
+  const amountExceedsThreshold = Number.isFinite(numAmount) && numAmount > amountThreshold;
+  const amountError = amountExceedsThreshold 
+    ? `Amount seems unusually high. Maximum allowed for ${selectedAsset} is ${amountThreshold.toLocaleString()}. Please double-check and re-enter.`
+    : null;
+
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [sendingOtp, setSendingOtp] = useState(false);
 
@@ -214,6 +229,9 @@ export function WithdrawWorkspace() {
                 onChange={(e) => setAmount(e.target.value)}
                 className="w-full rounded-[14px] border border-gray-200 bg-white px-5 py-4 text-[16px] font-medium text-[#0A0F2C] placeholder-[#A0AEC0] outline-none transition-all focus:border-[#113285] focus:ring-1 focus:ring-[#113285]"
               />
+              {amountError && (
+                <p className="mt-2 text-sm font-semibold text-red-600">{amountError}</p>
+              )}
             </div>
             
             <p className="mb-6 text-center text-[14px] text-[#718096]">
@@ -271,6 +289,10 @@ export function WithdrawWorkspace() {
 
             <button 
               onClick={() => {
+                if (amountExceedsThreshold) {
+                  setErrorMsg(amountError || "Amount exceeds maximum allowed limit.");
+                  return;
+                }
                 if (numAmount > availableBalance) {
                   setErrorMsg(`Amount exceeds available ${selectedAsset} balance in CAD.`);
                   return;
@@ -282,7 +304,7 @@ export function WithdrawWorkspace() {
                 setErrorMsg(null);
                 setStep(2);
               }}
-              disabled={!amount || numAmount <= 0 || metricsLoading}
+              disabled={!amount || numAmount <= 0 || metricsLoading || amountExceedsThreshold}
               className="w-full rounded-[14px] bg-[#113285] py-4 text-[15px] font-bold text-white transition-colors hover:bg-[#0c2461] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Continue

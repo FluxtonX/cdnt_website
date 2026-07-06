@@ -94,8 +94,38 @@ function txToCad(
   cadRates: Record<string, number>,
 ): number {
   const sym = (tx.asset || "CAD").toUpperCase();
-  if (sym === "CAD") return tx.rawAmount;
-  return tx.rawAmount * (cadRates[sym] || cadRates.USDT || 1.36);
+  let amount = tx.rawAmount;
+
+  // Phase 1: Currency detection - if already CAD or USD, don't multiply by exchange rate
+  if (sym === "CAD" || sym === "USD") {
+    return amount;
+  }
+
+  // Phase 1: Unit detection and correction based on asset type
+  if (sym === "BTC" && amount > 1_000_000_000) {
+    // Likely in satoshis, convert to BTC
+    console.warn(`Transaction ${tx.id} appears to be in satoshis: ${amount}, converting to BTC`);
+    amount = amount / 100_000_000;
+  } else if (sym === "ETH" && amount > 1_000_000_000_000_000_000) {
+    // Likely in wei, convert to ETH
+    console.warn(`Transaction ${tx.id} appears to be in wei: ${amount}, converting to ETH`);
+    amount = amount / 1_000_000_000_000_000_000;
+  } else if (sym === "USDT" && amount > 10_000 && amount < 1_000_000_000) {
+    // Could be in cents, convert to USDT
+    console.warn(`Transaction ${tx.id} appears to be in cents: ${amount}, converting to USDT`);
+    amount = amount / 100;
+  }
+
+  // Phase 1: Transaction amount validation - check for unreasonably large values
+  const rate = cadRates[sym] || cadRates.USDT || 1.36;
+  const cadValue = amount * rate;
+  
+  if (cadValue > 1_000_000_000) {
+    console.error(`Transaction ${tx.id} has suspiciously high CAD value: $${cadValue.toLocaleString()}, skipping`);
+    return 0;
+  }
+
+  return cadValue;
 }
 
 function getRangeBounds(
@@ -171,53 +201,128 @@ function buildPerformanceChartData(
   customStart: Date | null,
   customEnd: Date | null,
 ): { name: string; value: number }[] {
-  const { start, end } = getRangeBounds(range, customStart, customEnd, allTxs);
-  const val = portfolioValue || 0;
-  const pointCount = 7;
-  const duration = Math.max(end.getTime() - start.getTime(), 1);
-  const step = duration / (pointCount - 1);
+  try {
+    const { start, end } = getRangeBounds(range, customStart, customEnd, allTxs);
+    const val = portfolioValue || 0;
+    const pointCount = 7;
+    const duration = Math.max(end.getTime() - start.getTime(), 1);
+    const step = duration / (pointCount - 1);
 
-  const sortedTxs = [...allTxs].sort((a, b) => a.rawDate.getTime() - b.rawDate.getTime());
-  const txsInRange = sortedTxs.filter((t) => t.rawDate >= start && t.rawDate <= end);
+    console.log(`[Performance Graph] Range: ${range}, PortfolioValue: $${val.toLocaleString()}, Start: ${start.toISOString()}, End: ${end.toISOString()}`);
+    console.log(`[Performance Graph] Total transactions: ${allTxs.length}`);
 
-  const netInPeriod = txsInRange.reduce((sum, tx) => {
-    const cad = txToCad(tx, cadRates);
-    return sum + (tx.type === "deposit" ? cad : -cad);
-  }, 0);
+    const sortedTxs = [...allTxs].sort((a, b) => a.rawDate.getTime() - b.rawDate.getTime());
+    
+    // Phase 2: Transaction type validation - only process deposit/withdrawal, filter out pending/rejected
+    const txsInRange = sortedTxs.filter((t) => {
+      const inRange = t.rawDate >= start && t.rawDate <= end;
+      const validType = t.type === "deposit" || t.type === "withdrawal";
+      const validStatus = t.status !== "pending" && t.status !== "rejected";
+      return inRange && validType && validStatus;
+    });
 
-  const baseline = Math.max(0, val - netInPeriod);
+    console.log(`[Performance Graph] Transactions in range after filtering: ${txsInRange.length}`);
+    if (txsInRange.length > 0) {
+      console.log(`[Performance Graph] Sample transactions:`, txsInRange.slice(0, 3).map(t => ({
+        id: t.id,
+        type: t.type,
+        asset: t.asset,
+        amount: t.rawAmount,
+        status: t.status,
+        date: t.rawDate.toISOString()
+      })));
+    }
 
-  if (txsInRange.length === 0) {
-    // No transactions in this period — show current portfolio value as a flat line.
-    // Only show $0 if the user genuinely has no balance.
+    const netInPeriod = txsInRange.reduce((sum, tx) => {
+      const cad = txToCad(tx, cadRates);
+      console.log(`[Performance Graph] Transaction ${tx.id}: ${tx.type} ${tx.asset} ${tx.rawAmount} -> CAD: $${cad.toFixed(2)}`);
+      return sum + (tx.type === "deposit" ? cad : -cad);
+    }, 0);
+
+    console.log(`[Performance Graph] netInPeriod: $${netInPeriod.toLocaleString()}`);
+
+    // Phase 2: Sanity check - netInPeriod shouldn't exceed portfolioValue by unreasonable margin
+    // Relaxed threshold from 10x to 100x to allow for legitimate high-volume trading
+    if (Math.abs(netInPeriod) > val * 100 && val > 0) {
+      console.error(`Sanity check failed: netInPeriod ($${netInPeriod.toLocaleString()}) exceeds portfolioValue ($${val.toLocaleString()}) by 100x, falling back to flat line`);
+      return Array.from({ length: pointCount }, (_, index) => {
+        const bucketDate = new Date(start.getTime() + step * index);
+        return { name: formatBucketLabel(bucketDate, range), value: val };
+      });
+    }
+
+    const baseline = Math.max(0, val - netInPeriod);
+    console.log(`[Performance Graph] baseline: $${baseline.toLocaleString()}`);
+
+    // Phase 2: Sanity check - baseline should not be negative (already handled by Math.max, but check anyway)
+    if (baseline < 0) {
+      console.error(`Sanity check failed: baseline is negative ($${baseline.toLocaleString()}), falling back to flat line`);
+      return Array.from({ length: pointCount }, (_, index) => {
+        const bucketDate = new Date(start.getTime() + step * index);
+        return { name: formatBucketLabel(bucketDate, range), value: val };
+      });
+    }
+
+    if (txsInRange.length === 0) {
+      // No transactions in this period — show current portfolio value as a flat line.
+      console.log(`[Performance Graph] No valid transactions in range, showing flat line at current value`);
+      return Array.from({ length: pointCount }, (_, index) => {
+        const bucketDate = new Date(start.getTime() + step * index);
+        return { name: formatBucketLabel(bucketDate, range), value: val };
+      });
+    }
+
+    let running = baseline;
+    let txIndex = 0;
+
+    const dataPoints = Array.from({ length: pointCount }, (_, index) => {
+      const bucketEnd =
+        index === pointCount - 1 ? end : new Date(start.getTime() + step * (index + 1));
+
+      while (txIndex < txsInRange.length && txsInRange[txIndex].rawDate <= bucketEnd) {
+        const tx = txsInRange[txIndex];
+        const cad = txToCad(tx, cadRates);
+        running += tx.type === "deposit" ? cad : -cad;
+        console.log(`[Performance Graph] Bucket ${index}: processed tx ${tx.id}, running: $${running.toFixed(2)}`);
+        txIndex += 1;
+      }
+
+      const bucketDate = new Date(start.getTime() + step * index);
+      const value = index === pointCount - 1 ? val : Math.max(0, Math.round(running));
+
+      console.log(`[Performance Graph] Bucket ${index}: value = $${value.toLocaleString()}`);
+
+      // Phase 2: Final sanity check on individual data points - relaxed threshold
+      if (value > val * 1000 && val > 0) {
+        console.error(`Sanity check failed: data point value ($${value.toLocaleString()}) exceeds portfolioValue by 1000x, capping`);
+        return {
+          name: formatBucketLabel(bucketDate, range),
+          value: val,
+        };
+      }
+
+      return {
+        name: formatBucketLabel(bucketDate, range),
+        value,
+      };
+    });
+
+    console.log(`[Performance Graph] Final data points:`, dataPoints);
+    return dataPoints;
+  } catch (error) {
+    // Phase 2: Error handling - catch any calculation errors and fall back to flat line
+    console.error("Error in buildPerformanceChartData:", error);
+    const { start, end } = getRangeBounds(range, customStart, customEnd, allTxs);
+    const val = portfolioValue || 0;
+    const pointCount = 7;
+    const duration = Math.max(end.getTime() - start.getTime(), 1);
+    const step = duration / (pointCount - 1);
+    
     return Array.from({ length: pointCount }, (_, index) => {
       const bucketDate = new Date(start.getTime() + step * index);
       return { name: formatBucketLabel(bucketDate, range), value: val };
     });
   }
-
-  let running = baseline;
-  let txIndex = 0;
-
-  return Array.from({ length: pointCount }, (_, index) => {
-    const bucketEnd =
-      index === pointCount - 1 ? end : new Date(start.getTime() + step * (index + 1));
-
-    while (txIndex < txsInRange.length && txsInRange[txIndex].rawDate <= bucketEnd) {
-      const tx = txsInRange[txIndex];
-      const cad = txToCad(tx, cadRates);
-      running += tx.type === "deposit" ? cad : -cad;
-      txIndex += 1;
-    }
-
-    const bucketDate = new Date(start.getTime() + step * index);
-    const value = index === pointCount - 1 ? val : Math.max(0, Math.round(running));
-
-    return {
-      name: formatBucketLabel(bucketDate, range),
-      value,
-    };
-  });
 }
 
 function AllocationActiveShape(props: PieSectorDataItem) {

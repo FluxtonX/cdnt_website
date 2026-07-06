@@ -19,6 +19,7 @@ import { LiveCryptoChart } from "@/components/market/LiveCryptoChart";
 import { CoinLogo } from "@/components/market/CoinLogo";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
+import { fetchLiveCADRates } from "@/lib/utils";
 
 const supabase = createClient();
 
@@ -59,12 +60,10 @@ export default function ExchangePage() {
   const [orderPanelOpen, setOrderPanelOpen] = React.useState(true);
   const [side, setSide] = React.useState<"buy" | "sell">("buy");
   const [amount, setAmount] = React.useState("");
-  const [baseCurrency, setBaseCurrency] = React.useState<"USDT" | "CAD" | "USD">("USDT");
+  const [baseCurrency, setBaseCurrency] = React.useState<"USDT" | "CAD">("USDT");
 
   const [balances, setBalances] = React.useState<Record<string, number>>({
     USDT: 0,
-    CAD: 0,
-    USD: 0,
     BTC: 0,
     ETH: 0,
   });
@@ -81,10 +80,9 @@ export default function ExchangePage() {
     USD: 1,
   });
 
-  // Exchange rates for fiat conversions
+  // Exchange rates for fiat conversions (USDT to CAD)
   const [exchangeRates, setExchangeRates] = React.useState<Record<string, number>>({
-    CAD_TO_USDT: 1.36,
-    USD_TO_USDT: 1,
+    USDT_TO_CAD: 1.36,
   });
 
   const loadBalances = React.useCallback(async () => {
@@ -115,6 +113,25 @@ export default function ExchangePage() {
   React.useEffect(() => {
     loadBalances();
   }, [loadBalances]);
+
+  // Fetch real-time USDT to CAD exchange rate
+  React.useEffect(() => {
+    async function loadExchangeRate() {
+      try {
+        const rates = await fetchLiveCADRates(["USDT"]);
+        if (rates.USDT) {
+          setExchangeRates({ USDT_TO_CAD: rates.USDT });
+        }
+      } catch (err) {
+        console.error("Failed to load exchange rate:", err);
+      }
+    }
+
+    loadExchangeRate();
+    // Refresh every 5 minutes
+    const interval = setInterval(loadExchangeRate, 300000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Load ticker from Binance
   React.useEffect(() => {
@@ -162,8 +179,8 @@ export default function ExchangePage() {
   const coinSymbol = selectedCoin.baseAsset;
   const assetBalance = balances[coinSymbol] ?? 0;
 
-  // Convert base currency to USDT for calculations
-  const baseToUsdtRate = baseCurrency === "CAD" ? exchangeRates.CAD_TO_USDT : baseCurrency === "USD" ? exchangeRates.USD_TO_USDT : 1;
+  // Convert base currency to USDT for calculations (CAD is display-only, always use USDT for actual trades)
+  const baseToUsdtRate = baseCurrency === "CAD" ? 1 / exchangeRates.USDT_TO_CAD : 1;
   const amountInUsdt = amountValue * baseToUsdtRate;
 
   const estimatedCrypto = side === "buy" && amountInUsdt > 0 && livePrice > 0 ? amountInUsdt / livePrice : 0;
@@ -180,7 +197,7 @@ export default function ExchangePage() {
     setAmount("");
   }
 
-  function switchBaseCurrency(currency: "USDT" | "CAD" | "USD") {
+  function switchBaseCurrency(currency: "USDT" | "CAD") {
     setBaseCurrency(currency);
     setAmount("");
   }
@@ -414,8 +431,8 @@ export default function ExchangePage() {
                 </button>
               </div>
 
-              <div className="mt-3 grid grid-cols-3 rounded-xl bg-slate-50 p-1">
-                {(["USDT", "CAD", "USD"] as const).map((currency) => (
+              <div className="mt-3 grid grid-cols-2 rounded-xl bg-slate-50 p-1">
+                {(["USDT", "CAD"] as const).map((currency) => (
                   <button
                     key={currency}
                     type="button"
@@ -443,7 +460,7 @@ export default function ExchangePage() {
                 </div>
                 <p className="mt-2 text-lg font-black text-[#113285]">
                   {side === "buy" 
-                    ? loadingBalances ? "--" : `${balances[baseCurrency]?.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || "0.00"} ${baseCurrency}`
+                    ? loadingBalances ? "--" : `${(baseCurrency === "CAD" ? (balances["USDT"] || 0) * exchangeRates.USDT_TO_CAD : balances["USDT"] || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${baseCurrency}`
                     : loadingBalances ? "--" : `${assetBalance.toLocaleString("en-US", { maximumFractionDigits: 8 })} ${selectedCoin.baseAsset}`
                   }
                 </p>
@@ -488,7 +505,7 @@ export default function ExchangePage() {
                 ))}
                 <button
                   type="button"
-                  onClick={() => setAmount(side === "buy" ? String(balances[baseCurrency] || 0) : assetBalance.toFixed(selectedCoin.baseAsset === "BTC" ? 8 : 4))}
+                  onClick={() => setAmount(side === "buy" ? String(baseCurrency === "CAD" ? (balances["USDT"] || 0) * exchangeRates.USDT_TO_CAD : balances["USDT"] || 0) : assetBalance.toFixed(selectedCoin.baseAsset === "BTC" ? 8 : 4))}
                   className="rounded-lg border border-slate-200 px-2 py-2 text-xs font-bold text-[#0A0F2C] hover:border-[#113285]"
                 >
                   Max
@@ -502,11 +519,11 @@ export default function ExchangePage() {
                 </div>
                 <div className="flex justify-between gap-3">
                   <span className="font-semibold text-[#718096]">Fee ({side === "buy" ? "0.50" : "0.40"}%)</span>
-                  <span className="font-black text-[#0A0F2C]">{side === "buy" ? `${fee.toFixed(2)} ${baseCurrency}` : formatCurrency(fee)}</span>
+                  <span className="font-black text-[#0A0F2C]">{side === "buy" ? `${(baseCurrency === "CAD" ? fee * exchangeRates.USDT_TO_CAD : fee).toFixed(2)} ${baseCurrency}` : formatCurrency(fee)}</span>
                 </div>
                 <div className="flex justify-between gap-3 border-t border-slate-200 pt-3">
                   <span className="font-black text-[#0A0F2C]">{side === "buy" ? "Total Cost" : "Net Proceeds"}</span>
-                  <span className="font-black text-[#0A0F2C]">{side === "buy" ? `${total.toFixed(2)} ${baseCurrency}` : formatCurrency(total)}</span>
+                  <span className="font-black text-[#0A0F2C]">{side === "buy" ? `${(baseCurrency === "CAD" ? total * exchangeRates.USDT_TO_CAD : total).toFixed(2)} ${baseCurrency}` : formatCurrency(total)}</span>
                 </div>
               </div>
 

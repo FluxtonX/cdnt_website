@@ -65,6 +65,21 @@ export function DepositWorkspace({ initialAsset }: { initialAsset?: string }) {
   const numericAmount = Number(amount);
   const amountIsValid = config && Number.isFinite(numericAmount) && numericAmount >= config.minAmount;
 
+  // Amount threshold validation to prevent unrealistic large amounts
+  const getAmountThreshold = (assetType: string): number => {
+    const upperAsset = assetType.toUpperCase();
+    if (upperAsset === "BTC") return 10;
+    if (upperAsset === "ETH") return 100;
+    if (upperAsset === "USDT" || upperAsset === "USDC") return 100000;
+    return Infinity; // No limit for other assets
+  };
+
+  const amountThreshold = getAmountThreshold(asset);
+  const amountExceedsThreshold = Number.isFinite(numericAmount) && numericAmount > amountThreshold;
+  const amountError = amountExceedsThreshold 
+    ? `Amount seems unusually high. Maximum allowed for ${asset} is ${amountThreshold.toLocaleString()}. Please double-check and re-enter.`
+    : null;
+
   const handleAssetChange = (nextAsset: DepositAsset | "fiat") => {
     if (nextAsset === "fiat") {
       setAsset("fiat");
@@ -305,6 +320,9 @@ export function DepositWorkspace({ initialAsset }: { initialAsset?: string }) {
                           <span className="mt-2 block text-xs font-medium text-[#718096]">
                             Minimum deposit is {formatAmount(config.minAmount, config.asset)}.
                           </span>
+                          {amountError && (
+                            <p className="mt-2 text-sm font-semibold text-red-600">{amountError}</p>
+                          )}
                         </label>
 
                         <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-4">
@@ -317,7 +335,7 @@ export function DepositWorkspace({ initialAsset }: { initialAsset?: string }) {
                         </div>
 
                         <button
-                          disabled={!amountIsValid}
+                          disabled={!amountIsValid || amountExceedsThreshold}
                           onClick={() => setStep(1)}
                           className="inline-flex w-full items-center justify-center rounded-2xl bg-[#113285] px-5 py-4 text-sm font-bold text-white transition-colors hover:bg-[#0D2768] disabled:cursor-not-allowed disabled:bg-gray-300 sm:w-auto"
                         >
