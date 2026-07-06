@@ -41,6 +41,7 @@ export function WithdrawWorkspace() {
   const youReceive = numAmount > fee ? numAmount - fee : 0;
 
   // Amount threshold validation to prevent unrealistic large amounts
+  // Convert CAD amount to crypto equivalent for validation
   const getAmountThreshold = (assetType: string): number => {
     const upperAsset = assetType.toUpperCase();
     if (upperAsset === "BTC") return 10;
@@ -50,7 +51,8 @@ export function WithdrawWorkspace() {
   };
 
   const amountThreshold = getAmountThreshold(selectedAsset);
-  const amountExceedsThreshold = Number.isFinite(numAmount) && numAmount > amountThreshold;
+  const cryptoEquivalent = Number.isFinite(numAmount) ? numAmount / selectedRate : 0;
+  const amountExceedsThreshold = Number.isFinite(cryptoEquivalent) && cryptoEquivalent > amountThreshold;
   const amountError = amountExceedsThreshold 
     ? `Amount seems unusually high. Maximum allowed for ${selectedAsset} is ${amountThreshold.toLocaleString()}. Please double-check and re-enter.`
     : null;
@@ -74,7 +76,7 @@ export function WithdrawWorkspace() {
       const res = await fetch("/api/auth/send-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: userEmail }),
+        body: JSON.stringify({ email: userEmail, purpose: "withdrawal" }),
       });
       
       const data = await res.json();
@@ -221,7 +223,7 @@ export function WithdrawWorkspace() {
             </div>
 
             <div className="mb-4">
-              <label className="mb-2 block text-[14px] font-bold text-[#0A0F2C]">Withdrawal Amount (CAD)</label>
+              <label className="mb-2 block text-[14px] font-bold text-[#0A0F2C]">Enter amount in CAD</label>
               <input 
                 type="number" 
                 placeholder="0.00"

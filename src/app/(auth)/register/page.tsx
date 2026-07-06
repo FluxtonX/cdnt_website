@@ -80,7 +80,7 @@ export default function RegisterPage() {
         await fetch("/api/auth/send-otp", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: normalizedEmail }),
+          body: JSON.stringify({ email: normalizedEmail, purpose: "email-verification" }),
         });
       } catch (err) {
         console.error("Failed to send initial OTP", err);
