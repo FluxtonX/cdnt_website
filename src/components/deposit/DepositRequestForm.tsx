@@ -66,6 +66,17 @@ export function DepositRequestForm({ config, amount }: { config: DepositAddressC
       return;
     }
 
+    // Insert user notification
+    await supabase.from("notifications").insert({
+      user_id: user.id,
+      audience: "User",
+      type: "Info",
+      title: "Deposit Request Submitted",
+      message: `Your deposit request for ${amount} ${config.asset} has been submitted and is pending approval.`,
+      is_read: false,
+      link: "/transactions"
+    });
+
     // Insert admin notification
     await supabase.from("notifications").insert({
       audience: "Admin",
