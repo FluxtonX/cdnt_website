@@ -153,7 +153,7 @@ export default function TransactionsPage() {
                 <p className="text-[12px] font-semibold uppercase tracking-wide text-[#718096]">Amount</p>
                 <p className="mt-1 text-[14px] font-bold text-[#0A0F2C]">
                   {selectedTransaction.asset !== "CAD" && selectedTransaction.asset !== "USD"
-                    ? `${(Number(selectedTransaction.amount) / (metrics?.cadRates?.[selectedTransaction.asset] || 1)).toFixed(6)} ${selectedTransaction.asset} ($${selectedTransaction.amount} CAD)`
+                    ? `${Number(selectedTransaction.amount).toFixed(6)} ${selectedTransaction.asset} ($${(Number(selectedTransaction.amount) * (metrics?.cadRates?.[selectedTransaction.asset] || 1)).toFixed(2)} CAD)`
                     : `${selectedTransaction.amount} ${selectedTransaction.asset}`}
                 </p>
               </div>

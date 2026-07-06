@@ -861,7 +861,7 @@ export default function DashboardPage() {
                 <p className="text-[12px] font-semibold uppercase tracking-wide text-[#718096]">Amount</p>
                 <p className="mt-1 text-[14px] font-bold text-[#0A0F2C]">
                   {selectedTxDetails.asset !== "CAD" && selectedTxDetails.asset !== "USD"
-                    ? `${(Number(selectedTxDetails.amount) / (metrics?.cadRates?.[selectedTxDetails.asset] || 1)).toFixed(6)} ${selectedTxDetails.asset} ($${selectedTxDetails.amount} CAD)`
+                    ? `${Number(selectedTxDetails.amount).toFixed(6)} ${selectedTxDetails.asset} ($${(Number(selectedTxDetails.amount) * (metrics?.cadRates?.[selectedTxDetails.asset] || 1)).toFixed(2)} CAD)`
                     : `${selectedTxDetails.amount} ${selectedTxDetails.asset}`}
                 </p>
               </div>
