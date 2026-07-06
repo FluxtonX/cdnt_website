@@ -195,7 +195,7 @@ export function UserShell({ children }: { children: React.ReactNode }) {
         const { data, error } = await supabase
           .from("notifications")
           .select("*")
-          .or(`user_id.eq.${user.id},audience.eq.All`)
+          .or(`user_id.eq.${user.id},audience.eq.Admin`)
           .order("created_at", { ascending: false });
 
         if (!error && data) {
