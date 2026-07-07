@@ -31,7 +31,10 @@ export function WithdrawWorkspace() {
   // Compute available balance based on selected asset
   const selectedWallet = wallets.find(w => w.currency === selectedAsset) || { currency: selectedAsset, balance: 0 };
   const selectedRate = cadRates[selectedAsset] || 1.36; // Fallback rate if missing
-  const availableBalance = selectedWallet.balance * selectedRate;
+  // If CAD is selected, use balance directly (no conversion needed)
+  const availableBalance = selectedAsset.toUpperCase() === 'CAD' 
+    ? selectedWallet.balance 
+    : selectedWallet.balance * selectedRate;
 
   const createWithdrawal = useCreateWithdrawalRequest();
 
@@ -243,11 +246,15 @@ export function WithdrawWorkspace() {
                 <>
                   Available {selectedAsset} balance: 
                   <span className="font-bold text-[#0A0F2C] ml-1">
-                    {selectedWallet.balance.toFixed(6)}
+                    {selectedAsset.toUpperCase() === 'CAD' 
+                      ? selectedWallet.balance.toFixed(2)
+                      : selectedWallet.balance.toFixed(6)}
                   </span> 
-                  <span className="ml-1">
-                    (${(availableBalance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CAD)
-                  </span>
+                  {selectedAsset.toUpperCase() !== 'CAD' && (
+                    <span className="ml-1">
+                      (${(availableBalance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CAD)
+                    </span>
+                  )}
                 </>
               )}
             </p>
@@ -296,7 +303,7 @@ export function WithdrawWorkspace() {
                   return;
                 }
                 if (numAmount > availableBalance) {
-                  setErrorMsg(`Amount exceeds available ${selectedAsset} balance in CAD.`);
+                  setErrorMsg(`Amount exceeds available ${selectedAsset} balance.`);
                   return;
                 }
                 if (numAmount < 10) {

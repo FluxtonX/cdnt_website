@@ -46,6 +46,24 @@ export function DepositRequestForm({ config, amount }: { config: DepositAddressC
       return;
     }
 
+    // Fetch user's name from KYC table first, then profiles
+    const { data: kyc } = await supabase
+      .from("kyc_submissions")
+      .select("full_name")
+      .eq("user_id", user.id)
+      .single();
+    
+    let userName = kyc?.full_name;
+    
+    if (!userName) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", user.id)
+        .single();
+      userName = profile?.full_name || user.email || "A user";
+    }
+
     const { error } = await supabase.from("deposit_requests").insert({
       user_id: user.id,
       asset: config.asset,
@@ -77,12 +95,12 @@ export function DepositRequestForm({ config, amount }: { config: DepositAddressC
       link: "/transactions"
     });
 
-    // Insert admin notification
+    // Insert admin notification with user name
     await supabase.from("notifications").insert({
       audience: "Admin",
       type: "Info",
       title: "New Deposit Request",
-      message: `A user has submitted a new manual deposit request for ${amount} ${config.asset}.`,
+      message: `${userName} has submitted a new manual deposit request for ${amount} ${config.asset}.`,
       is_read: false,
       link: "/dashboard/transactions"
     });

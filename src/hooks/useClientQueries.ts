@@ -82,12 +82,20 @@ export function useDashboardMetrics() {
       if (!walletsErr && userWallets) {
         userWallets.forEach((w: any) => {
           const balance = Number(w.balance || 0);
-          if (balance > 0) {
+          // Include CAD wallet even if balance is 0 (for withdrawal functionality)
+          if (balance > 0 || w.currency.toUpperCase() === 'CAD') {
             wallets.push({ currency: w.currency, balance });
+            // If it's CAD, add directly to portfolio value (no conversion needed)
+            if (w.currency.toUpperCase() === 'CAD') {
+              portfolioValue += balance;
+              cadBalance += balance;
+            }
           }
         });
-        portfolioValue = calculateCADBalance(userWallets, liveCadRates);
-        cadBalance = portfolioValue;
+        
+        // Calculate portfolio value for non-CAD currencies only
+        const nonCadWallets = userWallets.filter((w: any) => w.currency.toUpperCase() !== 'CAD');
+        portfolioValue += calculateCADBalance(nonCadWallets, liveCadRates);
       }
 
       let thisMonthDeposits = 0;
@@ -429,14 +437,21 @@ export function useClientWallets() {
       // Get all currencies from user wallets plus defaults
       const allCurrencies = Array.from(new Set([...defaultCurrencies, ...Array.from(userWalletCurrencies)]));
       
-      // Calculate total portfolio value in CAD
+      // Calculate total portfolio value in CAD (excluding CAD wallet itself)
       let totalPortfolioValue = 0;
       (userWallets || []).forEach((w: any) => {
         const currency = w.currency?.toUpperCase();
         const balance = Number(w.balance || 0);
+        // Skip CAD for portfolio calculation since it's already in CAD
+        if (currency === 'CAD') return;
         const rate = cadRates[currency] || cadRates.USDT || 1.36;
         totalPortfolioValue += balance * rate;
       });
+      
+      // Add CAD balance directly if it exists
+      const cadWallet = (userWallets || []).find((w: any) => w.currency?.toUpperCase() === 'CAD');
+      const cadBalance = Number(cadWallet?.balance || 0);
+      totalPortfolioValue += cadBalance;
       
       allCurrencies.forEach((currency) => {
         const userWallet = (userWallets || []).find((w: any) => w.currency?.toUpperCase() === currency);
@@ -476,22 +491,24 @@ export function useClientWallets() {
         });
       });
 
-      // Add CAD wallet with total portfolio value
-      mappedWallets.push({
-        id: "cad",
-        name: "CAD",
-        symbol: "CAD",
-        balance: totalPortfolioValue.toFixed(2),
-        rawBalance: totalPortfolioValue,
-        value: `$${totalPortfolioValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-        change: "Fiat",
-        changeType: "neutral",
-        network: "Canadian Dollar",
-        address: "",
-        addresses: [],
-        image: undefined,
-        activities: [],
-      });
+      // Add CAD wallet with stored balance (not calculated)
+      if (cadBalance > 0 || defaultCurrencies.includes("CAD")) {
+        mappedWallets.push({
+          id: "cad",
+          name: "CAD",
+          symbol: "CAD",
+          balance: cadBalance.toFixed(2),
+          rawBalance: cadBalance,
+          value: `$${cadBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+          change: "Fiat",
+          changeType: "neutral",
+          network: "Canadian Dollar",
+          address: "",
+          addresses: [],
+          image: undefined,
+          activities: allActivities.filter((act) => act.currency === "CAD").slice(0, 5),
+        });
+      }
 
       return mappedWallets;
     },
@@ -536,6 +553,24 @@ export function useCreateWithdrawalRequest() {
         throw new Error("User session not found. Please log in again.");
       }
 
+      // Fetch user's name from KYC table first, then profiles
+      const { data: kyc } = await supabase
+        .from("kyc_submissions")
+        .select("full_name")
+        .eq("user_id", user.id)
+        .single();
+      
+      let userName = kyc?.full_name;
+      
+      if (!userName) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("id", user.id)
+          .single();
+        userName = profile?.full_name || user.email || "A user";
+      }
+
       const { error: insertError } = await supabase.from("withdrawal_requests").insert({
         user_id: user.id,
         asset: input.asset,
@@ -564,7 +599,7 @@ export function useCreateWithdrawalRequest() {
           audience: "Admin",
           type: "Info",
           title: "New Withdrawal Request",
-          message: `A user has submitted a new withdrawal request for $${input.amount.toLocaleString()} CAD.`,
+          message: `${userName} has submitted a new withdrawal request for $${input.amount.toLocaleString()} CAD.`,
           is_read: false,
           link: "/dashboard/withdrawals"
         }

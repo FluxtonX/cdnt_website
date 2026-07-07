@@ -391,8 +391,9 @@ export default function DashboardPage() {
     }
 
     return wallets.map((w) => {
-      const rate = cadRates[w.currency] || cadRates.USDT || 1.36;
-      const value = w.balance * rate;
+      // If CAD, use balance directly (no conversion needed)
+      const isCAD = w.currency === 'CAD';
+      const value = isCAD ? w.balance : w.balance * (cadRates[w.currency] || cadRates.USDT || 1.36);
       return buildItem(w.currency, value);
     }).filter((item) => item.value > 0);
   }, [wallets, cadRates, portfolioValue]);
@@ -731,16 +732,17 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {wallets.length > 0 ? wallets.map((w) => {
-          const rate = cadRates[w.currency] || cadRates.USDT || 1.36;
-          const value = w.balance * rate;
-          const decimals = w.currency === "USDT" || w.currency === "USDC" ? 2 : 8;
-          const isStable = w.currency === "USDT" || w.currency === "USDC";
+          // If CAD, use balance directly (no conversion needed)
+          const isCAD = w.currency === 'CAD';
+          const value = isCAD ? w.balance : w.balance * (cadRates[w.currency] || cadRates.USDT || 1.36);
+          const decimals = w.currency === "USDT" || w.currency === "USDC" || isCAD ? 2 : 8;
+          const isStable = w.currency === "USDT" || w.currency === "USDC" || isCAD;
           return (
             <div key={w.currency} className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex flex-col">
               <div className="flex items-start justify-between mb-4">
                 <CoinLogo src={getCoinBySymbol(`${w.currency}USDT`)?.logoUrl} symbol={w.currency} className="h-10 w-10 p-1.5" />
                 <div className={isStable ? "bg-gray-100 text-[#718096] px-2 py-0.5 rounded text-[11px] font-bold" : "bg-green-50 text-[#10B981] px-2 py-0.5 rounded text-[11px] font-bold border border-green-100"}>
-                  {isStable ? "Stable" : "Live"}
+                  {isStable ? (isCAD ? "Fiat" : "Stable") : "Live"}
                 </div>
               </div>
               <h3 className="text-[15px] font-bold text-[#0A0F2C] mb-1">{w.currency}</h3>

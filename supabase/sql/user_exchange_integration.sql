@@ -9,7 +9,8 @@ create or replace function public.execute_trade(
   p_user_id uuid,
   p_side text,            -- 'buy' or 'sell'
   p_crypto_symbol text,    -- e.g. 'BTC', 'ETH'
-  p_usd_amount numeric,    -- amount of USD/USDT
+  p_fiat_currency text,   -- 'USDT' or 'CAD'
+  p_usd_amount numeric,    -- amount of USD/USDT/CAD
   p_crypto_amount numeric  -- amount of cryptocurrency
 )
 returns boolean
@@ -25,23 +26,28 @@ begin
     raise exception 'Invalid trade side. Must be buy or sell.';
   end if;
 
+  -- Ensure fiat currency is valid
+  if p_fiat_currency not in ('USDT', 'CAD') then
+    raise exception 'Invalid fiat currency. Must be USDT or CAD.';
+  end if;
+
   if p_side = 'buy' then
-    -- Deduct USDT, Credit Crypto
-    -- 1. Check USDT balance with row lock to prevent race conditions
+    -- Deduct Fiat (USDT or CAD), Credit Crypto
+    -- 1. Check fiat balance with row lock to prevent race conditions
     select balance into v_fiat_balance
     from public.user_wallets
-    where user_id = p_user_id and currency = 'USDT'
+    where user_id = p_user_id and currency = p_fiat_currency
     for update;
 
     if v_fiat_balance is null or v_fiat_balance < p_usd_amount then
-      raise exception 'Insufficient USDT balance to complete this purchase.';
+      raise exception 'Insufficient % balance to complete this purchase.', p_fiat_currency;
     end if;
 
-    -- 2. Deduct USDT balance
+    -- 2. Deduct fiat balance
     update public.user_wallets
     set balance = balance - p_usd_amount,
         updated_at = now()
-    where user_id = p_user_id and currency = 'USDT';
+    where user_id = p_user_id and currency = p_fiat_currency;
 
     -- 3. Credit Crypto balance
     insert into public.user_wallets (user_id, currency, balance, updated_at)
@@ -56,10 +62,10 @@ begin
     values (p_user_id, 'DEPOSIT', 'EXCHANGE_BUY', p_crypto_symbol, p_crypto_amount, 'COMPLETED');
 
     insert into public.wallet_ledger (user_id, type, provider, currency, amount, status)
-    values (p_user_id, 'WITHDRAWAL', 'EXCHANGE_BUY', 'USDT', p_usd_amount, 'COMPLETED');
+    values (p_user_id, 'WITHDRAWAL', 'EXCHANGE_BUY', p_fiat_currency, p_usd_amount, 'COMPLETED');
 
   else
-    -- Deduct Crypto, Credit USDT
+    -- Deduct Crypto, Credit Fiat (USDT or CAD)
     -- 1. Check Crypto balance with row lock
     select balance into v_crypto_balance
     from public.user_wallets
@@ -76,9 +82,9 @@ begin
         updated_at = now()
     where user_id = p_user_id and currency = p_crypto_symbol;
 
-    -- 3. Credit USDT balance
+    -- 3. Credit fiat balance
     insert into public.user_wallets (user_id, currency, balance, updated_at)
-    values (p_user_id, 'USDT', p_usd_amount, now())
+    values (p_user_id, p_fiat_currency, p_usd_amount, now())
     on conflict (user_id, currency)
     do update set
       balance = public.user_wallets.balance + p_usd_amount,
@@ -89,7 +95,7 @@ begin
     values (p_user_id, 'WITHDRAWAL', 'EXCHANGE_SELL', p_crypto_symbol, p_crypto_amount, 'COMPLETED');
 
     insert into public.wallet_ledger (user_id, type, provider, currency, amount, status)
-    values (p_user_id, 'DEPOSIT', 'EXCHANGE_SELL', 'USDT', p_usd_amount, 'COMPLETED');
+    values (p_user_id, 'DEPOSIT', 'EXCHANGE_SELL', p_fiat_currency, p_usd_amount, 'COMPLETED');
 
   end if;
 
@@ -109,13 +115,17 @@ begin
   values (new.id, 'USDT', case when new.email = 'muhammedmudassir40@gmail.com' then 50000.00 else 0.00 end)
   on conflict (user_id, currency) do nothing;
   
-  -- Also give them 0 balance for BTC and ETH so they show up in portfolios
+  -- Also give them 0 balance for BTC, ETH, and CAD so they show up in portfolios
   insert into public.user_wallets (user_id, currency, balance)
   values (new.id, 'BTC', 0.00000000)
   on conflict (user_id, currency) do nothing;
   
   insert into public.user_wallets (user_id, currency, balance)
   values (new.id, 'ETH', 0.00000000)
+  on conflict (user_id, currency) do nothing;
+  
+  insert into public.user_wallets (user_id, currency, balance)
+  values (new.id, 'CAD', 0.00)
   on conflict (user_id, currency) do nothing;
   
   return new;

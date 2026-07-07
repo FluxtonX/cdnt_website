@@ -185,6 +185,10 @@ export default function ExchangePage() {
 
   const estimatedCrypto = side === "buy" && amountInUsdt > 0 && livePrice > 0 ? amountInUsdt / livePrice : 0;
   const estimatedUsd = side === "sell" && amountValue > 0 ? amountValue * livePrice : 0;
+  // Convert estimated USD to CAD if CAD is selected as base currency
+  const estimatedDisplay = baseCurrency === "CAD" && side === "sell" 
+    ? estimatedUsd * exchangeRates.USDT_TO_CAD 
+    : estimatedUsd;
   const fee = side === "buy" ? amountInUsdt * 0.005 : estimatedUsd * 0.004;
   const totalInUsdt = side === "buy" ? amountInUsdt + fee : Math.max(0, estimatedUsd - fee);
   const total = totalInUsdt / baseToUsdtRate;
@@ -220,6 +224,7 @@ export default function ExchangePage() {
         p_user_id: user.id,
         p_side: side,
         p_crypto_symbol: selectedCoin.baseAsset,
+        p_fiat_currency: baseCurrency,
         p_usd_amount: usdVal,
         p_crypto_amount: cryptoVal,
       });
@@ -478,12 +483,12 @@ export default function ExchangePage() {
               />
 
               <label className="mt-5 block text-sm font-black text-[#0A0F2C]">
-                {side === "buy" ? `Estimated ${selectedCoin.baseAsset}` : "Estimated USDT"}
+                {side === "buy" ? `Estimated ${selectedCoin.baseAsset}` : `Estimated ${baseCurrency}`}
               </label>
               <div className="mt-2 flex h-14 items-center rounded-xl border border-slate-200 bg-slate-50 px-4 text-lg font-black text-slate-400">
                 {side === "buy"
                   ? estimatedCrypto > 0 ? estimatedCrypto.toFixed(selectedCoin.baseAsset === "BTC" ? 8 : 4) : "0.00000000"
-                  : estimatedUsd > 0 ? `$${estimatedUsd.toLocaleString("en-US", { maximumFractionDigits: 2 })}` : "$0.00"}
+                  : estimatedDisplay > 0 ? `$${estimatedDisplay.toLocaleString("en-US", { maximumFractionDigits: 2 })}` : "$0.00"}
               </div>
 
               <div className="mt-4 grid grid-cols-4 gap-2">
