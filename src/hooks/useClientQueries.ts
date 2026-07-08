@@ -474,13 +474,15 @@ export function useClientWallets() {
         const primaryAddress = addresses[0]?.address || `${currency.toLowerCase()}...address`;
         const primaryNetwork = addresses[0]?.network || `${currency} Network`;
 
+        // CAD balance is stored directly — use it as-is without any rate conversion.
+        const displayValue = currency === "CAD" ? balance : balance * rate;
         mappedWallets.push({
           id: currency.toLowerCase(),
           name: currency,
           symbol: currency,
           balance: balance.toFixed(decimals),
           rawBalance: balance,
-          value: `$${(balance * rate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+          value: `$${displayValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
           change: currency === "USDT" || currency === "USDC" ? "Stable" : "Live",
           changeType: currency === "USDT" || currency === "USDC" ? "neutral" : "positive",
           network: primaryNetwork,
@@ -525,11 +527,18 @@ export function useWithdrawBalance() {
         .select("currency, balance")
         .eq("user_id", user.id);
 
+      if (!wallets || wallets.length === 0) return 0;
+
+      // CAD balance is stored directly — do NOT multiply by any exchange rate.
+      // Only convert non-CAD crypto wallets to CAD using live rates.
+      const cadWallet = wallets.find((w: any) => w.currency?.toUpperCase() === "CAD");
+      const cadBalance = Number(cadWallet?.balance || 0);
+
+      const nonCadWallets = wallets.filter((w: any) => w.currency?.toUpperCase() !== "CAD");
       const rates = await fetchLiveCADRates();
-      if (wallets && wallets.length > 0) {
-        return calculateCADBalance(wallets, rates);
-      }
-      return 0;
+      const cryptoValueInCad = calculateCADBalance(nonCadWallets, rates);
+
+      return cadBalance + cryptoValueInCad;
     },
   });
 }

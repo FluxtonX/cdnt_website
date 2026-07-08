@@ -216,8 +216,39 @@ export default function ExchangePage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Please log in first.");
 
-      const usdVal = side === "buy" ? amountInUsdt : Number(amount) * livePrice;
       const cryptoVal = side === "buy" ? amountInUsdt / livePrice : Number(amount);
+
+      // Calculate the fiat amount that will be credited/debited in the wallet.
+      // p_usd_amount must be denominated in p_fiat_currency, not always in USDT.
+      //
+      // SELL:
+      //   - Raw USDT value = crypto_amount × livePrice  (livePrice is always in USDT)
+      //   - fee is deducted (0.4%)
+      //   - If baseCurrency === 'CAD', convert the net USDT proceeds → CAD using
+      //     the live USDT-to-CAD rate so the credited amount matches "Net Proceeds"
+      //     shown on screen.
+      //
+      // BUY:
+      //   - amountInUsdt is already the USDT-equivalent (CAD input ÷ rate).
+      //   - If baseCurrency === 'CAD', the wallet to debit is CAD, so pass the
+      //     original CAD input amount (amountValue) plus fee in CAD.
+      let fiatAmount: number;
+      if (side === "sell") {
+        const grossUsdt = Number(amount) * livePrice;   // USDT value of crypto sold
+        const feeUsdt   = grossUsdt * 0.004;            // 0.4% fee in USDT
+        const netUsdt   = grossUsdt - feeUsdt;          // net proceeds in USDT
+        // Convert to the fiat currency the user chose
+        fiatAmount = baseCurrency === "CAD"
+          ? netUsdt * exchangeRates.USDT_TO_CAD         // → CAD (matches "Net Proceeds" shown)
+          : netUsdt;                                    // → USDT (no conversion)
+      } else {
+        // BUY: deduct fiat from wallet
+        const feeUsdt  = amountInUsdt * 0.005;          // 0.5% fee in USDT
+        const totalUsdt = amountInUsdt + feeUsdt;       // total fiat cost in USDT
+        fiatAmount = baseCurrency === "CAD"
+          ? totalUsdt / baseToUsdtRate                  // → back to CAD
+          : totalUsdt;                                  // → USDT
+      }
 
       // Call transaction-safe RPC function
       const { error } = await supabase.rpc("execute_trade", {
@@ -225,7 +256,7 @@ export default function ExchangePage() {
         p_side: side,
         p_crypto_symbol: selectedCoin.baseAsset,
         p_fiat_currency: baseCurrency,
-        p_usd_amount: usdVal,
+        p_usd_amount: fiatAmount,   // correctly denominated in baseCurrency
         p_crypto_amount: cryptoVal,
       });
 
@@ -524,11 +555,25 @@ export default function ExchangePage() {
                 </div>
                 <div className="flex justify-between gap-3">
                   <span className="font-semibold text-[#718096]">Fee ({side === "buy" ? "0.50" : "0.40"}%)</span>
-                  <span className="font-black text-[#0A0F2C]">{side === "buy" ? `${(baseCurrency === "CAD" ? fee * exchangeRates.USDT_TO_CAD : fee).toFixed(2)} ${baseCurrency}` : formatCurrency(fee)}</span>
+                  <span className="font-black text-[#0A0F2C]">
+                    {side === "buy"
+                      ? `${(baseCurrency === "CAD" ? fee * exchangeRates.USDT_TO_CAD : fee).toFixed(2)} ${baseCurrency}`
+                      : baseCurrency === "CAD"
+                        ? `$${(fee * exchangeRates.USDT_TO_CAD).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CAD`
+                        : formatCurrency(fee)
+                    }
+                  </span>
                 </div>
                 <div className="flex justify-between gap-3 border-t border-slate-200 pt-3">
                   <span className="font-black text-[#0A0F2C]">{side === "buy" ? "Total Cost" : "Net Proceeds"}</span>
-                  <span className="font-black text-[#0A0F2C]">{side === "buy" ? `${(baseCurrency === "CAD" ? total * exchangeRates.USDT_TO_CAD : total).toFixed(2)} ${baseCurrency}` : formatCurrency(total)}</span>
+                  <span className="font-black text-[#0A0F2C]">
+                    {side === "buy"
+                      ? `${(baseCurrency === "CAD" ? total * exchangeRates.USDT_TO_CAD : total).toFixed(2)} ${baseCurrency}`
+                      : baseCurrency === "CAD"
+                        ? `$${(totalInUsdt * exchangeRates.USDT_TO_CAD).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CAD`
+                        : formatCurrency(total)
+                    }
+                  </span>
                 </div>
               </div>
 
