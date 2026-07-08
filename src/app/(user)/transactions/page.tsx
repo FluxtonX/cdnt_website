@@ -35,11 +35,11 @@ export default function TransactionsPage() {
   const handleExportCSV = () => {
     if (filteredTransactions.length === 0) return;
 
-    const headers = ["Date", "Description", "Type", "Asset", "Amount", "Status"];
+    const headers = ["Date", "Description", "Type", "Asset", "Crypto Amount", "CAD Value", "Status"];
     const csvContent = [
       headers.join(","),
       ...filteredTransactions.map(row =>
-        [row.date, row.description, row.type, row.asset, row.amount, row.status].map(val => `"${val}"`).join(",")
+        [row.date, row.description, row.type, row.asset, row.amount, row.fiat, row.status].map(val => `"${val}"`).join(",")
       )
     ].join("\n");
 

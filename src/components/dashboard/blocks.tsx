@@ -396,7 +396,8 @@ export function TransactionTable({
             <th className="py-3 font-semibold">Description</th>
             <th className="py-3 font-semibold">Type</th>
             <th className="py-3 font-semibold">Asset</th>
-            <th className="py-3 font-semibold">Amount</th>
+            <th className="py-3 font-semibold">Crypto Amount</th>
+            <th className="py-3 font-semibold">CAD Value</th>
             <th className="py-3 font-semibold">Status</th>
             {onViewRow && <th className="py-3 font-semibold">Actions</th>}
           </tr>
@@ -413,7 +414,8 @@ export function TransactionTable({
               </td>
               <td className="py-4 text-xs font-medium uppercase text-banking-muted">{row.type.replaceAll("_", " ")}</td>
               <td className="py-4">{row.asset}</td>
-              <td className="py-4 font-bold text-banking-text">{row.amount}</td>
+              <td className="py-4 font-bold text-banking-text uppercase tracking-wider">{row.amount}</td>
+              <td className="py-4 font-bold text-banking-text">{row.fiat}</td>
               <td className="py-4"><StatusBadge status={row.status} /></td>
               {onViewRow && (
                 <td className="py-4">

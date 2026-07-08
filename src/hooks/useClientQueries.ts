@@ -271,13 +271,27 @@ export function useClientTransactions() {
         console.error("Failed to fetch withdrawal_requests:", withdrawalsRes.error);
       }
 
+      const allAssets = Array.from(new Set([
+        ...(depositsRes.data || []).map((d) => (d.asset || "USDT").toUpperCase()),
+        ...(withdrawalsRes.data || []).map((w) => (w.asset || "USDT").toUpperCase()),
+      ]));
+      const cadRates = await fetchLiveCADRates(allAssets.length > 0 ? allAssets : ["BTC", "ETH", "USDT"]);
+
+      const getCadValue = (asset: string, amount: number): string => {
+        const sym = (asset || "USDT").toUpperCase();
+        if (sym === "CAD") return `$${amount.toFixed(2)} CAD`;
+        const rate = cadRates[sym] || cadRates["USDT"] || 1.36;
+        const cadVal = amount * rate;
+        return `$${cadVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CAD`;
+      };
+
       const deposits: TransactionRow[] = (depositsRes.data || []).map((d) => ({
         id: d.id,
         type: "deposit",
         asset: d.asset || "USD",
         amount: String(d.expected_amount),
         rawAmount: Number(d.expected_amount),
-        fiat: "USD",
+        fiat: getCadValue(d.asset || "USDT", Number(d.expected_amount)),
         status: d.status,
         date: new Date(d.created_at).toLocaleDateString(),
         description: `TXN-${d.id.substring(0, 8).toUpperCase()}`,
@@ -293,7 +307,7 @@ export function useClientTransactions() {
         asset: w.asset || (w.method === "interac" ? "CAD" : "USD"),
         amount: String(w.amount),
         rawAmount: Number(w.amount),
-        fiat: "USD",
+        fiat: getCadValue(w.asset || (w.method === "interac" ? "CAD" : "USDT"), Number(w.amount)),
         status: w.status,
         date: new Date(w.created_at).toLocaleDateString(),
         description: `TXN-${w.id.substring(0, 8).toUpperCase()}`,
