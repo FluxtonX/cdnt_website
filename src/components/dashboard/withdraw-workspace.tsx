@@ -1,13 +1,44 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { ArrowLeft, AlertCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, AlertCircle, Loader2, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/ui/toast";
 import { useRouter } from "next/navigation";
 import { useDashboardMetrics, useCreateWithdrawalRequest } from "@/hooks/useClientQueries";
+
+// CoinGecko ID mapping for crypto symbols
+const COINGECKO_IDS: Record<string, string> = {
+  BTC: "bitcoin",
+  ETH: "ethereum",
+  USDT: "tether",
+  USDC: "usd-coin",
+  BNB: "binancecoin",
+  SOL: "solana",
+  XRP: "ripple",
+  LTC: "litecoin",
+  ADA: "cardano",
+  DOT: "polkadot",
+};
+
+// Fetch live USD price from CoinGecko (free, no API key required)
+async function fetchLiveCadRate(symbol: string): Promise<number | null> {
+  const id = COINGECKO_IDS[symbol.toUpperCase()];
+  if (!id) return null;
+  try {
+    const res = await fetch(
+      `https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=cad`,
+      { cache: "no-store" }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data?.[id]?.cad ?? null;
+  } catch {
+    return null;
+  }
+}
 
 export function WithdrawWorkspace() {
   const [step, setStep] = useState(1);
@@ -19,86 +50,144 @@ export function WithdrawWorkspace() {
   const [twoFa, setTwoFa] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [selectedAsset, setSelectedAsset] = useState<string>("USDT");
+  const [selectedAsset, setSelectedAsset] = useState<string>("");
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [sendingOtp, setSendingOtp] = useState(false);
+
+  // Live rate state
+  const [liveRate, setLiveRate] = useState<number | null>(null);
+  const [rateLoading, setRateLoading] = useState(false);
+  const [rateError, setRateError] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const rateTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const supabase = createClient();
   const { notify } = useToast();
   const router = useRouter();
-  
+
   const { data: metrics, isLoading: metricsLoading } = useDashboardMetrics();
   const wallets = metrics?.wallets || [];
-  
+  const cadRates = metrics?.cadRates || {};
+
+  // Auto-select first wallet when wallets load
   useEffect(() => {
-    if (wallets.length > 0 && !wallets.some(w => w.currency === selectedAsset)) {
+    if (wallets.length > 0 && !selectedAsset) {
+      setSelectedAsset(wallets[0].currency);
+    } else if (wallets.length > 0 && !wallets.some(w => w.currency === selectedAsset)) {
       setSelectedAsset(wallets[0].currency);
     }
-  }, [wallets, selectedAsset]);
-  const cadRates = metrics?.cadRates || {};
-  
-  // Compute available balance based on selected asset
-  const selectedWallet = wallets.find(w => w.currency === selectedAsset) || { currency: selectedAsset, balance: 0 };
-  const selectedRate = cadRates[selectedAsset] || 1.36; // Fallback rate if missing
-  // If CAD is selected, use balance directly (no conversion needed)
-  const availableBalance = selectedAsset.toUpperCase() === 'CAD' 
-    ? selectedWallet.balance 
-    : selectedWallet.balance * selectedRate;
+  }, [wallets]);
 
-  const createWithdrawal = useCreateWithdrawalRequest();
+  // Fetch live CAD rate whenever selected asset changes
+  const fetchRate = async (asset: string) => {
+    if (!asset || asset.toUpperCase() === "CAD") {
+      setLiveRate(1);
+      return;
+    }
+    setRateLoading(true);
+    setRateError(false);
+    const rate = await fetchLiveCadRate(asset);
+    if (rate !== null) {
+      setLiveRate(rate);
+      setLastUpdated(new Date());
+      setRateError(false);
+    } else {
+      // Fallback to metrics rate
+      const fallback = cadRates[asset] ?? null;
+      setLiveRate(fallback);
+      setRateError(true);
+    }
+    setRateLoading(false);
+  };
 
+  useEffect(() => {
+    if (!selectedAsset) return;
+    fetchRate(selectedAsset);
 
-  // If CAD selected → user enters CAD directly. For crypto → user enters crypto amount.
-  const isCADAsset = selectedAsset.toUpperCase() === "CAD";
-  const numAmount = parseFloat(amount || "0");
+    // Refresh every 60 seconds
+    if (rateTimerRef.current) clearInterval(rateTimerRef.current);
+    rateTimerRef.current = setInterval(() => fetchRate(selectedAsset), 60_000);
+    return () => {
+      if (rateTimerRef.current) clearInterval(rateTimerRef.current);
+    };
+  }, [selectedAsset]);
 
-  // For crypto: validate against actual balance in crypto units; for CAD: validate against CAD balance
-  const exceedsBalance = isCADAsset
-    ? numAmount > selectedWallet.balance
-    : numAmount > selectedWallet.balance;
-
-  // Compute CAD equivalent of entered amount (for display only)
-  const cadEquivalent = isCADAsset ? numAmount : numAmount * selectedRate;
-  // Fee in crypto units
-  const feeInCrypto = isCADAsset ? 2.5 : (selectedRate > 0 ? 2.5 / selectedRate : 0);
-  const youReceiveDisplay = isCADAsset
-    ? `$${Math.max(0, numAmount - 2.5).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CAD`
-    : `${Math.max(0, numAmount - feeInCrypto).toFixed(8)} ${selectedAsset} ($${Math.max(0, cadEquivalent - 2.5).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CAD)`;
-
-  const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [sendingOtp, setSendingOtp] = useState(false);
+  // Get user email on mount
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       setUserEmail(user?.email ?? null);
     });
   }, [supabase]);
 
+  const createWithdrawal = useCreateWithdrawalRequest();
+
+  const isCADAsset = selectedAsset.toUpperCase() === "CAD";
+  const selectedWallet = wallets.find(w => w.currency === selectedAsset) || { currency: selectedAsset, balance: 0 };
+
+  // Effective rate: live rate > metrics rate > fallback
+  const effectiveRate = liveRate ?? cadRates[selectedAsset] ?? 1;
+  const availableBalanceCAD = isCADAsset ? selectedWallet.balance : selectedWallet.balance * effectiveRate;
+
+  const numAmount = parseFloat(amount || "0");
+  const cadEquivalent = isCADAsset ? numAmount : numAmount * effectiveRate;
+  const FEE_CAD = 2.5;
+  const feeInCrypto = isCADAsset ? FEE_CAD : (effectiveRate > 0 ? FEE_CAD / effectiveRate : 0);
+
+  const youReceiveDisplay = isCADAsset
+    ? `$${Math.max(0, numAmount - FEE_CAD).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CAD`
+    : `${Math.max(0, numAmount - feeInCrypto).toFixed(8)} ${selectedAsset} ($${Math.max(0, cadEquivalent - FEE_CAD).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CAD)`;
+
+  // Two-way calculator handlers
+  const handleCryptoChange = (val: string) => {
+    setAmount(val);
+    const num = parseFloat(val);
+    if (!isNaN(num) && effectiveRate > 0) {
+      setCadAmount((num * effectiveRate).toFixed(2));
+    } else {
+      setCadAmount("");
+    }
+  };
+
+  const handleCadChange = (val: string) => {
+    setCadAmount(val);
+    const num = parseFloat(val);
+    if (!isNaN(num) && effectiveRate > 0) {
+      setAmount((num / effectiveRate).toFixed(8));
+    } else {
+      setAmount("");
+    }
+  };
+
+  const handleAssetChange = (asset: string) => {
+    setSelectedAsset(asset);
+    setAmount("");
+    setCadAmount("");
+    setErrorMsg(null);
+  };
+
+  const prevStep = () => {
+    setErrorMsg(null);
+    setStep((s) => Math.max(1, s - 1));
+  };
+
   const handleNextStep2 = async () => {
-    // Before going to step 3, we send the OTP
     setErrorMsg(null);
     setSendingOtp(true);
     try {
       if (!userEmail) throw new Error("Could not determine your registered email.");
-      
       const res = await fetch("/api/auth/send-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: userEmail, purpose: "withdrawal" }),
       });
-      
       const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to send 2FA code.");
-      }
-
+      if (!res.ok) throw new Error(data.error || "Failed to send 2FA code.");
       setStep(3);
     } catch (err: any) {
       setErrorMsg(err.message || "Failed to send 2FA code.");
     } finally {
       setSendingOtp(false);
     }
-  };
-  const prevStep = () => {
-    setErrorMsg(null);
-    setStep((s) => Math.max(1, s - 1));
   };
 
   const handleConfirmWithdrawal = async () => {
@@ -107,22 +196,16 @@ export function WithdrawWorkspace() {
     try {
       if (!userEmail) throw new Error("Session expired. Please log in again.");
 
-      // Verify OTP
       const verifyRes = await fetch("/api/withdraw/verify-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: userEmail, code: twoFa }),
       });
-      
       const verifyData = await verifyRes.json();
-      if (!verifyRes.ok) {
-        throw new Error(verifyData.error || "Invalid 2FA code.");
-      }
+      if (!verifyRes.ok) throw new Error(verifyData.error || "Invalid 2FA code.");
 
       const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) {
-        throw new Error("User session not found. Please log in again.");
-      }
+      if (userError || !user) throw new Error("User session not found. Please log in again.");
 
       await createWithdrawal.mutateAsync({
         asset: selectedAsset,
@@ -146,32 +229,11 @@ export function WithdrawWorkspace() {
     }
   };
 
-
-  const handleCryptoChange = (val: string) => {
-    setAmount(val);
-    const num = parseFloat(val);
-    if (!isNaN(num) && selectedRate > 0) {
-      setCadAmount((num * selectedRate).toFixed(2));
-    } else {
-      setCadAmount("");
-    }
-  };
-
-  const handleCadChange = (val: string) => {
-    setCadAmount(val);
-    const num = parseFloat(val);
-    if (!isNaN(num) && selectedRate > 0) {
-      setAmount((num / selectedRate).toFixed(8));
-    } else {
-      handleCryptoChange("");
-    }
-  };
-
   return (
-        <div className="mx-auto w-full max-w-[640px]">
+    <div className="mx-auto w-full max-w-[640px]">
       <div className="mb-8 flex items-center gap-4">
-        <Link 
-          href="/dashboard" 
+        <Link
+          href="/dashboard"
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 transition-colors shadow-sm"
         >
           <ArrowLeft className="h-[20px] w-[20px]" strokeWidth={2} />
@@ -193,7 +255,6 @@ export function WithdrawWorkspace() {
             )}>
               1
             </div>
-            {/* Line 1-2 */}
             <div className={cn(
               "mx-2 h-[3px] w-[40px] sm:w-[60px] rounded-full transition-colors",
               step >= 2 ? "bg-[#113285]" : "bg-[#F1F5F9]"
@@ -205,7 +266,6 @@ export function WithdrawWorkspace() {
             )}>
               2
             </div>
-            {/* Line 2-3 */}
             <div className={cn(
               "mx-2 h-[3px] w-[40px] sm:w-[60px] rounded-full transition-colors",
               step >= 3 ? "bg-[#113285]" : "bg-[#F1F5F9]"
@@ -220,20 +280,17 @@ export function WithdrawWorkspace() {
           </div>
         </div>
 
-        {/* Step 1: Select Asset & Enter Amount */}
+        {/* ── Step 1: Select Asset & Enter Amount ── */}
         {step === 1 && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
             <h2 className="mb-8 text-center text-[18px] font-bold text-[#0A0F2C]">Withdraw Funds</h2>
-            
+
+            {/* Select Asset */}
             <div className="mb-6">
               <label className="mb-2 block text-[14px] font-bold text-[#0A0F2C]">Select Asset</label>
               <select
                 value={selectedAsset}
-                onChange={(e) => {
-                  setSelectedAsset(e.target.value);
-                  handleCryptoChange("");
-                  setErrorMsg(null);
-                }}
+                onChange={(e) => handleAssetChange(e.target.value)}
                 className="w-full rounded-[14px] border border-gray-200 bg-white px-5 py-4 text-[16px] font-medium text-[#0A0F2C] outline-none transition-all focus:border-[#113285] focus:ring-1 focus:ring-[#113285]"
               >
                 {wallets.length === 0 && (
@@ -241,60 +298,126 @@ export function WithdrawWorkspace() {
                 )}
                 {wallets.map((w) => (
                   <option key={w.currency} value={w.currency}>
-                    {w.currency} - {w.balance.toFixed(6)} 
+                    {w.currency} — {isCADAsset ? `$${w.balance.toFixed(2)}` : w.balance.toFixed(8)}
                   </option>
                 ))}
               </select>
             </div>
 
-            <div className="mb-4">
-              <label className="mb-2 block text-[14px] font-bold text-[#0A0F2C]">
-                {isCADAsset ? "Enter amount in CAD" : `Enter amount in ${selectedAsset}`}
-              </label>
-              <input 
-                type="number" 
-                placeholder={isCADAsset ? "0.00" : "0.00000000"}
-                value={amount}
-                onChange={(e) => handleCryptoChange(e.target.value)}
-                step={isCADAsset ? "0.01" : "0.00000001"}
-                className="w-full rounded-[14px] border border-gray-200 bg-white px-5 py-4 text-[16px] font-medium text-[#0A0F2C] placeholder-[#A0AEC0] outline-none transition-all focus:border-[#113285] focus:ring-1 focus:ring-[#113285]"
-              />
-              {!isCADAsset && (
-                <div className="mt-4">
-                  <label className="mb-2 block text-[14px] font-bold text-[#0A0F2C]">
-                    Or enter amount in CAD
-                  </label>
-                  <input 
-                    type="number" 
-                    placeholder="0.00"
-                    value={cadAmount}
-                    onChange={(e) => handleCadChange(e.target.value)}
-                    step="0.01"
-                    className="w-full rounded-[14px] border border-gray-200 bg-white px-5 py-4 text-[16px] font-medium text-[#0A0F2C] placeholder-[#A0AEC0] outline-none transition-all focus:border-[#113285] focus:ring-1 focus:ring-[#113285]"
-                  />
+            {/* Live Rate Badge */}
+            {!isCADAsset && selectedAsset && (
+              <div className="mb-4 flex items-center justify-between rounded-[12px] border border-gray-100 bg-[#F8F9FA] px-4 py-3">
+                <div className="flex items-center gap-2">
+                  {rateLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-[#113285]" />
+                  ) : rateError ? (
+                    <span className="h-2 w-2 rounded-full bg-amber-400" />
+                  ) : (
+                    <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                  )}
+                  <span className="text-[13px] font-medium text-[#718096]">
+                    {rateLoading
+                      ? "Fetching live rate..."
+                      : liveRate
+                      ? `1 ${selectedAsset} = $${liveRate.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CAD`
+                      : "Rate unavailable"}
+                  </span>
+                  {rateError && (
+                    <span className="text-[11px] text-amber-500 font-medium">(estimated)</span>
+                  )}
+                </div>
+                <button
+                  onClick={() => fetchRate(selectedAsset)}
+                  disabled={rateLoading}
+                  className="flex items-center gap-1 text-[12px] font-semibold text-[#113285] hover:opacity-70 disabled:opacity-40 transition-opacity"
+                >
+                  <RefreshCw className={cn("h-3 w-3", rateLoading && "animate-spin")} />
+                  Refresh
+                </button>
+              </div>
+            )}
+
+            {/* Available Balance */}
+            <div className="mb-5 rounded-[12px] border border-[#E8EDF5] bg-[#EEF3FF] px-4 py-3">
+              {metricsLoading ? (
+                <p className="text-[13px] text-[#718096]">Loading balance...</p>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <span className="text-[13px] font-medium text-[#718096]">Available balance</span>
+                  <span className="text-[14px] font-bold text-[#113285]">
+                    {isCADAsset
+                      ? `$${selectedWallet.balance.toFixed(2)} CAD`
+                      : `${selectedWallet.balance.toFixed(8)} ${selectedAsset}`}
+                    {!isCADAsset && liveRate && (
+                      <span className="ml-1 text-[12px] font-medium text-[#718096]">
+                        (≈ ${availableBalanceCAD.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CAD)
+                      </span>
+                    )}
+                  </span>
                 </div>
               )}
             </div>
-            
-            <p className="mb-6 text-center text-[14px] text-[#718096]">
-              {metricsLoading ? (
-                "Loading balance..."
-              ) : (
-                <>
-                  Available {selectedAsset} balance: 
-                  <span className="font-bold text-[#0A0F2C] ml-1">
-                    {isCADAsset 
-                      ? `$${selectedWallet.balance.toFixed(2)} CAD`
-                      : `${selectedWallet.balance.toFixed(8)} ${selectedAsset} ($${availableBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CAD)`}
-                  </span> 
-                </>
-              )}
-            </p>
 
+            {/* Amount Inputs */}
+            <div className="mb-6 space-y-4">
+              {/* Crypto field */}
+              <div>
+                <label className="mb-2 block text-[14px] font-bold text-[#0A0F2C]">
+                  {isCADAsset ? "Enter amount in CAD" : `Enter amount in ${selectedAsset}`}
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    placeholder={isCADAsset ? "0.00" : "0.00000000"}
+                    value={amount}
+                    onChange={(e) => handleCryptoChange(e.target.value)}
+                    step={isCADAsset ? "0.01" : "0.00000001"}
+                    min="0"
+                    className="w-full rounded-[14px] border border-gray-200 bg-white px-5 py-4 pr-16 text-[16px] font-medium text-[#0A0F2C] placeholder-[#A0AEC0] outline-none transition-all focus:border-[#113285] focus:ring-1 focus:ring-[#113285]"
+                  />
+                  <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[13px] font-bold text-[#718096]">
+                    {selectedAsset}
+                  </span>
+                </div>
+              </div>
+
+              {/* CAD calculator field (only for non-CAD assets) */}
+              {!isCADAsset && (
+                <div>
+                  <label className="mb-2 flex items-center gap-2 text-[14px] font-bold text-[#0A0F2C]">
+                    Or enter amount in CAD
+                    <span className="rounded-[6px] bg-[#EEF3FF] px-2 py-0.5 text-[11px] font-semibold text-[#113285]">
+                      calculator
+                    </span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      placeholder="0.00"
+                      value={cadAmount}
+                      onChange={(e) => handleCadChange(e.target.value)}
+                      step="0.01"
+                      min="0"
+                      className="w-full rounded-[14px] border border-gray-200 bg-white px-5 py-4 pr-16 text-[16px] font-medium text-[#0A0F2C] placeholder-[#A0AEC0] outline-none transition-all focus:border-[#113285] focus:ring-1 focus:ring-[#113285]"
+                    />
+                    <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[13px] font-bold text-[#718096]">
+                      CAD
+                    </span>
+                  </div>
+                  {numAmount > 0 && liveRate && (
+                    <p className="mt-1.5 text-[12px] text-[#718096]">
+                      {numAmount.toFixed(8)} {selectedAsset} ≈ ${cadEquivalent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CAD at live rate
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Quick amount buttons */}
             <div className="mb-8 flex flex-wrap gap-3 sm:flex-nowrap">
               {isCADAsset ? (
                 ["100", "500", "1000"].map((preset) => (
-                  <button 
+                  <button
                     key={preset}
                     onClick={() => handleCryptoChange(preset)}
                     className="flex-1 rounded-[12px] border border-gray-200 bg-white py-3 text-[14px] font-bold text-[#0A0F2C] transition-colors hover:bg-gray-50 focus:border-[#113285] focus:ring-1 focus:ring-[#113285] outline-none"
@@ -307,7 +430,7 @@ export function WithdrawWorkspace() {
                   const pctVal = parseFloat(pct) / 100;
                   const cryptoAmt = (selectedWallet.balance * pctVal).toFixed(8);
                   return (
-                    <button 
+                    <button
                       key={pct}
                       onClick={() => handleCryptoChange(cryptoAmt)}
                       className="flex-1 rounded-[12px] border border-gray-200 bg-white py-3 text-[14px] font-bold text-[#0A0F2C] transition-colors hover:bg-gray-50 focus:border-[#113285] focus:ring-1 focus:ring-[#113285] outline-none"
@@ -317,26 +440,27 @@ export function WithdrawWorkspace() {
                   );
                 })
               )}
-              <button 
-                onClick={() => handleCryptoChange(isCADAsset ? availableBalance.toString() : selectedWallet.balance.toString())}
+              <button
+                onClick={() => handleCryptoChange(
+                  isCADAsset ? availableBalanceCAD.toString() : selectedWallet.balance.toString()
+                )}
                 className="flex-1 rounded-[12px] border border-gray-200 bg-white py-3 text-[14px] font-bold text-[#0A0F2C] transition-colors hover:bg-gray-50 focus:border-[#113285] focus:ring-1 focus:ring-[#113285] outline-none"
               >
                 Max
               </button>
             </div>
 
+            {/* Fee summary */}
             <div className="mb-8 rounded-[16px] bg-[#F8F9FA] p-5 border border-gray-100">
               <div className="mb-3 flex justify-between">
                 <span className="text-[14px] font-medium text-[#718096]">Transaction Fee</span>
                 <span className="text-[14px] font-bold text-[#0A0F2C]">
-                  {isCADAsset ? `$2.50 CAD` : `${feeInCrypto.toFixed(8)} ${selectedAsset} ($2.50 CAD)`}
+                  {isCADAsset ? `$${FEE_CAD.toFixed(2)} CAD` : `${feeInCrypto.toFixed(8)} ${selectedAsset} ($${FEE_CAD.toFixed(2)} CAD)`}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-[16px] font-bold text-[#0A0F2C]">You will receive</span>
-                <span className="text-[18px] font-bold text-[#113285]">
-                  {youReceiveDisplay}
-                </span>
+                <span className="text-[18px] font-bold text-[#113285]">{youReceiveDisplay}</span>
               </div>
             </div>
 
@@ -346,28 +470,33 @@ export function WithdrawWorkspace() {
               </div>
             )}
 
-            <button 
+            <button
               onClick={() => {
-                if (numAmount > selectedWallet.balance) {
-                  setErrorMsg(`Amount exceeds available ${selectedAsset} balance.`);
+                if (numAmount <= 0) {
+                  setErrorMsg("Please enter a valid amount.");
                   return;
                 }
-                const minCrypto = isCADAsset ? 10 : (10 / selectedRate);
+                if (numAmount > selectedWallet.balance) {
+                  setErrorMsg(`Amount exceeds your available ${selectedAsset} balance.`);
+                  return;
+                }
+                const minCrypto = isCADAsset ? 10 : (effectiveRate > 0 ? 10 / effectiveRate : 0);
                 if (numAmount < minCrypto) {
-                  setErrorMsg(isCADAsset ? "Minimum withdrawal amount is $10 CAD." : `Minimum withdrawal amount is $10 CAD equivalent.`);
+                  setErrorMsg(isCADAsset ? "Minimum withdrawal amount is $10 CAD." : `Minimum withdrawal is $10 CAD equivalent (≈ ${minCrypto.toFixed(8)} ${selectedAsset}).`);
                   return;
                 }
                 setErrorMsg(null);
                 setStep(2);
               }}
-              disabled={!amount || numAmount <= 0 || metricsLoading}
+              disabled={!amount || numAmount <= 0 || metricsLoading || rateLoading}
               className="w-full rounded-[14px] bg-[#113285] py-4 text-[15px] font-bold text-white transition-colors hover:bg-[#0c2461] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Continue
             </button>
           </div>
         )}
-        {/* Step 2: Recipient Details */}
+
+        {/* ── Step 2: Recipient Details ── */}
         {step === 2 && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
             <h2 className="mb-8 text-center text-[18px] font-bold text-[#0A0F2C]">Recipient Details</h2>
@@ -375,8 +504,8 @@ export function WithdrawWorkspace() {
             <div className="space-y-6 mb-8">
               <div>
                 <label className="mb-2 block text-[14px] font-bold text-[#0A0F2C]">Recipient Email (Interac e-Transfer)</label>
-                <input 
-                  type="email" 
+                <input
+                  type="email"
                   placeholder="recipient@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -386,8 +515,8 @@ export function WithdrawWorkspace() {
 
               <div>
                 <label className="mb-2 block text-[14px] font-bold text-[#0A0F2C]">Security Question</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   placeholder="What is your favorite color?"
                   value={question}
                   onChange={(e) => setQuestion(e.target.value)}
@@ -397,8 +526,8 @@ export function WithdrawWorkspace() {
 
               <div>
                 <label className="mb-2 block text-[14px] font-bold text-[#0A0F2C]">Security Answer</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   placeholder="Answer"
                   value={answer}
                   onChange={(e) => setAnswer(e.target.value)}
@@ -424,14 +553,14 @@ export function WithdrawWorkspace() {
             )}
 
             <div className="flex gap-4">
-              <button 
+              <button
                 onClick={prevStep}
                 disabled={sendingOtp}
                 className="flex-1 rounded-[14px] border border-gray-200 bg-white py-4 text-[15px] font-bold text-[#0A0F2C] transition-colors hover:bg-gray-50 disabled:opacity-50"
               >
                 Back
               </button>
-              <button 
+              <button
                 onClick={handleNextStep2}
                 disabled={!email || !question || !answer || sendingOtp}
                 className="flex-1 rounded-[14px] bg-[#113285] py-4 text-[15px] font-bold text-white transition-colors hover:bg-[#0c2461] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
@@ -449,25 +578,27 @@ export function WithdrawWorkspace() {
           </div>
         )}
 
-        {/* Step 3: Confirm & Verify */}
+        {/* ── Step 3: Confirm & Verify ── */}
         {step === 3 && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
-            <h2 className="mb-8 text-center text-[18px] font-bold text-[#0A0F2C]">Confirm & Verify</h2>
+            <h2 className="mb-8 text-center text-[18px] font-bold text-[#0A0F2C]">Confirm &amp; Verify</h2>
 
             <div className="mb-8 rounded-[16px] bg-[#F8F9FA] p-6 border border-gray-100">
               <h3 className="mb-5 text-[15px] font-bold text-[#0A0F2C]">Transaction Summary</h3>
-              
+
               <div className="space-y-4 mb-6">
                 <div className="flex justify-between">
                   <span className="text-[14px] font-medium text-[#718096]">Amount</span>
                   <span className="text-[14px] font-bold text-[#0A0F2C]">
-                    {isCADAsset ? `${numAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CAD` : `${numAmount} ${selectedAsset}`}
+                    {isCADAsset
+                      ? `$${numAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CAD`
+                      : `${numAmount.toFixed(8)} ${selectedAsset} (≈ $${cadEquivalent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CAD)`}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-[14px] font-medium text-[#718096]">Fee</span>
                   <span className="text-[14px] font-bold text-[#0A0F2C]">
-                    {isCADAsset ? `$2.50 CAD` : `${feeInCrypto.toFixed(8)} ${selectedAsset} ($2.50 CAD)`}
+                    {isCADAsset ? `$${FEE_CAD.toFixed(2)} CAD` : `${feeInCrypto.toFixed(8)} ${selectedAsset} ($${FEE_CAD.toFixed(2)} CAD)`}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -479,10 +610,8 @@ export function WithdrawWorkspace() {
               <div className="h-px w-full bg-gray-200 mb-5" />
 
               <div className="flex justify-between items-center">
-                <span className="text-[16px] font-bold text-[#0A0F2C]">Total</span>
-                <span className="text-[18px] font-bold text-[#113285]">
-                  {youReceiveDisplay}
-                </span>
+                <span className="text-[16px] font-bold text-[#0A0F2C]">You will receive</span>
+                <span className="text-[18px] font-bold text-[#113285]">{youReceiveDisplay}</span>
               </div>
             </div>
 
@@ -495,8 +624,8 @@ export function WithdrawWorkspace() {
             <div className="mb-8">
               <label className="mb-2 block text-[14px] font-bold text-[#0A0F2C]">2FA Verification Code</label>
               <p className="mb-4 text-sm text-[#718096]">We have sent a 6-digit code to your registered email address.</p>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 placeholder="0 0 0 0 0 0"
                 value={twoFa}
                 onChange={(e) => setTwoFa(e.target.value)}
@@ -506,14 +635,14 @@ export function WithdrawWorkspace() {
             </div>
 
             <div className="flex gap-4">
-              <button 
+              <button
                 onClick={prevStep}
                 disabled={submitting}
                 className="flex-1 rounded-[14px] border border-gray-200 bg-white py-4 text-[15px] font-bold text-[#0A0F2C] transition-colors hover:bg-gray-50 disabled:opacity-50"
               >
                 Back
               </button>
-              <button 
+              <button
                 className="flex-1 rounded-[14px] bg-[#113285] py-4 text-[15px] font-bold text-white transition-colors hover:bg-[#0c2461] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 disabled={twoFa.length < 6 || submitting}
                 onClick={handleConfirmWithdrawal}
