@@ -12,6 +12,7 @@ import { useDashboardMetrics, useCreateWithdrawalRequest } from "@/hooks/useClie
 export function WithdrawWorkspace() {
   const [step, setStep] = useState(1);
   const [amount, setAmount] = useState("");
+  const [cadAmount, setCadAmount] = useState("");
   const [email, setEmail] = useState("");
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
@@ -26,6 +27,12 @@ export function WithdrawWorkspace() {
   
   const { data: metrics, isLoading: metricsLoading } = useDashboardMetrics();
   const wallets = metrics?.wallets || [];
+  
+  useEffect(() => {
+    if (wallets.length > 0 && !wallets.some(w => w.currency === selectedAsset)) {
+      setSelectedAsset(wallets[0].currency);
+    }
+  }, [wallets, selectedAsset]);
   const cadRates = metrics?.cadRates || {};
   
   // Compute available balance based on selected asset
@@ -139,6 +146,27 @@ export function WithdrawWorkspace() {
     }
   };
 
+
+  const handleCryptoChange = (val: string) => {
+    setAmount(val);
+    const num = parseFloat(val);
+    if (!isNaN(num) && selectedRate > 0) {
+      setCadAmount((num * selectedRate).toFixed(2));
+    } else {
+      setCadAmount("");
+    }
+  };
+
+  const handleCadChange = (val: string) => {
+    setCadAmount(val);
+    const num = parseFloat(val);
+    if (!isNaN(num) && selectedRate > 0) {
+      setAmount((num / selectedRate).toFixed(8));
+    } else {
+      handleCryptoChange("");
+    }
+  };
+
   return (
         <div className="mx-auto w-full max-w-[640px]">
       <div className="mb-8 flex items-center gap-4">
@@ -203,7 +231,7 @@ export function WithdrawWorkspace() {
                 value={selectedAsset}
                 onChange={(e) => {
                   setSelectedAsset(e.target.value);
-                  setAmount("");
+                  handleCryptoChange("");
                   setErrorMsg(null);
                 }}
                 className="w-full rounded-[14px] border border-gray-200 bg-white px-5 py-4 text-[16px] font-medium text-[#0A0F2C] outline-none transition-all focus:border-[#113285] focus:ring-1 focus:ring-[#113285]"
@@ -227,14 +255,24 @@ export function WithdrawWorkspace() {
                 type="number" 
                 placeholder={isCADAsset ? "0.00" : "0.00000000"}
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                onChange={(e) => handleCryptoChange(e.target.value)}
                 step={isCADAsset ? "0.01" : "0.00000001"}
                 className="w-full rounded-[14px] border border-gray-200 bg-white px-5 py-4 text-[16px] font-medium text-[#0A0F2C] placeholder-[#A0AEC0] outline-none transition-all focus:border-[#113285] focus:ring-1 focus:ring-[#113285]"
               />
-              {!isCADAsset && numAmount > 0 && (
-                <p className="mt-2 text-[13px] text-[#718096]">
-                  ≈ <span className="font-bold text-[#0A0F2C]">${cadEquivalent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CAD</span>
-                </p>
+              {!isCADAsset && (
+                <div className="mt-4">
+                  <label className="mb-2 block text-[14px] font-bold text-[#0A0F2C]">
+                    Or enter amount in CAD
+                  </label>
+                  <input 
+                    type="number" 
+                    placeholder="0.00"
+                    value={cadAmount}
+                    onChange={(e) => handleCadChange(e.target.value)}
+                    step="0.01"
+                    className="w-full rounded-[14px] border border-gray-200 bg-white px-5 py-4 text-[16px] font-medium text-[#0A0F2C] placeholder-[#A0AEC0] outline-none transition-all focus:border-[#113285] focus:ring-1 focus:ring-[#113285]"
+                  />
+                </div>
               )}
             </div>
             
@@ -258,7 +296,7 @@ export function WithdrawWorkspace() {
                 ["100", "500", "1000"].map((preset) => (
                   <button 
                     key={preset}
-                    onClick={() => setAmount(preset)}
+                    onClick={() => handleCryptoChange(preset)}
                     className="flex-1 rounded-[12px] border border-gray-200 bg-white py-3 text-[14px] font-bold text-[#0A0F2C] transition-colors hover:bg-gray-50 focus:border-[#113285] focus:ring-1 focus:ring-[#113285] outline-none"
                   >
                     ${preset}
@@ -271,7 +309,7 @@ export function WithdrawWorkspace() {
                   return (
                     <button 
                       key={pct}
-                      onClick={() => setAmount(cryptoAmt)}
+                      onClick={() => handleCryptoChange(cryptoAmt)}
                       className="flex-1 rounded-[12px] border border-gray-200 bg-white py-3 text-[14px] font-bold text-[#0A0F2C] transition-colors hover:bg-gray-50 focus:border-[#113285] focus:ring-1 focus:ring-[#113285] outline-none"
                     >
                       {pct}
@@ -280,7 +318,7 @@ export function WithdrawWorkspace() {
                 })
               )}
               <button 
-                onClick={() => setAmount(isCADAsset ? availableBalance.toString() : selectedWallet.balance.toString())}
+                onClick={() => handleCryptoChange(isCADAsset ? availableBalance.toString() : selectedWallet.balance.toString())}
                 className="flex-1 rounded-[12px] border border-gray-200 bg-white py-3 text-[14px] font-bold text-[#0A0F2C] transition-colors hover:bg-gray-50 focus:border-[#113285] focus:ring-1 focus:ring-[#113285] outline-none"
               >
                 Max
