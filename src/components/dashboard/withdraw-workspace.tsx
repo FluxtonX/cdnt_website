@@ -38,30 +38,214 @@ export function WithdrawWorkspace() {
 
   const createWithdrawal = useCreateWithdrawalRequest();
 
-  const fee = 2.50;
-  
+
+  // If CAD selected → user enters CAD directly. For crypto → user enters crypto amount.
+  const isCADAsset = selectedAsset.toUpperCase() === "CAD";
   const numAmount = parseFloat(amount || "0");
-  const youReceive = numAmount > fee ? numAmount - fee : 0;
 
-  // Amount threshold validation to prevent unrealistic large amounts
-  // Convert CAD amount to crypto equivalent for validation
-  const getAmountThreshold = (assetType: string): number => {
-    const upperAsset = assetType.toUpperCase();
-    if (upperAsset === "BTC") return 10;
-    if (upperAsset === "ETH") return 100;
-    if (upperAsset === "USDT" || upperAsset === "USDC") return 100000;
-    return Infinity; // No limit for other assets
-  };
+  // For crypto: validate against actual balance in crypto units; for CAD: validate against CAD balance
+  const exceedsBalance = isCADAsset
+    ? numAmount > selectedWallet.balance
+    : numAmount > selectedWallet.balance;
 
-  const amountThreshold = getAmountThreshold(selectedAsset);
-  const cryptoEquivalent = Number.isFinite(numAmount) ? numAmount / selectedRate : 0;
-  const amountExceedsThreshold = Number.isFinite(cryptoEquivalent) && cryptoEquivalent > amountThreshold;
-  const amountError = amountExceedsThreshold 
-    ? `Amount seems unusually high. Maximum allowed for ${selectedAsset} is ${amountThreshold.toLocaleString()}. Please double-check and re-enter.`
-    : null;
+  // Compute CAD equivalent of entered amount (for display only)
+  const cadEquivalent = isCADAsset ? numAmount : numAmount * selectedRate;
+  // Fee in crypto units
+  const feeInCrypto = isCADAsset ? 2.5 : (selectedRate > 0 ? 2.5 / selectedRate : 0);
+  const youReceiveDisplay = isCADAsset
+    ? `$${Math.max(0, numAmount - 2.5).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CAD`
+    : `${Math.max(0, numAmount - feeInCrypto).toFixed(8)} ${selectedAsset} ($${Math.max(0, cadEquivalent - 2.5).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CAD)`;
 
-  const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [sendingOtp, setSendingOtp] = useState(false);
+  return (
+        <div className="mx-auto w-full max-w-[640px]">
+      <div className="mb-8 flex items-center gap-4">
+        <Link 
+          href="/dashboard" 
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 transition-colors shadow-sm"
+        >
+          <ArrowLeft className="h-[20px] w-[20px]" strokeWidth={2} />
+        </Link>
+        <div>
+          <h1 className="text-[22px] font-bold tracking-tight text-[#0A0F2C]">Withdraw Funds</h1>
+          <p className="text-[14px] text-[#718096]">Transfer to your bank via Interac e-Transfer</p>
+        </div>
+      </div>
+
+      <div className="rounded-[20px] border border-gray-100 bg-white p-6 sm:p-10 shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
+        {/* Stepper */}
+        <div className="mb-10 flex items-center justify-center">
+          <div className="flex items-center">
+            {/* Step 1 */}
+            <div className={cn(
+              "flex h-[36px] w-[36px] items-center justify-center rounded-full text-[14px] font-bold transition-colors",
+              step >= 1 ? "bg-[#113285] text-white shadow-sm" : "bg-[#F8F9FA] text-[#718096]"
+            )}>
+              1
+            </div>
+            {/* Line 1-2 */}
+            <div className={cn(
+              "mx-2 h-[3px] w-[40px] sm:w-[60px] rounded-full transition-colors",
+              step >= 2 ? "bg-[#113285]" : "bg-[#F1F5F9]"
+            )} />
+            {/* Step 2 */}
+            <div className={cn(
+              "flex h-[36px] w-[36px] items-center justify-center rounded-full text-[14px] font-bold transition-colors",
+              step >= 2 ? "bg-[#113285] text-white shadow-sm" : "bg-[#F8F9FA] text-[#718096]"
+            )}>
+              2
+            </div>
+            {/* Line 2-3 */}
+            <div className={cn(
+              "mx-2 h-[3px] w-[40px] sm:w-[60px] rounded-full transition-colors",
+              step >= 3 ? "bg-[#113285]" : "bg-[#F1F5F9]"
+            )} />
+            {/* Step 3 */}
+            <div className={cn(
+              "flex h-[36px] w-[36px] items-center justify-center rounded-full text-[14px] font-bold transition-colors",
+              step >= 3 ? "bg-[#113285] text-white shadow-sm" : "bg-[#F8F9FA] text-[#718096]"
+            )}>
+              3
+            </div>
+          </div>
+        </div>
+
+        {/* Step 1: Select Asset & Enter Amount */}
+        {step === 1 && (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
+            <h2 className="mb-8 text-center text-[18px] font-bold text-[#0A0F2C]">Withdraw Funds</h2>
+            
+            <div className="mb-6">
+              <label className="mb-2 block text-[14px] font-bold text-[#0A0F2C]">Select Asset</label>
+              <select
+                value={selectedAsset}
+                onChange={(e) => {
+                  setSelectedAsset(e.target.value);
+                  setAmount("");
+                  setErrorMsg(null);
+                }}
+                className="w-full rounded-[14px] border border-gray-200 bg-white px-5 py-4 text-[16px] font-medium text-[#0A0F2C] outline-none transition-all focus:border-[#113285] focus:ring-1 focus:ring-[#113285]"
+              >
+                {wallets.length === 0 && (
+                  <option value="USDT">USDT (No balance)</option>
+                )}
+                {wallets.map((w) => (
+                  <option key={w.currency} value={w.currency}>
+                    {w.currency} - {w.balance.toFixed(6)} 
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="mb-4">
+              <label className="mb-2 block text-[14px] font-bold text-[#0A0F2C]">
+                {isCADAsset ? "Enter amount in CAD" : `Enter amount in ${selectedAsset}`}
+              </label>
+              <input 
+                type="number" 
+                placeholder={isCADAsset ? "0.00" : "0.00000000"}
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                step={isCADAsset ? "0.01" : "0.00000001"}
+                className="w-full rounded-[14px] border border-gray-200 bg-white px-5 py-4 text-[16px] font-medium text-[#0A0F2C] placeholder-[#A0AEC0] outline-none transition-all focus:border-[#113285] focus:ring-1 focus:ring-[#113285]"
+              />
+              {!isCADAsset && numAmount > 0 && (
+                <p className="mt-2 text-[13px] text-[#718096]">
+                  ≈ <span className="font-bold text-[#0A0F2C]">${cadEquivalent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CAD</span>
+                </p>
+              )}
+            </div>
+            
+            <p className="mb-6 text-center text-[14px] text-[#718096]">
+              {metricsLoading ? (
+                "Loading balance..."
+              ) : (
+                <>
+                  Available {selectedAsset} balance: 
+                  <span className="font-bold text-[#0A0F2C] ml-1">
+                    {isCADAsset 
+                      ? `$${selectedWallet.balance.toFixed(2)} CAD`
+                      : `${selectedWallet.balance.toFixed(8)} ${selectedAsset} ($${availableBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CAD)`}
+                  </span> 
+                </>
+              )}
+            </p>
+
+            <div className="mb-8 flex flex-wrap gap-3 sm:flex-nowrap">
+              {isCADAsset ? (
+                ["100", "500", "1000"].map((preset) => (
+                  <button 
+                    key={preset}
+                    onClick={() => setAmount(preset)}
+                    className="flex-1 rounded-[12px] border border-gray-200 bg-white py-3 text-[14px] font-bold text-[#0A0F2C] transition-colors hover:bg-gray-50 focus:border-[#113285] focus:ring-1 focus:ring-[#113285] outline-none"
+                  >
+                    ${preset}
+                  </button>
+                ))
+              ) : (
+                ["25%", "50%", "75%"].map((pct) => {
+                  const pctVal = parseFloat(pct) / 100;
+                  const cryptoAmt = (selectedWallet.balance * pctVal).toFixed(8);
+                  return (
+                    <button 
+                      key={pct}
+                      onClick={() => setAmount(cryptoAmt)}
+                      className="flex-1 rounded-[12px] border border-gray-200 bg-white py-3 text-[14px] font-bold text-[#0A0F2C] transition-colors hover:bg-gray-50 focus:border-[#113285] focus:ring-1 focus:ring-[#113285] outline-none"
+                    >
+                      {pct}
+                    </button>
+                  );
+                })
+              )}
+              <button 
+                onClick={() => setAmount(isCADAsset ? availableBalance.toString() : selectedWallet.balance.toString())}
+                className="flex-1 rounded-[12px] border border-gray-200 bg-white py-3 text-[14px] font-bold text-[#0A0F2C] transition-colors hover:bg-gray-50 focus:border-[#113285] focus:ring-1 focus:ring-[#113285] outline-none"
+              >
+                Max
+              </button>
+            </div>
+
+            <div className="mb-8 rounded-[16px] bg-[#F8F9FA] p-5 border border-gray-100">
+              <div className="mb-3 flex justify-between">
+                <span className="text-[14px] font-medium text-[#718096]">Transaction Fee</span>
+                <span className="text-[14px] font-bold text-[#0A0F2C]">
+                  {isCADAsset ? `$2.50 CAD` : `${feeInCrypto.toFixed(8)} ${selectedAsset} ($2.50 CAD)`}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[16px] font-bold text-[#0A0F2C]">You will receive</span>
+                <span className="text-[18px] font-bold text-[#113285]">
+                  {youReceiveDisplay}
+                </span>
+              </div>
+            </div>
+
+            {errorMsg && (
+              <div className="mb-4 rounded-[14px] border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
+                {errorMsg}
+              </div>
+            )}
+
+            <button 
+              onClick={() => {
+                if (numAmount > selectedWallet.balance) {
+                  setErrorMsg(`Amount exceeds available ${selectedAsset} balance.`);
+                  return;
+                }
+                const minCrypto = isCADAsset ? 10 : (10 / selectedRate);
+                if (numAmount < minCrypto) {
+                  setErrorMsg(isCADAsset ? "Minimum withdrawal amount is $10 CAD." : `Minimum withdrawal amount is $10 CAD equivalent.`);
+                  return;
+                }
+                setErrorMsg(null);
+                setStep(2);
+              }}
+              disabled={!amount || numAmount <= 0 || metricsLoading}
+              className="w-full rounded-[14px] bg-[#113285] py-4 text-[15px] font-bold text-white transition-colors hover:bg-[#0c2461] disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Continue
+            </button>
+          </div>
+        )}
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
