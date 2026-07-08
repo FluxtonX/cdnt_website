@@ -495,8 +495,12 @@ export default function ExchangePage() {
                   Available Balance
                 </div>
                 <p className="mt-2 text-lg font-black text-[#113285]">
-                  {side === "buy" 
-                    ? loadingBalances ? "--" : `${(baseCurrency === "CAD" ? (balances["USDT"] || 0) * exchangeRates.USDT_TO_CAD : balances["USDT"] || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${baseCurrency}`
+                  {side === "buy"
+                    ? loadingBalances ? "--" : `${(
+                        baseCurrency === "CAD"
+                          ? (balances["CAD"] ?? 0)          // ← read actual stored CAD wallet balance
+                          : (balances["USDT"] ?? 0)          // ← read actual stored USDT wallet balance
+                      ).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${baseCurrency}`
                     : loadingBalances ? "--" : `${assetBalance.toLocaleString("en-US", { maximumFractionDigits: 8 })} ${selectedCoin.baseAsset}`
                   }
                 </p>
@@ -529,7 +533,9 @@ export default function ExchangePage() {
                     type="button"
                     onClick={() => {
                       if (side === "buy") {
-                        setAmount(String(value));
+                        const maxFiat = baseCurrency === "CAD" ? (balances["CAD"] ?? 0) : (balances["USDT"] ?? 0);
+                        const maxPossible = Math.floor((maxFiat / 1.005) * 10000) / 10000;
+                        setAmount(String(Math.min(value, maxPossible)));
                       } else {
                         setAmount(((assetBalance * value) / 100).toFixed(selectedCoin.baseAsset === "BTC" ? 8 : 4));
                       }
@@ -541,7 +547,15 @@ export default function ExchangePage() {
                 ))}
                 <button
                   type="button"
-                  onClick={() => setAmount(side === "buy" ? String(baseCurrency === "CAD" ? (balances["USDT"] || 0) * exchangeRates.USDT_TO_CAD : balances["USDT"] || 0) : assetBalance.toFixed(selectedCoin.baseAsset === "BTC" ? 8 : 4))}
+                  onClick={() => {
+                    if (side === "buy") {
+                      const maxFiat = baseCurrency === "CAD" ? (balances["CAD"] ?? 0) : (balances["USDT"] ?? 0);
+                      const maxPossible = Math.floor((maxFiat / 1.005) * 10000) / 10000;
+                      setAmount(String(maxPossible));
+                    } else {
+                      setAmount(assetBalance.toFixed(selectedCoin.baseAsset === "BTC" ? 8 : 4));
+                    }
+                  }}
                   className="rounded-lg border border-slate-200 px-2 py-2 text-xs font-bold text-[#0A0F2C] hover:border-[#113285]"
                 >
                   Max
@@ -557,7 +571,10 @@ export default function ExchangePage() {
                   <span className="font-semibold text-[#718096]">Fee ({side === "buy" ? "0.50" : "0.40"}%)</span>
                   <span className="font-black text-[#0A0F2C]">
                     {side === "buy"
-                      ? `${(baseCurrency === "CAD" ? fee * exchangeRates.USDT_TO_CAD : fee).toFixed(2)} ${baseCurrency}`
+                      ? `${(baseCurrency === "CAD"
+                          ? (fee / baseToUsdtRate)            // fee in USDT ÷ baseToUsdtRate = fee in CAD (same as fee * USDT_TO_CAD)
+                          : fee
+                        ).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${baseCurrency}`
                       : baseCurrency === "CAD"
                         ? `$${(fee * exchangeRates.USDT_TO_CAD).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CAD`
                         : formatCurrency(fee)
@@ -568,7 +585,7 @@ export default function ExchangePage() {
                   <span className="font-black text-[#0A0F2C]">{side === "buy" ? "Total Cost" : "Net Proceeds"}</span>
                   <span className="font-black text-[#0A0F2C]">
                     {side === "buy"
-                      ? `${(baseCurrency === "CAD" ? total * exchangeRates.USDT_TO_CAD : total).toFixed(2)} ${baseCurrency}`
+                      ? `${total.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${baseCurrency}`
                       : baseCurrency === "CAD"
                         ? `$${(totalInUsdt * exchangeRates.USDT_TO_CAD).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CAD`
                         : formatCurrency(total)

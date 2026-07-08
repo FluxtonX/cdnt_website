@@ -369,6 +369,13 @@ export default function DashboardPage() {
     USDT: metrics?.cadRates?.USDT ?? 1.36,
   }), [metrics?.cadRates]);
   const wallets = useMemo(() => metrics?.wallets ?? [], [metrics?.wallets]);
+  const visibleWallets = useMemo(() => {
+    return wallets.filter((w) => {
+      const isCAD = w.currency === 'CAD';
+      const value = isCAD ? w.balance : w.balance * (cadRates[w.currency] || cadRates.USDT || 1.36);
+      return value >= 0.005;
+    });
+  }, [wallets, cadRates]);
   const portfolioValue = metrics?.portfolioValue ?? 0;
   const cadBalance = metrics?.cadBalance ?? 0;
   const thisMonthDeposits = metrics?.thisMonthDeposits ?? 0;
@@ -386,17 +393,17 @@ export default function DashboardPage() {
       };
     };
 
-    if (portfolioValue === 0 || wallets.length === 0) {
+    if (portfolioValue === 0 || visibleWallets.length === 0) {
       return [];
     }
 
-    return wallets.map((w) => {
+    return visibleWallets.map((w) => {
       // If CAD, use balance directly (no conversion needed)
       const isCAD = w.currency === 'CAD';
       const value = isCAD ? w.balance : w.balance * (cadRates[w.currency] || cadRates.USDT || 1.36);
       return buildItem(w.currency, value);
     }).filter((item) => item.value > 0);
-  }, [wallets, cadRates, portfolioValue]);
+  }, [visibleWallets, cadRates, portfolioValue]);
 
   const allocationTotal = useMemo(
     () => allocationData.reduce((sum, item) => sum + item.value, 0),
@@ -731,7 +738,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {wallets.length > 0 ? wallets.map((w) => {
+        {visibleWallets.length > 0 ? visibleWallets.map((w) => {
           // If CAD, use balance directly (no conversion needed)
           const isCAD = w.currency === 'CAD';
           const value = isCAD ? w.balance : w.balance * (cadRates[w.currency] || cadRates.USDT || 1.36);

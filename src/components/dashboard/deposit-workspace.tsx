@@ -32,13 +32,12 @@ function formatAmount(value: number, symbol: string) {
   })} ${symbol}`;
 }
 
-/** Maps DepositNetwork values to the network column values used in platform_wallets */
 function getDbNetwork(asset: string, network: string): string {
   const upper = network.toUpperCase();
-  if (upper === "BTC") return "Bitcoin Mainnet";
-  if (upper === "ETH") return "Ethereum Mainnet";
-  if (upper === "TRC20") return "TRON (TRC-20) / Ethereum";
-  if (upper === "ERC20") return "TRON (TRC-20) / Ethereum";
+  if (upper === "BTC") return "Bitcoin";
+  if (upper === "ETH") return "Ethereum";
+  if (upper === "TRC20") return "TRC20";
+  if (upper === "ERC20") return "ERC20";
   return network;
 }
 

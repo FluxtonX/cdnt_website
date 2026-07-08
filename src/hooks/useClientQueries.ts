@@ -320,6 +320,7 @@ export type MappedWallet = {
   symbol: string;
   balance: string;
   rawBalance: number;
+  rawFiatValue: number;
   value: string;
   change: string;
   changeType: string;
@@ -454,6 +455,8 @@ export function useClientWallets() {
       totalPortfolioValue += cadBalance;
       
       allCurrencies.forEach((currency) => {
+        if (currency === 'CAD') return; // CAD is handled separately below
+
         const userWallet = (userWallets || []).find((w: any) => w.currency?.toUpperCase() === currency);
         const balance = Number(userWallet?.balance || 0);
 
@@ -482,6 +485,7 @@ export function useClientWallets() {
           symbol: currency,
           balance: balance.toFixed(decimals),
           rawBalance: balance,
+          rawFiatValue: displayValue,
           value: `$${displayValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
           change: currency === "USDT" || currency === "USDC" ? "Stable" : "Live",
           changeType: currency === "USDT" || currency === "USDC" ? "neutral" : "positive",
@@ -501,6 +505,7 @@ export function useClientWallets() {
           symbol: "CAD",
           balance: cadBalance.toFixed(2),
           rawBalance: cadBalance,
+          rawFiatValue: cadBalance,
           value: `$${cadBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
           change: "Fiat",
           changeType: "neutral",
@@ -510,6 +515,12 @@ export function useClientWallets() {
           image: undefined,
           activities: allActivities.filter((act) => act.currency === "CAD").slice(0, 5),
         });
+      }
+
+      const hasNonZeroBalance = mappedWallets.some(w => w.rawFiatValue >= 0.005);
+
+      if (hasNonZeroBalance) {
+        return mappedWallets.filter(w => w.rawFiatValue >= 0.005);
       }
 
       return mappedWallets;
