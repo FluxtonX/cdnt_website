@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Bitcoin } from "lucide-react";
+import type { LandingAssetsContent } from "@/lib/content-defaults";
 
 const ASSETS = [
   {
@@ -42,7 +43,7 @@ const ASSETS = [
   },
 ];
 
-export default function DigitalAssetsSection() {
+export default function DigitalAssetsSection({ content }: { content: LandingAssetsContent }) {
   return (
     <section className="relative py-20 md:py-32 bg-gradient-to-b from-[#0A0F2C] to-[#0D1845] overflow-hidden">
       {/* Background Glow */}
@@ -53,11 +54,15 @@ export default function DigitalAssetsSection() {
         {/* Header */}
         <div className="mb-16 md:mb-24">
           <p className="text-accent-gold font-semibold tracking-widest text-sm uppercase mb-4">
-            Digital Banking
+            {content.overline}
           </p>
           <h2 className="text-4xl md:text-[48px] font-bold text-white leading-tight">
-            Digital assets, <br />
-            held to a <span className="text-accent-gold">higher standard.</span>
+            {content.heading.split(", held to a ").map((part, i) => (
+              <span key={i}>
+                {i > 0 && <span className="text-accent-gold">held to a </span>}
+                {part}
+              </span>
+            ))}
           </h2>
         </div>
 

@@ -2,8 +2,21 @@
 
 import { motion } from "framer-motion";
 import { CONTAINER } from "./Navbar";
+import type { LandingHeroContent } from "@/lib/content-defaults";
 
-export default function HeroSection() {
+export default function HeroSection({ content }: { content: LandingHeroContent }) {
+  // Split the multi-line headline into individual lines.
+  // Line 0 is dark (gray-900), remaining lines are brand blue.
+  const headlineLines = content.headline.split("\n");
+
+  // Parse "Value / Label" stat strings into { value, label } pairs.
+  const stats = content.stats.map((s) => {
+    const slashIdx = s.indexOf(" / ");
+    return slashIdx !== -1
+      ? { value: s.slice(0, slashIdx), label: s.slice(slashIdx + 3) }
+      : { value: s, label: "" };
+  });
+
   return (
     <section
       className="min-h-screen flex items-center overflow-hidden relative"
@@ -25,36 +38,25 @@ export default function HeroSection() {
           >
             <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
             <span className="text-[12px] text-gray-600 font-medium">
-              FINTRAC registered · CDIC-style insured deposits
+              {content.trustBadge}
             </span>
           </motion.div>
 
-          {/* Heading */}
+          {/* Headline — first line dark, subsequent lines blue */}
           <div className="space-y-1 mb-6">
-            <motion.h1
-              className="font-extrabold text-[42px] sm:text-[56px] leading-tight text-gray-900"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.15 }}
-            >
-              Banking Meets
-            </motion.h1>
-            <motion.h1
-              className="font-extrabold text-[42px] sm:text-[56px] leading-none text-primary-blue"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.3 }}
-            >
-              Crypto
-            </motion.h1>
-            <motion.h1
-              className="font-extrabold text-[42px] sm:text-[56px] leading-none text-primary-blue"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.45 }}
-            >
-              Intelligence
-            </motion.h1>
+            {headlineLines.map((line, i) => (
+              <motion.h1
+                key={i}
+                className={`font-extrabold text-[42px] sm:text-[56px] ${
+                  i === 0 ? "text-gray-900 leading-tight" : "text-primary-blue leading-none"
+                }`}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.15 + i * 0.15 }}
+              >
+                {line}
+              </motion.h1>
+            ))}
           </div>
 
           {/* Body Copy */}
@@ -64,9 +66,7 @@ export default function HeroSection() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.6 }}
           >
-            A regulated Canadian digital bank with a built-in crypto engine.
-            Move money, save smarter, and invest in digital assets — all from
-            one elegant, insured account.
+            {content.body}
           </motion.p>
 
           {/* CTA Buttons */}
@@ -77,10 +77,10 @@ export default function HeroSection() {
             transition={{ duration: 0.5, delay: 0.75 }}
           >
             <button className="bg-primary-navy text-white rounded-full px-7 py-3.5 font-semibold text-[15px] hover:bg-blue-900 transition-all flex items-center justify-center gap-2">
-              Open Account <span>→</span>
+              {content.btn1} <span>→</span>
             </button>
             <button className="bg-white border border-gray-200 text-gray-800 rounded-full px-7 py-3.5 font-medium text-[15px] hover:bg-gray-50 hover:border-gray-300 transition-all flex items-center justify-center gap-2">
-              Explore Platform <span>↗</span>
+              {content.btn2} <span>↗</span>
             </button>
           </motion.div>
 
@@ -91,20 +91,12 @@ export default function HeroSection() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.9 }}
           >
-            <div>
-              <p className="text-[22px] font-bold text-gray-900 leading-none">2M+</p>
-              <p className="text-[13px] text-gray-500 mt-1">Canadians onboard</p>
-            </div>
-            <div>
-              <p className="text-[22px] font-bold text-gray-900 leading-none">$2.4B</p>
-              <p className="text-[13px] text-gray-500 mt-1">Assets secured</p>
-            </div>
-            <div>
-              <p className="text-[22px] font-bold text-gray-900 leading-none flex items-center gap-1">
-                4.9<span className="text-amber-500">★</span>
-              </p>
-              <p className="text-[13px] text-gray-500 mt-1">App Store</p>
-            </div>
+            {stats.map((stat, i) => (
+              <div key={i}>
+                <p className="text-[22px] font-bold text-gray-900 leading-none">{stat.value}</p>
+                <p className="text-[13px] text-gray-500 mt-1">{stat.label}</p>
+              </div>
+            ))}
           </motion.div>
 
         </div>
@@ -117,7 +109,7 @@ export default function HeroSection() {
           transition={{ duration: 0.7, delay: 0.3 }}
         >
           {/*
-            Grid layout (mirrors the reference image):
+            Grid layout:
             ┌──────────────┬───────────────────────┐
             │  Stat card   │   Dark bank card       │
             ├──────────────┼───────────┬────────────┤
@@ -156,7 +148,6 @@ export default function HeroSection() {
                   </p>
                   <p className="text-[26px] font-black mt-1 tracking-tight">$48,210.94</p>
                 </div>
-                {/* CDNT logo mark */}
                 <div className="w-10 h-10 rounded-xl border border-[#3061EF]/60 flex items-center justify-center">
                   <svg viewBox="0 0 24 24" className="w-5 h-5 text-[#3061EF]" fill="currentColor">
                     <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/>
@@ -173,7 +164,7 @@ export default function HeroSection() {
 
             {/* ── ROW 2 ── */}
 
-            {/* Cell C: Unsplash photo — spans full height of row 2 */}
+            {/* Cell C: Photo — spans full height of row 2 */}
             <div className="rounded-2xl overflow-hidden shadow-sm" style={{ minHeight: "280px" }}>
               <img
                 src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&q=80"
@@ -183,7 +174,7 @@ export default function HeroSection() {
               />
             </div>
 
-            {/* Cell D: Right column of row 2 — two cards stacked */}
+            {/* Cell D: Right column — two cards stacked */}
             <div className="flex flex-col gap-3">
 
               {/* Spend / growth card */}
@@ -193,7 +184,6 @@ export default function HeroSection() {
                     <span className="text-[#3061EF] font-bold text-sm">▲</span>
                     <span className="text-[13px] font-semibold text-gray-600">24%</span>
                   </div>
-                  {/* Icon badge */}
                   <div className="w-9 h-9 rounded-full bg-[#0B1220] flex items-center justify-center">
                     <svg viewBox="0 0 24 24" className="w-4 h-4 text-white" fill="none" stroke="currentColor" strokeWidth="2">
                       <rect x="2" y="5" width="20" height="14" rx="2"/>
@@ -205,20 +195,13 @@ export default function HeroSection() {
                 <p className="text-[28px] font-black text-gray-900 mt-1 leading-none">$4,325</p>
               </div>
 
-              {/* Accent card — blue, mirrors the green card in the reference */}
+              {/* Accent card */}
               <div
                 className="rounded-2xl p-5 relative overflow-hidden"
                 style={{ background: "#3061EF" }}
               >
-                {/* Decorative watermark */}
-                <div
-                  className="absolute -right-4 -bottom-4 w-24 h-24 rounded-full opacity-10"
-                  style={{ background: "white" }}
-                />
-                <div
-                  className="absolute right-4 bottom-4 w-14 h-14 rounded-full opacity-10"
-                  style={{ background: "white" }}
-                />
+                <div className="absolute -right-4 -bottom-4 w-24 h-24 rounded-full opacity-10" style={{ background: "white" }} />
+                <div className="absolute right-4 bottom-4 w-14 h-14 rounded-full opacity-10" style={{ background: "white" }} />
                 <p className="text-[36px] font-black text-white leading-none">2M+</p>
                 <p className="text-[13px] text-white/80 font-medium mt-3 leading-snug">
                   Satisfied Global<br />Customers

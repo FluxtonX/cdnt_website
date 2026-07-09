@@ -3,14 +3,9 @@
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { CheckCircle2 } from "lucide-react";
+import type { LandingAppContent } from "@/lib/content-defaults";
 
-const BENEFITS = [
-  "Portfolio profiles with live data and live exotic curves",
-  "Portfolio analytics with your daily and live exotic curves",
-  "Instant e-Transfers, bill pay, and crypto through the app",
-];
-
-export default function AppPreviewSection() {
+export default function AppPreviewSection({ content }: { content: LandingAppContent }) {
   return (
     <section className="py-16 md:py-24 bg-bg-light overflow-hidden">
       <div className="max-w-7xl mx-auto px-6">
@@ -25,19 +20,23 @@ export default function AppPreviewSection() {
             transition={{ duration: 0.6 }}
           >
             <p className="text-accent-gold font-semibold tracking-widest text-sm uppercase mb-4">
-              Your Pocket Branch
+              {content.overline}
             </p>
             <h2 className="text-4xl md:text-[42px] font-bold text-text-primary leading-tight mb-6">
-              Your entire financial life, <br />
-              in your pocket.
+              {content.heading.split(", ").map((part, i) => (
+                <span key={i}>
+                  {i > 0 && <br />}
+                  {part}
+                  {i === 0 && ","}
+                </span>
+              ))}
             </h2>
             <p className="text-lg text-text-secondary leading-relaxed mb-8">
-              Send money, manage cards, track investments and oversee your crypto 
-              portfolio — all from one beautifully designed interface.
+              {content.body}
             </p>
 
             <ul className="space-y-4">
-              {BENEFITS.map((benefit, idx) => (
+              {content.benefits.map((benefit, idx) => (
                 <li key={idx} className="flex items-start">
                   <CheckCircle2 className="w-6 h-6 text-primary-blue mt-0.5 mr-3 flex-shrink-0" />
                   <span className="text-text-secondary text-base leading-relaxed">
