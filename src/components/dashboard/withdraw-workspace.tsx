@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, ReactNode } from "react";
 import Link from "next/link";
 import { ArrowLeft, AlertCircle, Loader2, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -49,7 +49,7 @@ export function WithdrawWorkspace() {
   const [answer, setAnswer] = useState("");
   const [twoFa, setTwoFa] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<ReactNode | null>(null);
   const [selectedAsset, setSelectedAsset] = useState<string>("");
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [sendingOtp, setSendingOtp] = useState(false);
@@ -69,13 +69,16 @@ export function WithdrawWorkspace() {
   const wallets = metrics?.wallets || [];
   const cadRates = metrics?.cadRates || {};
 
-  // Auto-select first wallet when wallets load
+  // Auto-select CAD wallet
   useEffect(() => {
+    setSelectedAsset("CAD");
+    /*
     if (wallets.length > 0 && !selectedAsset) {
       setSelectedAsset(wallets[0].currency);
     } else if (wallets.length > 0 && !wallets.some(w => w.currency === selectedAsset)) {
       setSelectedAsset(wallets[0].currency);
     }
+    */
   }, [wallets]);
 
   // Fetch live CAD rate whenever selected asset changes
@@ -146,6 +149,19 @@ export function WithdrawWorkspace() {
     } else {
       setCadAmount("");
     }
+    
+    // Instant validation
+    if (val === "" || num === 0) {
+      setErrorMsg(null);
+    } else if (num !== availableBalanceCAD) {
+      setErrorMsg(
+        <span>
+          For partial withdrawals, please contact <Link href="/support" className="underline text-[#113285] hover:text-[#0c2461]">support</Link>.
+        </span>
+      );
+    } else {
+      setErrorMsg(null);
+    }
   };
 
   const handleCadChange = (val: string) => {
@@ -155,6 +171,28 @@ export function WithdrawWorkspace() {
       setAmount((num / effectiveRate).toFixed(8));
     } else {
       setAmount("");
+    }
+  };
+
+  const handleButtonMouseEnter = () => {
+    setErrorMsg(
+      <span>
+        For partial withdrawals, please contact <Link href="/support" className="underline text-[#113285] hover:text-[#0c2461]">support</Link>.
+      </span>
+    );
+  };
+
+  const handleButtonMouseLeave = () => {
+    const currentNum = parseFloat(amount || "0");
+    if (amount !== "" && currentNum !== 0 && currentNum !== availableBalanceCAD) {
+      // Keep error if the input amount is still not matching the full balance
+      setErrorMsg(
+        <span>
+          For partial withdrawals, please contact <Link href="/support" className="underline text-[#113285] hover:text-[#0c2461]">support</Link>.
+        </span>
+      );
+    } else {
+      setErrorMsg(null);
     }
   };
 
@@ -288,6 +326,11 @@ export function WithdrawWorkspace() {
             {/* Select Asset */}
             <div className="mb-6">
               <label className="mb-2 block text-[14px] font-bold text-[#0A0F2C]">Select Asset</label>
+              <div className="w-full rounded-[14px] border border-gray-200 bg-gray-50 px-5 py-4 text-[16px] font-bold text-[#0A0F2C] flex justify-between items-center cursor-not-allowed">
+                <span>CAD</span>
+                <span className="text-[#718096]">${selectedWallet.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              </div>
+              {/*
               <select
                 value={selectedAsset}
                 onChange={(e) => handleAssetChange(e.target.value)}
@@ -302,9 +345,11 @@ export function WithdrawWorkspace() {
                   </option>
                 ))}
               </select>
+              */}
             </div>
 
             {/* Live Rate Badge */}
+            {/*
             {!isCADAsset && selectedAsset && (
               <div className="mb-4 flex items-center justify-between rounded-[12px] border border-gray-100 bg-[#F8F9FA] px-4 py-3">
                 <div className="flex items-center gap-2">
@@ -336,6 +381,7 @@ export function WithdrawWorkspace() {
                 </button>
               </div>
             )}
+            */}
 
             {/* Available Balance */}
             <div className="mb-5 rounded-[12px] border border-[#E8EDF5] bg-[#EEF3FF] px-4 py-3">
@@ -382,6 +428,7 @@ export function WithdrawWorkspace() {
               </div>
 
               {/* CAD calculator field (only for non-CAD assets) */}
+              {/*
               {!isCADAsset && (
                 <div>
                   <label className="mb-2 flex items-center gap-2 text-[14px] font-bold text-[#0A0F2C]">
@@ -411,6 +458,7 @@ export function WithdrawWorkspace() {
                   )}
                 </div>
               )}
+              */}
             </div>
 
             {/* Quick amount buttons */}
@@ -419,8 +467,10 @@ export function WithdrawWorkspace() {
                 ["100", "500", "1000"].map((preset) => (
                   <button
                     key={preset}
-                    onClick={() => handleCryptoChange(preset)}
-                    className="flex-1 rounded-[12px] border border-gray-200 bg-white py-3 text-[14px] font-bold text-[#0A0F2C] transition-colors hover:bg-gray-50 focus:border-[#113285] focus:ring-1 focus:ring-[#113285] outline-none"
+                    disabled
+                    onMouseEnter={handleButtonMouseEnter}
+                    onMouseLeave={handleButtonMouseLeave}
+                    className="flex-1 rounded-[12px] border border-gray-100 bg-gray-100 py-3 text-[14px] font-bold text-gray-400 cursor-not-allowed opacity-60 outline-none"
                   >
                     ${preset}
                   </button>
@@ -432,8 +482,10 @@ export function WithdrawWorkspace() {
                   return (
                     <button
                       key={pct}
-                      onClick={() => handleCryptoChange(cryptoAmt)}
-                      className="flex-1 rounded-[12px] border border-gray-200 bg-white py-3 text-[14px] font-bold text-[#0A0F2C] transition-colors hover:bg-gray-50 focus:border-[#113285] focus:ring-1 focus:ring-[#113285] outline-none"
+                      disabled
+                      onMouseEnter={handleButtonMouseEnter}
+                      onMouseLeave={handleButtonMouseLeave}
+                      className="flex-1 rounded-[12px] border border-gray-100 bg-gray-100 py-3 text-[14px] font-bold text-gray-400 cursor-not-allowed opacity-60 outline-none"
                     >
                       {pct}
                     </button>
@@ -476,6 +528,15 @@ export function WithdrawWorkspace() {
                   setErrorMsg("Please enter a valid amount.");
                   return;
                 }
+                if (numAmount !== availableBalanceCAD) {
+                  setErrorMsg(
+                    <span>
+                      For partial withdrawals, please contact <Link href="/support" className="underline text-[#113285] hover:text-[#0c2461]">support</Link>.
+                    </span>
+                  );
+                  return;
+                }
+                /*
                 if (numAmount > selectedWallet.balance) {
                   setErrorMsg(`Amount exceeds your available ${selectedAsset} balance.`);
                   return;
@@ -485,6 +546,7 @@ export function WithdrawWorkspace() {
                   setErrorMsg(isCADAsset ? "Minimum withdrawal amount is $10 CAD." : `Minimum withdrawal is $10 CAD equivalent (≈ ${minCrypto.toFixed(8)} ${selectedAsset}).`);
                   return;
                 }
+                */
                 setErrorMsg(null);
                 setStep(2);
               }}
