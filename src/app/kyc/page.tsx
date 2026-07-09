@@ -40,7 +40,7 @@ export default function KYCPage() {
   const [formData, setFormData] = useState({
     fullName: "",
     dob: "",
-    sin: "",
+    gender: "",
     occupation: "",
     streetAddress: "",
     city: "",
@@ -191,7 +191,7 @@ const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, field: keyof t
           user_id: user.id,
           full_name: formData.fullName,
           date_of_birth: formData.dob,
-          sin: formData.sin,
+          gender: formData.gender,
           occupation: formData.occupation,
           street_address: formData.streetAddress,
           city: formData.city,
@@ -240,7 +240,7 @@ const nextStep = () => {
   if (currentStep === 1) {
     if (!formData.fullName.trim()) newErrors.fullName = "Full name is required";
     if (!formData.dob.trim()) newErrors.dob = "Date of birth is required";
-    if (!formData.sin.trim()) newErrors.sin = "SIN is required";
+    if (!formData.gender) newErrors.gender = "Gender is required";
     if (!formData.occupation.trim()) newErrors.occupation = "Occupation is required";
   }
   
@@ -361,16 +361,19 @@ const nextStep = () => {
           {errors.dob && <p className="text-[11px] text-red-500 mt-1">{errors.dob}</p>}
         </div>
         <div>
-          <label className="block text-[12px] font-bold text-[#0A0F2C] mb-1">Social Insurance Number (SIN)</label>
-          <input 
-            type="text" 
-            name="sin"
-            value={formData.sin}
-            onChange={handleInputChange}
-            placeholder="000-000-000" 
-            className={`w-full px-3 py-2.5 rounded-xl border text-[14px] text-[#0A0F2C] focus:outline-none focus:ring-2 focus:ring-[#113285]/20 focus:border-[#113285] transition-all ${errors.sin ? 'border-red-400' : 'border-gray-200'}`}
-          />
-          {errors.sin && <p className="text-[11px] text-red-500 mt-1">{errors.sin}</p>}
+          <label className="block text-[12px] font-bold text-[#0A0F2C] mb-1">Gender</label>
+          <div className={`flex items-center gap-4 px-3 py-2.5 rounded-xl border transition-all ${errors.gender ? 'border-red-400 bg-red-50/50' : 'border-gray-200 bg-white'}`}>
+            <label className="flex items-center gap-1.5 text-[14px] text-[#0A0F2C] cursor-pointer">
+              <input type="radio" name="gender" value="Male" checked={formData.gender === "Male"} onChange={handleInputChange} className="w-4 h-4 text-[#113285] focus:ring-[#113285] cursor-pointer" /> Male
+            </label>
+            <label className="flex items-center gap-1.5 text-[14px] text-[#0A0F2C] cursor-pointer">
+              <input type="radio" name="gender" value="Female" checked={formData.gender === "Female"} onChange={handleInputChange} className="w-4 h-4 text-[#113285] focus:ring-[#113285] cursor-pointer" /> Female
+            </label>
+            <label className="flex items-center gap-1.5 text-[14px] text-[#0A0F2C] cursor-pointer">
+              <input type="radio" name="gender" value="Other" checked={formData.gender === "Other"} onChange={handleInputChange} className="w-4 h-4 text-[#113285] focus:ring-[#113285] cursor-pointer" /> Other
+            </label>
+          </div>
+          {errors.gender && <p className="text-[11px] text-red-500 mt-1">{errors.gender}</p>}
         </div>
       </div>
 
