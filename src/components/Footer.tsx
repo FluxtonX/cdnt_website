@@ -2,8 +2,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { Twitter, Linkedin, Instagram, GitBranch } from "lucide-react";
 import type { LandingFooterContent } from "@/lib/content-defaults";
+import { DEFAULT_LANDING_CONTENT } from "@/lib/content-defaults";
 
-export default function Footer({ content }: { content: LandingFooterContent }) {
+export default function Footer({ content = DEFAULT_LANDING_CONTENT.footer }: { content?: LandingFooterContent }) {
   // Convert list of complex objects to key-value record to map dynamically
   const footerLinksMap: Record<string, { name: string; href: string }[]> = {};
   
