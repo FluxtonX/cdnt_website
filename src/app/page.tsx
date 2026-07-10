@@ -14,6 +14,7 @@
  */
 import { getLandingContent } from "@/lib/site-content";
 
+import { AnnouncementBanner } from "@/components/AnnouncementBanner";
 import Navbar from "@/components/Navbar";
 import HeroSection from "@/components/HeroSection";
 import TickerBar from "@/components/TickerBar";
@@ -33,6 +34,7 @@ export default async function Home() {
 
   return (
     <main className="min-h-screen">
+      <AnnouncementBanner />
       <Navbar />
       <HeroSection content={content.hero} />
       <TickerBar />

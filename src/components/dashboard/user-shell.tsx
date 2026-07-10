@@ -24,6 +24,7 @@ import {
   XCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { AnnouncementBanner } from "@/components/AnnouncementBanner";
 
 const FREEZE_SUPPORT_PATH = "/help-support";
 
@@ -364,6 +365,7 @@ export function UserShell({ children }: { children: React.ReactNode }) {
 
       {/* Main Content Area */}
       <div className="min-w-0 pb-20 lg:pb-0">
+        <AnnouncementBanner />
         {/* Top Header */}
         <header className={cn("sticky top-0 z-30 flex h-[88px] items-center justify-between border-b border-gray-100 bg-white px-4 sm:px-6 md:px-8", showFreezeOverlay && "pointer-events-none")}>
           <div className="flex flex-col justify-center min-w-0 mr-4">
