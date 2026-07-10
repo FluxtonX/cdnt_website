@@ -16,6 +16,12 @@ export default function ProfileSettingsPage() {
   const [rejectionReason, setRejectionReason] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
 
+  // Settings content from CMS
+  const [dailyUnverified, setDailyUnverified] = useState("1,000");
+  const [dailyVerified, setDailyVerified] = useState("5,000,000");
+  const [monthlyUnverified, setMonthlyUnverified] = useState("10,000");
+  const [monthlyVerified, setMonthlyVerified] = useState("50,000,000");
+
   const supabase = createClient();
 
   useEffect(() => {
@@ -65,6 +71,42 @@ export default function ProfileSettingsPage() {
       }
     }
     loadData();
+  }, [supabase]);
+
+  // Fetch settings content from site_content
+  useEffect(() => {
+    async function loadSettingsContent() {
+      try {
+        const { data, error } = await supabase
+          .from("site_content")
+          .select("key, value")
+          .eq("category", "settings");
+        
+        if (!error && data) {
+          data.forEach((row) => {
+            switch (row.key) {
+              case "settings.daily_unverified":
+                setDailyUnverified(row.value);
+                break;
+              case "settings.daily_verified":
+                setDailyVerified(row.value);
+                break;
+              case "settings.monthly_unverified":
+                setMonthlyUnverified(row.value);
+                break;
+              case "settings.monthly_verified":
+                setMonthlyVerified(row.value);
+                break;
+              default:
+                break;
+            }
+          });
+        }
+      } catch (err) {
+        console.error("Error loading settings content:", err);
+      }
+    }
+    loadSettingsContent();
   }, [supabase]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -259,13 +301,13 @@ export default function ProfileSettingsPage() {
           <div className="rounded-xl border border-gray-200 p-5">
             <p className="text-[13px] font-medium text-[#718096]">Daily Withdrawal Limit</p>
             <p className="mt-1 text-[24px] font-black tracking-tight text-[#0A0F2C]">
-              {kycStatus === 'verified' ? '$5,000,000.00' : '$1,000'}
+              {kycStatus === 'verified' ? `$${dailyVerified}` : `$${dailyUnverified}`}
             </p>
           </div>
           <div className="rounded-xl border border-gray-200 p-5">
             <p className="text-[13px] font-medium text-[#718096]">Monthly Limit</p>
             <p className="mt-1 text-[24px] font-black tracking-tight text-[#0A0F2C]">
-              {kycStatus === 'verified' ? '$50,000,000.00' : '$10,000'}
+              {kycStatus === 'verified' ? `$${monthlyVerified}` : `$${monthlyUnverified}`}
             </p>
           </div>
         </div>

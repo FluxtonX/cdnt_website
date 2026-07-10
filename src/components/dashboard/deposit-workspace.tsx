@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -20,6 +20,7 @@ import {
   getDepositNetworks,
 } from "@/config/depositAddresses";
 import { cn } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
 
 const steps = ["Details", "Review", "Transfer"];
 const assetOptions = Array.from(
@@ -50,6 +51,70 @@ export function DepositWorkspace({ initialAsset }: { initialAsset?: string }) {
   const [reference] = useState(() => `NUD-${Date.now().toString(36).toUpperCase()}`);
 
   const [error, setError] = useState<string | null>(null);
+
+  // Deposit content from CMS
+  const [pageSubheading, setPageSubheading] = useState("Select an asset, review the network, then scan the company deposit QR.");
+  const [infoBox, setInfoBox] = useState("The QR contains the fixed company deposit address for this asset and network. The address is intentionally not displayed as plain text on this screen.");
+  const [warningBox, setWarningBox] = useState("Sending the wrong asset or network can permanently lose funds.");
+  const [cadBlocked, setCadBlocked] = useState("Canadian regulations absolutely forbid CAD deposits on fraud-refund accounts. The deposit function is permanently disabled.");
+  const [successTitle, setSuccessTitle] = useState("Deposit QR ready");
+  const [successBody, setSuccessBody] = useState("Scan the QR from your external wallet and send only on the selected network.");
+  const [instructions, setInstructions] = useState<string[]>([
+    "Send only the selected asset on the correct network.",
+    "The QR uses a fixed company deposit address configured by admin.",
+    "Minimum deposit applies — check the amount field.",
+    "Requires the specified number of network confirmations.",
+    "Funds are reviewed manually before balance credit.",
+  ]);
+
+  const supabase = createClient();
+
+  // Fetch deposit content from site_content
+  useEffect(() => {
+    async function loadDepositContent() {
+      try {
+        const { data, error } = await supabase
+          .from("site_content")
+          .select("key, value")
+          .eq("category", "deposit");
+        
+        if (!error && data) {
+          data.forEach((row) => {
+            switch (row.key) {
+              case "deposit.page_subheading":
+                setPageSubheading(row.value);
+                break;
+              case "deposit.info_box":
+                setInfoBox(row.value);
+                break;
+              case "deposit.warning_box":
+                setWarningBox(row.value);
+                break;
+              case "deposit.cad_blocked":
+                setCadBlocked(row.value);
+                break;
+              case "deposit.success_title":
+                setSuccessTitle(row.value);
+                break;
+              case "deposit.success_body":
+                setSuccessBody(row.value);
+                break;
+              case "deposit.instructions":
+                if (Array.isArray(row.value)) {
+                  setInstructions(row.value);
+                }
+                break;
+              default:
+                break;
+            }
+          });
+        }
+      } catch (err) {
+        console.error("Error loading deposit content:", err);
+      }
+    }
+    loadDepositContent();
+  }, [supabase]);
 
   // Live address state fetched from platform_wallets table
   const [liveAddress, setLiveAddress] = useState<string | null>(null);
@@ -152,7 +217,7 @@ export function DepositWorkspace({ initialAsset }: { initialAsset?: string }) {
             Deposit Cryptocurrency
           </h1>
           <p className="text-xs sm:text-sm text-[#718096] mt-0.5">
-            Select an asset, review the network, then scan the company deposit QR.
+            {pageSubheading}
           </p>
         </div>
       </div>
@@ -161,7 +226,7 @@ export function DepositWorkspace({ initialAsset }: { initialAsset?: string }) {
         <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center">
           <AlertTriangle className="mx-auto h-12 w-12 text-red-600 mb-4" />
           <p className="text-base font-semibold text-red-900">
-            Canadian regulations absolutely forbid CAD deposits on fraud-refund accounts. The deposit function is permanently disabled.
+            {cadBlocked}
           </p>
         </div>
       ) : (
@@ -328,7 +393,7 @@ export function DepositWorkspace({ initialAsset }: { initialAsset?: string }) {
                           <div className="flex gap-3">
                             <Info className="mt-0.5 h-5 w-5 shrink-0 text-[#113285]" />
                             <p className="text-sm leading-6 text-[#4A5568]">
-                              The QR contains the fixed company deposit address for this asset and network. The address is intentionally not displayed as plain text on this screen.
+                              {infoBox}
                             </p>
                           </div>
                         </div>
@@ -342,7 +407,7 @@ export function DepositWorkspace({ initialAsset }: { initialAsset?: string }) {
                         </button>
                       </div>
 
-                      <DepositRules config={config} />
+                      <DepositRules config={config} instructions={instructions} formatAmount={formatAmount} />
                     </section>
                   ) : null}
 
@@ -366,7 +431,7 @@ export function DepositWorkspace({ initialAsset }: { initialAsset?: string }) {
                           <div className="flex gap-3">
                             <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-[#B7791F]" />
                             <p className="text-sm font-semibold leading-6 text-[#7A4B00]">
-                              Sending the wrong asset or network can permanently lose funds.
+                              {warningBox}
                             </p>
                           </div>
                         </div>
@@ -402,9 +467,9 @@ export function DepositWorkspace({ initialAsset }: { initialAsset?: string }) {
                           <div className="flex gap-3">
                             <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-700" />
                             <div>
-                              <p className="text-sm font-bold text-emerald-900">Deposit QR ready</p>
+                              <p className="text-sm font-bold text-emerald-900">{successTitle}</p>
                               <p className="mt-1 text-sm leading-6 text-emerald-800">
-                                Scan the QR from your external wallet and send only on {config.networkName}.
+                                {successBody.replace("the selected network", config.networkName)}
                               </p>
                             </div>
                           </div>
@@ -431,7 +496,7 @@ export function DepositWorkspace({ initialAsset }: { initialAsset?: string }) {
                       </div>
 
                       <div className="space-y-5">
-                        <DepositRules config={config} />
+                        <DepositRules config={config} instructions={instructions} formatAmount={formatAmount} />
 
                         <div className="rounded-2xl bg-[#F8FAFC] p-5">
                           <h3 className="mb-4 text-sm font-bold text-[#0A0F2C]">Deposit Status</h3>
@@ -477,7 +542,7 @@ function ReviewItem({ label, value }: { label: string; value: string }) {
   );
 }
 
-function DepositRules({ config }: { config: DepositAddressConfig }) {
+function DepositRules({ config, instructions, formatAmount }: { config: DepositAddressConfig; instructions: string[]; formatAmount: (value: number, symbol: string) => string }) {
   return (
     <div className="rounded-2xl border border-[#FFEDCC] bg-[#FFF9EA] p-5">
       <h3 className="mb-4 flex items-center gap-2 text-sm font-bold text-[#B7791F]">
@@ -485,11 +550,15 @@ function DepositRules({ config }: { config: DepositAddressConfig }) {
         Important instructions
       </h3>
       <ul className="space-y-3 text-sm font-medium leading-6 text-[#4A5568]">
-        <li>Send only {config.assetName} ({config.asset}) on {config.networkName}.</li>
-        <li>The QR uses a fixed company deposit address configured by admin.</li>
-        <li>Minimum deposit: {formatAmount(config.minAmount, config.asset)}.</li>
-        <li>Requires {config.confirmations} network confirmations.</li>
-        <li>Funds are reviewed manually before balance credit.</li>
+        {instructions.map((instruction, index) => (
+          <li key={index}>
+            {instruction
+              .replace("the selected asset", config.assetName)
+              .replace("the correct network", config.networkName)
+              .replace("the amount field", `${formatAmount(config.minAmount, config.asset)}`)
+              .replace("the specified number of network confirmations", `${config.confirmations} network confirmations`)}
+          </li>
+        ))}
       </ul>
     </div>
   );

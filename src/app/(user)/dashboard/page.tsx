@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -36,6 +36,7 @@ import {
 import { CoinLogo } from "@/components/market/CoinLogo";
 import { getCoinBySymbol } from "@/config/coins";
 import { cn, COIN_COLORS } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
 
 function formatRelativeTime(date: Date): string {
   const now = new Date();
@@ -359,9 +360,109 @@ export default function DashboardPage() {
   const [customStartDate, setCustomStartDate] = useState<Date | null>(null);
   const [customEndDate, setCustomEndDate] = useState<Date | null>(null);
   const [activeAllocationIndex, setActiveAllocationIndex] = useState<number | undefined>(undefined);
+  
+  // Dashboard content from CMS
+  const [portfolioLabel, setPortfolioLabel] = useState("Total Portfolio Value");
+  const [timeframeLabel, setTimeframeLabel] = useState("this month");
+  const [cadBalanceLabel, setCadBalanceLabel] = useState("CAD Balance");
+  const [depositBtn, setDepositBtn] = useState("Deposit");
+  const [withdrawBtn, setWithdrawBtn] = useState("Withdraw");
+  const [perfTitle, setPerfTitle] = useState("Portfolio Performance");
+  const [dateFrom, setDateFrom] = useState("From date");
+  const [dateTo, setDateTo] = useState("To date");
+  const [tooltipCad, setTooltipCad] = useState("CAD Value");
+  const [allocTitle, setAllocTitle] = useState("Asset Allocation");
+  const [emptyAssetsTitle, setEmptyAssetsTitle] = useState("No assets yet");
+  const [emptyAssetsSub, setEmptyAssetsSub] = useState("Deposit to see your allocation");
+  const [emptyWalletsTitle, setEmptyWalletsTitle] = useState("No wallets yet");
+  const [emptyWalletsSub, setEmptyWalletsSub] = useState("Make a deposit to get started");
+  const [txTitle, setTxTitle] = useState("Recent Transactions");
+  const [txViewAll, setTxViewAll] = useState("View All");
+  const [txLoading, setTxLoading] = useState("Loading transactions...");
+  const [emptyTx, setEmptyTx] = useState("No recent transactions");
+  
   const { data: metrics, isLoading: loadingBalance } = useDashboardMetrics();
   const { data: transactions = [], isLoading: loadingTx } = useRecentTransactions();
   const { data: allTransactions = [] } = useClientTransactions();
+  const supabase = createClient();
+
+  // Fetch dashboard content from site_content
+  useEffect(() => {
+    async function loadDashboardContent() {
+      try {
+        const { data, error } = await supabase
+          .from("site_content")
+          .select("key, value")
+          .eq("category", "dashboard");
+        
+        if (!error && data) {
+          data.forEach((row) => {
+            switch (row.key) {
+              case "dashboard.top_header.portfolio_label":
+                setPortfolioLabel(row.value);
+                break;
+              case "dashboard.top_header.timeframe_label":
+                setTimeframeLabel(row.value);
+                break;
+              case "dashboard.top_header.cad_balance_label":
+                setCadBalanceLabel(row.value);
+                break;
+              case "dashboard.top_header.deposit_btn":
+                setDepositBtn(row.value);
+                break;
+              case "dashboard.top_header.withdraw_btn":
+                setWithdrawBtn(row.value);
+                break;
+              case "dashboard.performance.title":
+                setPerfTitle(row.value);
+                break;
+              case "dashboard.performance.from_placeholder":
+                setDateFrom(row.value);
+                break;
+              case "dashboard.performance.to_placeholder":
+                setDateTo(row.value);
+                break;
+              case "dashboard.performance.tooltip_label":
+                setTooltipCad(row.value);
+                break;
+              case "dashboard.allocation.title":
+                setAllocTitle(row.value);
+                break;
+              case "dashboard.allocation.empty_title":
+                setEmptyAssetsTitle(row.value);
+                break;
+              case "dashboard.allocation.empty_sub":
+                setEmptyAssetsSub(row.value);
+                break;
+              case "dashboard.wallets.empty_title":
+                setEmptyWalletsTitle(row.value);
+                break;
+              case "dashboard.wallets.empty_sub":
+                setEmptyWalletsSub(row.value);
+                break;
+              case "dashboard.transactions.title":
+                setTxTitle(row.value);
+                break;
+              case "dashboard.transactions.view_all":
+                setTxViewAll(row.value);
+                break;
+              case "dashboard.transactions.loading":
+                setTxLoading(row.value);
+                break;
+              case "dashboard.transactions.empty":
+                setEmptyTx(row.value);
+                break;
+              default:
+                break;
+            }
+          });
+        }
+      } catch (err) {
+        console.error("Error loading dashboard content:", err);
+      }
+    }
+    loadDashboardContent();
+  }, [supabase]);
 
   const cadRates = useMemo((): Record<string, number> => ({
     BTC: metrics?.cadRates?.BTC ?? 95000,
@@ -492,7 +593,7 @@ export default function DashboardPage() {
         <div className="flex flex-col md:flex-row justify-between items-start gap-6">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <span className="text-[13px] text-blue-100/90 font-medium">Total Portfolio Value</span>
+              <span className="text-[13px] text-blue-100/90 font-medium">{portfolioLabel}</span>
               <button
                 onClick={() => setHideBalance(!hideBalance)}
                 className="hover:text-white text-blue-100/80 transition-colors"
@@ -527,11 +628,11 @@ export default function DashboardPage() {
                 ({percentChange >= 0 ? "+" : ""}
                 {percentChange.toFixed(1)}%)
               </span>
-              <span className="text-blue-200/80">this month</span>
+              <span className="text-blue-200/80">{timeframeLabel}</span>
             </div>
           </div>
           <div className="md:text-right">
-            <span className="text-[13px] text-blue-100/90 font-medium">CAD Balance</span>
+            <span className="text-[13px] text-blue-100/90 font-medium">{cadBalanceLabel}</span>
             <div className="text-xl md:text-2xl font-bold mt-1">
               {hideBalance ? (
                 "$•,•••.••"
@@ -550,14 +651,14 @@ export default function DashboardPage() {
             className="flex items-center justify-center gap-2 bg-[#FFC107] hover:bg-[#FFD166] text-[#0A0F2C] rounded-xl py-3.5 font-bold text-[14px] transition-colors shadow-sm"
           >
             <ArrowDownLeft className="w-4 h-4" strokeWidth={2.5} />
-            Deposit
+            {depositBtn}
           </Link>
           <Link
             href="/withdraw"
             className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white rounded-xl py-3.5 font-bold text-[14px] transition-colors shadow-sm"
           >
             <ArrowUpRight className="w-4 h-4" strokeWidth={2.5} />
-            Withdraw
+            {withdrawBtn}
           </Link>
         </div>
       </div>
@@ -565,7 +666,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
         <div className="rounded-2xl p-6 shadow-lg backdrop-blur-md bg-white/5 border border-white/10 bg-gradient-to-br from-[#1e3a8a]/95 to-[#0f172a]/90">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-            <h2 className="text-[15px] font-bold text-white">Portfolio Performance</h2>
+            <h2 className="text-[15px] font-bold text-white">{perfTitle}</h2>
             <div className="flex flex-wrap gap-1.5">
               {PERFORMANCE_TIME_RANGES.map((range) => (
                 <button
@@ -594,7 +695,7 @@ export default function DashboardPage() {
                 startDate={customStartDate}
                 endDate={customEndDate}
                 maxDate={customEndDate || new Date()}
-                placeholderText="From date"
+                placeholderText={dateFrom}
                 className="px-3 py-1.5 rounded-lg bg-white/10 border border-white/20 text-white text-xs font-medium outline-none focus:border-[#60a5fa] w-[130px]"
                 calendarClassName="!font-sans"
               />
@@ -607,7 +708,7 @@ export default function DashboardPage() {
                 endDate={customEndDate}
                 minDate={customStartDate || undefined}
                 maxDate={new Date()}
-                placeholderText="To date"
+                placeholderText={dateTo}
                 className="px-3 py-1.5 rounded-lg bg-white/10 border border-white/20 text-white text-xs font-medium outline-none focus:border-[#60a5fa] w-[130px]"
                 calendarClassName="!font-sans"
               />
@@ -652,7 +753,7 @@ export default function DashboardPage() {
                   labelStyle={{ color: "#94a3b8" }}
                   formatter={(value) => [
                     formatCadTooltip(typeof value === "number" ? value : 0),
-                    "CAD Value",
+                    tooltipCad,
                   ]}
                 />
                 <Area
@@ -673,13 +774,13 @@ export default function DashboardPage() {
         </div>
 
         <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex flex-col">
-          <h2 className="text-[15px] font-bold text-[#0A0F2C] mb-4">Asset Allocation</h2>
+          <h2 className="text-[15px] font-bold text-[#0A0F2C] mb-4">{allocTitle}</h2>
           <div className="flex-1 flex flex-col justify-between">
             {allocationData.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-[200px] text-[#A0AEC0]">
                 <svg className="w-12 h-12 mb-3 opacity-40" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M12 3v9l4 4" /></svg>
-                <p className="text-sm font-medium">No assets yet</p>
-                <p className="text-xs mt-1 opacity-70">Deposit to see your allocation</p>
+                <p className="text-sm font-medium">{emptyAssetsTitle}</p>
+                <p className="text-xs mt-1 opacity-70">{emptyAssetsSub}</p>
               </div>
             ) : (
               <div className="h-[220px] w-full relative">
@@ -764,25 +865,25 @@ export default function DashboardPage() {
         }) : (
           <div className="md:col-span-3 bg-white rounded-2xl p-8 border border-gray-100 shadow-sm flex flex-col items-center justify-center text-center">
             <svg className="w-12 h-12 mb-3 text-[#A0AEC0] opacity-50" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2" /><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" /></svg>
-            <p className="text-sm font-semibold text-[#4A5568]">No wallets yet</p>
-            <p className="text-xs text-[#A0AEC0] mt-1">Make a deposit to get started</p>
+            <p className="text-sm font-semibold text-[#4A5568]">{emptyWalletsTitle}</p>
+            <p className="text-xs text-[#A0AEC0] mt-1">{emptyWalletsSub}</p>
           </div>
         )}
       </div>
 
       <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-[15px] font-bold text-[#0A0F2C]">Recent Transactions</h2>
+          <h2 className="text-[15px] font-bold text-[#0A0F2C]">{txTitle}</h2>
           <Link href="/transactions" className="text-[12px] font-bold text-[#4A5568] hover:text-[#0A0F2C] transition-colors">
-            View All
+            {txViewAll}
           </Link>
         </div>
 
         <div className="space-y-4">
           {loadingTx ? (
-            <div className="py-6 text-center text-sm text-[#718096]">Loading transactions...</div>
+            <div className="py-6 text-center text-sm text-[#718096]">{txLoading}</div>
           ) : transactions.length === 0 ? (
-            <div className="py-6 text-center text-sm text-[#718096]">No recent transactions</div>
+            <div className="py-6 text-center text-sm text-[#718096]">{emptyTx}</div>
           ) : (
             transactions.map((tx, index) => {
               const isDeposit = tx.type === "Deposit";

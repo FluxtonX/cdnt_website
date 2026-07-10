@@ -54,6 +54,14 @@ export function WithdrawWorkspace() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [sendingOtp, setSendingOtp] = useState(false);
 
+  // Withdraw content from CMS
+  const [pageSubheading, setPageSubheading] = useState("Transfer to your bank via Interac e-Transfer");
+  const [feeAmount, setFeeAmount] = useState("2.50");
+  const [partialErrMsg, setPartialErrMsg] = useState("For partial withdrawals, please contact support.");
+  const [supportLink, setSupportLink] = useState("/support");
+  const [importantBox, setImportantBox] = useState("Make sure the recipient email is correct. The recipient will need the security answer to claim the funds.");
+  const [otpText, setOtpText] = useState("We have sent a 6-digit code to your registered email address.");
+
   // Live rate state
   const [liveRate, setLiveRate] = useState<number | null>(null);
   const [rateLoading, setRateLoading] = useState(false);
@@ -122,6 +130,48 @@ export function WithdrawWorkspace() {
     });
   }, [supabase]);
 
+  // Fetch withdraw content from site_content
+  useEffect(() => {
+    async function loadWithdrawContent() {
+      try {
+        const { data, error } = await supabase
+          .from("site_content")
+          .select("key, value")
+          .eq("category", "withdraw");
+        
+        if (!error && data) {
+          data.forEach((row) => {
+            switch (row.key) {
+              case "withdraw.page_subheading":
+                setPageSubheading(row.value);
+                break;
+              case "withdraw.fee_amount":
+                setFeeAmount(row.value);
+                break;
+              case "withdraw.partial_error_message":
+                setPartialErrMsg(row.value);
+                break;
+              case "withdraw.support_link":
+                setSupportLink(row.value);
+                break;
+              case "withdraw.important_box":
+                setImportantBox(row.value);
+                break;
+              case "withdraw.otp_text":
+                setOtpText(row.value);
+                break;
+              default:
+                break;
+            }
+          });
+        }
+      } catch (err) {
+        console.error("Error loading withdraw content:", err);
+      }
+    }
+    loadWithdrawContent();
+  }, [supabase]);
+
   const createWithdrawal = useCreateWithdrawalRequest();
 
   const isCADAsset = selectedAsset.toUpperCase() === "CAD";
@@ -133,7 +183,7 @@ export function WithdrawWorkspace() {
 
   const numAmount = parseFloat(amount || "0");
   const cadEquivalent = isCADAsset ? numAmount : numAmount * effectiveRate;
-  const FEE_CAD = 2.5;
+  const FEE_CAD = parseFloat(feeAmount) || 2.5;
   const feeInCrypto = isCADAsset ? FEE_CAD : (effectiveRate > 0 ? FEE_CAD / effectiveRate : 0);
 
   const youReceiveDisplay = isCADAsset
@@ -156,7 +206,7 @@ export function WithdrawWorkspace() {
     } else if (num !== availableBalanceCAD) {
       setErrorMsg(
         <span>
-          For partial withdrawals, please contact <Link href="/support" className="underline text-[#113285] hover:text-[#0c2461]">support</Link>.
+          {partialErrMsg} <Link href={supportLink} className="underline text-[#113285] hover:text-[#0c2461]">support</Link>.
         </span>
       );
     } else {
@@ -177,7 +227,7 @@ export function WithdrawWorkspace() {
   const handleButtonMouseEnter = () => {
     setErrorMsg(
       <span>
-        For partial withdrawals, please contact <Link href="/support" className="underline text-[#113285] hover:text-[#0c2461]">support</Link>.
+        {partialErrMsg} <Link href={supportLink} className="underline text-[#113285] hover:text-[#0c2461]">support</Link>.
       </span>
     );
   };
@@ -188,7 +238,7 @@ export function WithdrawWorkspace() {
       // Keep error if the input amount is still not matching the full balance
       setErrorMsg(
         <span>
-          For partial withdrawals, please contact <Link href="/support" className="underline text-[#113285] hover:text-[#0c2461]">support</Link>.
+          {partialErrMsg} <Link href={supportLink} className="underline text-[#113285] hover:text-[#0c2461]">support</Link>.
         </span>
       );
     } else {
@@ -278,7 +328,7 @@ export function WithdrawWorkspace() {
         </Link>
         <div>
           <h1 className="text-[22px] font-bold tracking-tight text-[#0A0F2C]">Withdraw Funds</h1>
-          <p className="text-[14px] text-[#718096]">Transfer to your bank via Interac e-Transfer</p>
+          <p className="text-[14px] text-[#718096]">{pageSubheading}</p>
         </div>
       </div>
 
@@ -531,7 +581,7 @@ export function WithdrawWorkspace() {
                 if (numAmount !== availableBalanceCAD) {
                   setErrorMsg(
                     <span>
-                      For partial withdrawals, please contact <Link href="/support" className="underline text-[#113285] hover:text-[#0c2461]">support</Link>.
+                      {partialErrMsg} <Link href={supportLink} className="underline text-[#113285] hover:text-[#0c2461]">support</Link>.
                     </span>
                   );
                   return;
@@ -604,7 +654,7 @@ export function WithdrawWorkspace() {
                 Important
               </div>
               <p className="text-[14px] text-[#4A5568] leading-relaxed">
-                Make sure the recipient email is correct. The recipient will need the security answer to claim the funds.
+                {importantBox}
               </p>
             </div>
 
@@ -685,7 +735,7 @@ export function WithdrawWorkspace() {
 
             <div className="mb-8">
               <label className="mb-2 block text-[14px] font-bold text-[#0A0F2C]">2FA Verification Code</label>
-              <p className="mb-4 text-sm text-[#718096]">We have sent a 6-digit code to your registered email address.</p>
+              <p className="mb-4 text-sm text-[#718096]">{otpText}</p>
               <input
                 type="text"
                 placeholder="0 0 0 0 0 0"

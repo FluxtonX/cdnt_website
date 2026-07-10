@@ -6,6 +6,7 @@ import { Copy, QrCode, TriangleAlert, ArrowDownLeft, ArrowUpRight, Check } from 
 import { CoinLogo } from "@/components/market/CoinLogo";
 import { useClientWallets } from "@/hooks/useClientQueries";
 import { QRCodeSVG } from "qrcode.react";
+import { createClient } from "@/lib/supabase/client";
 
 export default function WalletsPage() {
   const { data: wallets = [], isLoading: loading } = useClientWallets();
@@ -13,6 +14,19 @@ export default function WalletsPage() {
   const [copied, setCopied] = useState(false);
   const [showQr, setShowQr] = useState(false);
   const [selectedNetworkIndex, setSelectedNetworkIndex] = useState(0);
+
+  // Wallets content from CMS
+  const [cadTitle, setCadTitle] = useState("Withdrawal Only");
+  const [cadBody, setCadBody] = useState("This wallet is only suitable for withdrawals. CAD deposits are not accepted on this platform due to Canadian regulations.");
+  const [instructions, setInstructions] = useState<string[]>([
+    "Only send {asset name} to this address",
+    "Minimum deposit: 0.0005 BTC / 0.01 ETH / 5.0 USDT",
+    "Requires 3 network confirmations",
+    "Submit transaction hash on deposit request page after sending",
+  ]);
+  const [confirmations, setConfirmations] = useState("3");
+
+  const supabase = createClient();
 
   // Auto-select the first wallet once data loads
   useEffect(() => {
@@ -26,6 +40,44 @@ export default function WalletsPage() {
     setSelectedNetworkIndex(0);
     setShowQr(false);
   }, [selectedWalletId]);
+
+  // Fetch wallets content from site_content
+  useEffect(() => {
+    async function loadWalletsContent() {
+      try {
+        const { data, error } = await supabase
+          .from("site_content")
+          .select("key, value")
+          .eq("category", "wallets");
+        
+        if (!error && data) {
+          data.forEach((row) => {
+            switch (row.key) {
+              case "wallets.cad_title":
+                setCadTitle(row.value);
+                break;
+              case "wallets.cad_body":
+                setCadBody(row.value);
+                break;
+              case "wallets.instructions":
+                if (Array.isArray(row.value)) {
+                  setInstructions(row.value);
+                }
+                break;
+              case "wallets.confirmations":
+                setConfirmations(row.value);
+                break;
+              default:
+                break;
+            }
+          });
+        }
+      } catch (err) {
+        console.error("Error loading wallets content:", err);
+      }
+    }
+    loadWalletsContent();
+  }, [supabase]);
 
   const selectedWallet = wallets.find(w => w.id === selectedWalletId);
 
@@ -131,10 +183,10 @@ export default function WalletsPage() {
                   <div className="bg-[#E0E7FF] rounded-xl p-6 border border-blue-100/50 mb-6">
                     <div className="flex items-center gap-2 text-primary-blue font-semibold text-sm mb-3">
                       <TriangleAlert className="w-4 h-4" />
-                      Withdrawal Only
+                      {cadTitle}
                     </div>
                     <p className="text-sm text-gray-700 leading-relaxed">
-                      This wallet is only suitable for withdrawals. CAD deposits are not accepted on this platform due to Canadian regulations.
+                      {cadBody}
                     </p>
                   </div>
 
@@ -215,10 +267,14 @@ export default function WalletsPage() {
                       Important Instructions
                     </div>
                     <ul className="mt-3 space-y-2 text-sm text-gray-500 list-disc pl-5">
-                      <li>Only send {selectedWallet?.name} to this address</li>
-                      <li>Minimum deposit: {selectedWallet?.symbol === "BTC" ? "0.0005" : selectedWallet?.symbol === "ETH" ? "0.01" : "5.0"} {selectedWallet?.symbol}</li>
-                      <li>Requires 3 network confirmations</li>
-                      <li>Submit transaction hash on deposit request page after sending</li>
+                      {instructions.map((instruction, idx) => (
+                        <li key={idx}>
+                          {instruction
+                            .replace("{asset name}", selectedWallet?.name || "")
+                            .replace("{symbol}", selectedWallet?.symbol || "")
+                            .replace("3 network confirmations", `${confirmations} network confirmations`)}
+                        </li>
+                      ))}
                     </ul>
                   </div>
 

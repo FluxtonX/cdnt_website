@@ -72,6 +72,12 @@ export default function ExchangePage() {
   const [tradeLoading, setTradeLoading] = React.useState(false);
   const [toast, setToast] = React.useState<{ type: "success" | "error"; msg: string } | null>(null);
 
+  // Buy/Sell content from CMS
+  const [subheading, setSubheading] = React.useState("Live Binance market data for crypto charting and market stats");
+  const [disclaimer, setDisclaimer] = React.useState("Orders are reviewed before confirmation. Live Binance market price may change.");
+  const [buyFee, setBuyFee] = React.useState("0.50");
+  const [sellFee, setSellFee] = React.useState("0.40");
+
   const { data: metrics, isLoading: loadingMetrics } = useDashboardMetrics();
   const totalPortfolioValue = metrics?.portfolioValue ?? 0;
 
@@ -137,6 +143,42 @@ export default function ExchangePage() {
     return () => clearInterval(interval);
   }, []);
 
+  // Fetch buy/sell content from site_content
+  React.useEffect(() => {
+    async function loadBuySellContent() {
+      try {
+        const { data, error } = await supabase
+          .from("site_content")
+          .select("key, value")
+          .eq("category", "buysell");
+        
+        if (!error && data) {
+          data.forEach((row) => {
+            switch (row.key) {
+              case "buysell.page_subheading":
+                setSubheading(row.value);
+                break;
+              case "buysell.disclaimer":
+                setDisclaimer(row.value);
+                break;
+              case "buysell.buy_fee":
+                setBuyFee(row.value);
+                break;
+              case "buysell.sell_fee":
+                setSellFee(row.value);
+                break;
+              default:
+                break;
+            }
+          });
+        }
+      } catch (err) {
+        console.error("Error loading buysell content:", err);
+      }
+    }
+    loadBuySellContent();
+  }, [supabase]);
+
   // Load ticker from Binance
   React.useEffect(() => {
     const controller = new AbortController();
@@ -189,7 +231,9 @@ export default function ExchangePage() {
   const estimatedCrypto = side === "buy" && amountValue > 0 && conversionPrice > 0 ? amountValue / conversionPrice : 0;
   const estimatedFiat = side === "sell" && amountValue > 0 ? amountValue * conversionPrice : 0;
 
-  const feeInFiat = side === "buy" ? amountValue * 0.005 : estimatedFiat * 0.004;
+  const buyFeePercent = parseFloat(buyFee) || 0.50;
+  const sellFeePercent = parseFloat(sellFee) || 0.40;
+  const feeInFiat = side === "buy" ? amountValue * (buyFeePercent / 100) : estimatedFiat * (sellFeePercent / 100);
   const totalFiat = side === "buy" ? amountValue + feeInFiat : Math.max(0, estimatedFiat - feeInFiat);
 
   function switchSide(nextSide: "buy" | "sell") {
@@ -261,7 +305,7 @@ export default function ExchangePage() {
       <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-end">
         <div>
           <h1 className="text-3xl font-black tracking-normal text-[#0A0F2C]">Buy / Sell</h1>
-          <p className="mt-2 text-sm font-medium text-[#718096]">Live Binance market data for crypto charting and market stats</p>
+          <p className="mt-2 text-sm font-medium text-[#718096]">{subheading}</p>
         </div>
         <div className="grid grid-cols-2 gap-6 text-right">
           <div>
@@ -499,7 +543,7 @@ export default function ExchangePage() {
                     onClick={() => {
                       if (side === "buy") {
                         const maxFiat = baseCurrency === "CAD" ? (balances["CAD"] ?? 0) : (balances["USDT"] ?? 0);
-                        const maxPossible = Math.floor((maxFiat / 1.005) * 10000) / 10000;
+                        const maxPossible = Math.floor((maxFiat / (1 + buyFeePercent / 100)) * 10000) / 10000;
                         setAmount(String(Math.min(value, maxPossible)));
                       } else {
                         setAmount(((assetBalance * value) / 100).toFixed(selectedCoin.baseAsset === "BTC" ? 8 : 4));
@@ -515,7 +559,7 @@ export default function ExchangePage() {
                   onClick={() => {
                     if (side === "buy") {
                       const maxFiat = baseCurrency === "CAD" ? (balances["CAD"] ?? 0) : (balances["USDT"] ?? 0);
-                      const maxPossible = Math.floor((maxFiat / 1.005) * 10000) / 10000;
+                      const maxPossible = Math.floor((maxFiat / (1 + buyFeePercent / 100)) * 10000) / 10000;
                       setAmount(String(maxPossible));
                     } else {
                       setAmount(assetBalance.toFixed(selectedCoin.baseAsset === "BTC" ? 8 : 4));
@@ -533,7 +577,7 @@ export default function ExchangePage() {
                   <span className="font-black text-[#0A0F2C]">{conversionPrice > 0 ? `$${conversionPrice.toLocaleString("en-US", { maximumFractionDigits: 2 })} ${baseCurrency}` : "--"}</span>
                 </div>
                 <div className="flex justify-between gap-3">
-                  <span className="font-semibold text-[#718096]">Fee ({side === "buy" ? "0.50" : "0.40"}%)</span>
+                  <span className="font-semibold text-[#718096]">Fee ({side === "buy" ? buyFee : sellFee}%)</span>
                   <span className="font-black text-[#0A0F2C]">
                     {baseCurrency === "CAD"
                       ? `$${feeInFiat.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CAD`
@@ -576,7 +620,7 @@ export default function ExchangePage() {
 
               <p className="mt-4 flex gap-2 text-xs font-medium leading-5 text-[#718096]">
                 <CircleDollarSign className="mt-0.5 h-4 w-4 shrink-0" />
-                Orders are reviewed before confirmation. Live Binance market price may change.
+                {disclaimer}
               </p>
             </>
           )}

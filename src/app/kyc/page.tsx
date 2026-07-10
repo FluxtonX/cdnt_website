@@ -14,6 +14,22 @@ export default function KYCPage() {
   const supabase = createClient();
   const { notify } = useToast();
 
+  // KYC content from CMS
+  const [heading, setHeading] = useState("Identity Verification");
+  const [subheading, setSubheading] = useState("Complete KYC to unlock your account");
+  const [selfieGuides, setSelfieGuides] = useState<string[]>([
+    "Face clearly visible",
+    "Good lighting",
+    "No sunglasses or hats",
+    "Neutral expression",
+  ]);
+  const [thankYou, setThankYou] = useState("Thank you for submitting your documents.\nOur team is reviewing your information.\nThis typically takes 1-2 business days.");
+  const [whatNext, setWhatNext] = useState<string[]>([
+    "We'll verify your identity documents",
+    "You'll receive an email when approved",
+    "You can then access your full account",
+  ]);
+
   useEffect(() => {
   async function checkExistingKyc() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -33,6 +49,49 @@ export default function KYCPage() {
   }
   checkExistingKyc();
 }, []);
+
+  // Fetch KYC content from site_content
+  useEffect(() => {
+    async function loadKycContent() {
+      try {
+        const { data, error } = await supabase
+          .from("site_content")
+          .select("key, value")
+          .eq("category", "kyc");
+        
+        if (!error && data) {
+          data.forEach((row) => {
+            switch (row.key) {
+              case "kyc.page_heading":
+                setHeading(row.value);
+                break;
+              case "kyc.page_subheading":
+                setSubheading(row.value);
+                break;
+              case "kyc.selfie_guides":
+                if (Array.isArray(row.value)) {
+                  setSelfieGuides(row.value);
+                }
+                break;
+              case "kyc.thank_you":
+                setThankYou(row.value);
+                break;
+              case "kyc.what_next":
+                if (Array.isArray(row.value)) {
+                  setWhatNext(row.value);
+                }
+                break;
+              default:
+                break;
+            }
+          });
+        }
+      } catch (err) {
+        console.error("Error loading kyc content:", err);
+      }
+    }
+    loadKycContent();
+  }, [supabase]);
   const idFrontRef = useRef<HTMLInputElement>(null);
   const idBackRef = useRef<HTMLInputElement>(null);
   const selfieRef = useRef<HTMLInputElement>(null);
@@ -315,10 +374,10 @@ const nextStep = () => {
       {currentStep <= 4 && (
         <>
           <h1 className="text-[28px] font-bold text-white mb-1 text-center">
-            Identity Verification
+            {heading}
           </h1>
           <p className="text-[14px] text-blue-100 mb-5 text-center font-medium">
-            Complete KYC to unlock your account
+            {subheading}
           </p>
           <StepIndicator />
         </>
@@ -574,8 +633,8 @@ const nextStep = () => {
       <div className="bg-[#F8F9FA] rounded-xl p-4 border border-gray-100">
         <h3 className="text-[13px] font-bold text-[#0A0F2C] mb-2">Selfie Guidelines:</h3>
         <ul className="space-y-1.5">
-          {["Face clearly visible", "Good lighting", "No sunglasses or hats", "Neutral expression"].map(g => (
-            <li key={g} className="flex items-center text-[12px] text-[#4A5568]">
+          {selfieGuides.map((g, idx) => (
+            <li key={idx} className="flex items-center text-[12px] text-[#4A5568]">
               <CheckCircle2 className="w-3.5 h-3.5 text-[#10B981] mr-2 flex-shrink-0" />
               {g}
             </li>
@@ -636,17 +695,19 @@ const nextStep = () => {
             <h2 className="text-[20px] font-bold text-[#0A0F2C] mb-2">Verification in Progress</h2>
             
             <p className="text-[13px] text-[#718096] mb-6 max-w-[360px] leading-relaxed mx-auto">
-              Thank you for submitting your documents.<br />
-              Our team is reviewing your information.<br />
-              This typically takes 1-2 business days.
+              {thankYou.split('\n').map((line, idx) => (
+                <React.Fragment key={idx}>
+                  {line}<br />
+                </React.Fragment>
+              ))}
             </p>
             
             <div className="bg-[#F8F9FA] rounded-xl p-5 w-full mb-6">
               <h3 className="text-[13px] font-bold text-[#0A0F2C] mb-3">What happens next?</h3>
               <ul className="space-y-2 text-[12px] text-[#718096] text-left max-w-[260px] mx-auto list-disc pl-4 marker:text-gray-400">
-                <li className="pl-1">We'll verify your identity documents</li>
-                <li className="pl-1">You'll receive an email when approved</li>
-                <li className="pl-1">You can then access your full account</li>
+                {whatNext.map((item, idx) => (
+                  <li key={idx} className="pl-1">{item}</li>
+                ))}
               </ul>
             </div>
 
