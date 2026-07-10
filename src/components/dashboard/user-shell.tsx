@@ -24,7 +24,6 @@ import {
   XCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { AnnouncementBanner } from "@/components/AnnouncementBanner";
 
 const FREEZE_SUPPORT_PATH = "/help-support";
 
@@ -56,6 +55,7 @@ export function UserShell({ children }: { children: React.ReactNode }) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isHighValue, setIsHighValue] = useState(false);
+  const [headerTagline, setHeaderTagline] = useState("Here's what's happening with your portfolio today");
   const notificationsRef = useRef<HTMLDivElement>(null);
 
   const formatTime = (dateStr: string) => {
@@ -146,6 +146,26 @@ export function UserShell({ children }: { children: React.ReactNode }) {
       }
     }
     loadUser();
+  }, [supabase]);
+
+  useEffect(() => {
+    async function loadHeaderTagline() {
+      try {
+        const { data, error } = await supabase
+          .from("site_content")
+          .select("key, value")
+          .eq("category", "global")
+          .eq("key", "global.header_tagline")
+          .single();
+
+        if (!error && data && data.value) {
+          setHeaderTagline(data.value);
+        }
+      } catch (err) {
+        console.error("Error loading header tagline:", err);
+      }
+    }
+    loadHeaderTagline();
   }, [supabase]);
 
   useEffect(() => {
@@ -365,7 +385,6 @@ export function UserShell({ children }: { children: React.ReactNode }) {
 
       {/* Main Content Area */}
       <div className="min-w-0 pb-20 lg:pb-0">
-        <AnnouncementBanner />
         {/* Top Header */}
         <header className={cn("sticky top-0 z-30 flex h-[88px] items-center justify-between border-b border-gray-100 bg-white px-4 sm:px-6 md:px-8", showFreezeOverlay && "pointer-events-none")}>
           <div className="flex flex-col justify-center min-w-0 mr-4">
@@ -373,7 +392,7 @@ export function UserShell({ children }: { children: React.ReactNode }) {
               Welcome back, {userProfile?.fullName.split(' ')[0] || 'User'}
             </h1>
             <p className="text-[12px] sm:text-[13px] text-[#718096] mt-0.5 hidden sm:block truncate">
-              Here's what's happening with your portfolio today
+              {headerTagline}
             </p>
           </div>
           

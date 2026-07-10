@@ -97,7 +97,7 @@ export function AnnouncementBanner() {
     <div
       role="banner"
       style={{ backgroundColor: bg }}
-      className="relative flex items-center justify-center gap-3 px-10 py-2.5 text-white z-50"
+      className="relative flex items-center justify-center gap-3 px-10 py-2.5 text-white"
     >
       {banner.url ? (
         <a

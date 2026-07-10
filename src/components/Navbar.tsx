@@ -31,7 +31,7 @@ export default function Navbar() {
   }, []);
 
   return (
-    <div className="pt-4 px-4 sm:px-6 fixed top-0 left-0 right-0 z-50 flex justify-center">
+    <div className="pt-4 px-4 sm:px-6 sticky top-0 z-50 flex justify-center">
       <header
         className={`w-full max-w-7xl rounded-full border px-6 py-2 flex items-center justify-between transition-all duration-500 ease-in-out ${
           isScrolled
