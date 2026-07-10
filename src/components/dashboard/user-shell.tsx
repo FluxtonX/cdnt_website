@@ -159,7 +159,17 @@ export function UserShell({ children }: { children: React.ReactNode }) {
           .single();
 
         if (!error && data && data.value) {
-          setHeaderTagline(data.value);
+          // Handle both plain strings and JSON strings
+          let taglineValue = data.value;
+          if (typeof data.value === 'string') {
+            try {
+              taglineValue = JSON.parse(data.value);
+            } catch {
+              // Already a plain string, use as-is
+              taglineValue = data.value;
+            }
+          }
+          setHeaderTagline(taglineValue);
         }
       } catch (err) {
         console.error("Error loading header tagline:", err);
@@ -391,7 +401,7 @@ export function UserShell({ children }: { children: React.ReactNode }) {
             <h1 className="text-[16px] sm:text-[20px] font-bold text-[#0A0F2C] truncate">
               Welcome back, {userProfile?.fullName.split(' ')[0] || 'User'}
             </h1>
-            <p className="text-[12px] sm:text-[13px] text-[#718096] mt-0.5 hidden sm:block truncate">
+            <p className="text-[13px] sm:text-[14px] text-[#4A5568] mt-0.5 truncate">
               {headerTagline}
             </p>
           </div>
