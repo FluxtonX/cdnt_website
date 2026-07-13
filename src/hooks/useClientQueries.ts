@@ -133,7 +133,7 @@ export function useDashboardMetrics() {
         percentChange,
       };
     },
-    staleTime: 30_000,
+    staleTime: 0,
   });
 }
 

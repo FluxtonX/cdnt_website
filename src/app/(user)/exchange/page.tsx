@@ -21,6 +21,8 @@ import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { fetchLiveCADRates } from "@/lib/utils";
 import { useDashboardMetrics } from "@/hooks/useClientQueries";
+import { useQueryClient } from "@tanstack/react-query";
+import { clientQueryKeys } from "@/lib/query-keys";
 
 const supabase = createClient();
 
@@ -54,6 +56,7 @@ function formatCurrency(value: number) {
 }
 
 export default function ExchangePage() {
+  const queryClient = useQueryClient();
   const [selectedCoin, setSelectedCoin] = React.useState(COINS[0]);
   const [ticker, setTicker] = React.useState<Ticker24h | null>(null);
   const [latestCandle, setLatestCandle] = React.useState<Candle | null>(null);
@@ -231,8 +234,8 @@ export default function ExchangePage() {
   const estimatedCrypto = side === "buy" && amountValue > 0 && conversionPrice > 0 ? amountValue / conversionPrice : 0;
   const estimatedFiat = side === "sell" && amountValue > 0 ? amountValue * conversionPrice : 0;
 
-  const buyFeePercent = parseFloat(buyFee) || 0.50;
-  const sellFeePercent = parseFloat(sellFee) || 0.40;
+  const buyFeePercent = parseFloat(buyFee) ?? 0.50;
+  const sellFeePercent = parseFloat(sellFee) ?? 0.40;
   const feeInFiat = side === "buy" ? amountValue * (buyFeePercent / 100) : estimatedFiat * (sellFeePercent / 100);
   const totalFiat = side === "buy" ? amountValue + feeInFiat : Math.max(0, estimatedFiat - feeInFiat);
 
@@ -277,6 +280,7 @@ export default function ExchangePage() {
       });
       setAmount("");
       await loadBalances();
+      queryClient.invalidateQueries({ queryKey: clientQueryKeys.dashboard() });
     } catch (err: any) {
       console.error(err);
       setToast({

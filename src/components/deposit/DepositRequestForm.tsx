@@ -6,10 +6,13 @@ import { createClient } from "@/lib/supabase/client";
 import type { DepositAddressConfig } from "@/config/depositAddresses";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/toast";
+import { useQueryClient } from "@tanstack/react-query";
+import { clientQueryKeys } from "@/lib/query-keys";
 
 export function DepositRequestForm({ config, amount }: { config: DepositAddressConfig; amount: number }) {
   const supabase = createClient();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { notify } = useToast();
   const [txHash, setTxHash] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -109,6 +112,7 @@ export function DepositRequestForm({ config, amount }: { config: DepositAddressC
     notify({
       title: "Deposit request submitted successfully! Awaiting admin approval.",
     });
+    queryClient.invalidateQueries({ queryKey: clientQueryKeys.dashboard() });
     router.push("/dashboard");
   };
 
