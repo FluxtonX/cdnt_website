@@ -115,6 +115,46 @@ export function NotificationCenter() {
     }
   };
 
+  const handleMarkAsRead = async (id: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      await supabase
+        .from("notifications")
+        .update({ is_read: true })
+        .eq("id", id)
+        .eq("user_id", user.id);
+
+      // Update local state
+      setDbNotifications(prev =>
+        prev.map(n => n.id === id ? { ...n, is_read: true } : n)
+      );
+    } catch (e) {
+      console.error("Error marking notification as read:", e);
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      await supabase
+        .from("notifications")
+        .update({ is_read: true })
+        .eq("user_id", user.id)
+        .eq("is_read", false);
+
+      // Update local state
+      setDbNotifications(prev =>
+        prev.map(n => ({ ...n, is_read: true }))
+      );
+    } catch (e) {
+      console.error("Error marking all notifications as read:", e);
+    }
+  };
+
   const visibleNotifications = useMemo(() => {
     return dbNotifications;
   }, [dbNotifications]);
@@ -144,6 +184,7 @@ export function NotificationCenter() {
         body: n.message,
         time: timeStr,
         icon: iconMap[n.type] || Info,
+        is_read: n.is_read,
       };
     });
   }, [visibleNotifications]);
@@ -165,36 +206,47 @@ export function NotificationCenter() {
     });
   }, [mergedNotifications, query, filter, deletedIds]);
 
+  const unreadCount = mergedNotifications.filter(n => !n.is_read && !deletedIds.includes(n.id)).length;
+
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 lg:grid-cols-[1fr_auto_auto]">
-        <label className="flex h-11 items-center gap-2 rounded-md border border-banking-border px-3 text-sm text-banking-muted">
-          <Search className="h-4 w-4" />
-          <input
+      <div className="flex items-center justify-between">
+        <div className="grid gap-3 lg:grid-cols-[1fr_auto_auto] flex-1">
+          <label className="flex h-11 items-center gap-2 rounded-md border border-banking-border px-3 text-sm text-banking-muted">
+            <Search className="h-4 w-4" />
+            <input
+              suppressHydrationWarning
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              className="h-full flex-1 bg-transparent outline-none"
+              placeholder="Search notifications"
+            />
+          </label>
+          <select
             suppressHydrationWarning
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            className="h-full flex-1 bg-transparent outline-none"
-            placeholder="Search notifications"
-          />
-        </label>
-        <select
-          suppressHydrationWarning
-          value={filter}
-          onChange={(event) => setFilter(event.target.value)}
-          className="h-11 rounded-md border border-banking-border bg-white px-3 text-sm cursor-pointer outline-none"
+            value={filter}
+            onChange={(event) => setFilter(event.target.value)}
+            className="h-11 rounded-md border border-banking-border bg-white px-3 text-sm cursor-pointer outline-none"
+          >
+            {filters.map((item) => (
+              <option key={item} value={item}>{item}</option>
+            ))}
+          </select>
+          <Link
+            href="/notifications/preferences"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-md border border-banking-border bg-white px-4 text-sm font-semibold hover:bg-gray-50 transition-colors"
+          >
+            <Settings className="h-4 w-4" />
+            Preferences
+          </Link>
+        </div>
+        <button
+          onClick={handleMarkAllAsRead}
+          disabled={unreadCount === 0}
+          className="ml-4 inline-flex h-11 items-center justify-center gap-2 rounded-md border border-banking-border bg-white px-4 text-sm font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {filters.map((item) => (
-            <option key={item} value={item}>{item}</option>
-          ))}
-        </select>
-        <Link
-          href="/notifications/preferences"
-          className="inline-flex h-11 items-center justify-center gap-2 rounded-md border border-banking-border bg-white px-4 text-sm font-semibold hover:bg-gray-50 transition-colors"
-        >
-          <Settings className="h-4 w-4" />
-          Preferences
-        </Link>
+          Mark all as read
+        </button>
       </div>
       <div className="space-y-3">
         {loading ? (
@@ -211,14 +263,19 @@ export function NotificationCenter() {
             return (
               <article
                 key={item.id}
-                className="group flex gap-4 rounded-md border border-banking-border bg-white p-4 hover:border-gray-300 transition-colors relative"
+                onClick={() => !item.is_read && handleMarkAsRead(item.id)}
+                className={`group flex gap-4 rounded-md border p-4 hover:border-gray-300 transition-colors relative cursor-pointer ${
+                  !item.is_read ? "bg-blue-50/30 border-blue-200" : "bg-white border-banking-border"
+                }`}
               >
-                <div className="grid h-11 w-11 place-items-center rounded-md bg-blue-50 text-banking-blue shrink-0">
+                <div className={`grid h-11 w-11 place-items-center rounded-md shrink-0 ${
+                  !item.is_read ? "bg-blue-100 text-banking-blue" : "bg-blue-50 text-banking-blue"
+                }`}>
                   <Icon className="h-5 w-5" />
                 </div>
                 <div className="min-w-0 flex-1 pr-10">
                   <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-start">
-                    <h2 className="font-semibold text-gray-900">{item.title}</h2>
+                    <h2 className={`font-semibold ${!item.is_read ? "text-gray-900" : "text-gray-600"}`}>{item.title}</h2>
                     <span className="w-fit rounded-full bg-banking-offWhite px-2.5 py-1 text-xs font-semibold text-banking-muted">
                       {item.time}
                     </span>
@@ -227,10 +284,19 @@ export function NotificationCenter() {
                     {item.body}
                   </p>
                 </div>
+                {!item.is_read && (
+                  <div className="absolute right-4 top-4">
+                    <span className="h-2.5 w-2.5 rounded-full bg-blue-500"></span>
+                  </div>
+                )}
                 <button
-                  onClick={() => handleDelete(item.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDelete(item.id);
+                  }}
                   className="absolute right-4 top-4 opacity-0 group-hover:opacity-100 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all cursor-pointer"
                   title="Delete notification"
+                  style={{ right: !item.is_read ? "2rem" : "1rem" }}
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>

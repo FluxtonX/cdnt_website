@@ -48,11 +48,14 @@ export function WithdrawWorkspace() {
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
   const [twoFa, setTwoFa] = useState("");
+  const [otpDigits, setOtpDigits] = useState(["", "", "", "", "", ""]);
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<ReactNode | null>(null);
   const [selectedAsset, setSelectedAsset] = useState<string>("");
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [sendingOtp, setSendingOtp] = useState(false);
+  const [otpResendTimer, setOtpResendTimer] = useState(0);
+  const otpTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Withdraw content from CMS
   const [pageSubheading, setPageSubheading] = useState("Transfer to your bank via Interac e-Transfer");
@@ -129,6 +132,25 @@ export function WithdrawWorkspace() {
       setUserEmail(user?.email ?? null);
     });
   }, [supabase]);
+
+  // OTP resend timer countdown
+  useEffect(() => {
+    if (otpResendTimer > 0) {
+      otpTimerRef.current = setInterval(() => {
+        setOtpResendTimer((prev) => prev - 1);
+      }, 1000);
+    } else {
+      if (otpTimerRef.current) {
+        clearInterval(otpTimerRef.current);
+        otpTimerRef.current = null;
+      }
+    }
+    return () => {
+      if (otpTimerRef.current) {
+        clearInterval(otpTimerRef.current);
+      }
+    };
+  }, [otpResendTimer]);
 
   // Fetch withdraw content from site_content
   useEffect(() => {
@@ -271,10 +293,76 @@ export function WithdrawWorkspace() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to send 2FA code.");
       setStep(3);
+      setOtpResendTimer(60); // Start 60 second countdown
     } catch (err: any) {
       setErrorMsg(err.message || "Failed to send 2FA code.");
     } finally {
       setSendingOtp(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    setErrorMsg(null);
+    setSendingOtp(true);
+    try {
+      if (!userEmail) throw new Error("Could not determine your registered email.");
+      const res = await fetch("/api/auth/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: userEmail, purpose: "withdrawal" }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to resend 2FA code.");
+      setOtpResendTimer(60); // Reset timer
+      setOtpDigits(["", "", "", "", "", ""]); // Clear OTP inputs
+      setTwoFa(""); // Clear OTP
+      notify({
+        title: "New code sent successfully!",
+      });
+    } catch (err: any) {
+      setErrorMsg(err.message || "Failed to resend 2FA code.");
+    } finally {
+      setSendingOtp(false);
+    }
+  };
+
+  const handleOtpChange = (index: number, value: string) => {
+    const newDigits = [...otpDigits];
+    // Only allow numbers
+    const numValue = value.replace(/[^0-9]/g, "");
+    newDigits[index] = numValue.slice(0, 1);
+    setOtpDigits(newDigits);
+
+    // Auto-focus next input
+    if (numValue && index < 5) {
+      const nextInput = document.getElementById(`otp-${index + 1}`);
+      nextInput?.focus();
+    }
+
+    // Update twoFa for verification
+    const otpValue = newDigits.join("");
+    setTwoFa(otpValue);
+  };
+
+  const handleOtpPaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData("text").replace(/[^0-9]/g, "").slice(0, 6);
+    const pastedDigits = pastedData.split("");
+    const newDigits = [...pastedDigits, ...Array(6 - pastedDigits.length).fill("")];
+    setOtpDigits(newDigits);
+    setTwoFa(newDigits.join(""));
+
+    // Focus the last filled input or the first empty one
+    const lastIndex = Math.min(pastedData.length, 5);
+    const nextInput = document.getElementById(`otp-${lastIndex}`);
+    nextInput?.focus();
+  };
+
+  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent) => {
+    // Handle backspace to go to previous input
+    if (e.key === "Backspace" && !otpDigits[index] && index > 0) {
+      const prevInput = document.getElementById(`otp-${index - 1}`);
+      prevInput?.focus();
     }
   };
 
@@ -736,14 +824,37 @@ export function WithdrawWorkspace() {
             <div className="mb-8">
               <label className="mb-2 block text-[14px] font-bold text-[#0A0F2C]">2FA Verification Code</label>
               <p className="mb-4 text-sm text-[#718096]">{otpText}</p>
-              <input
-                type="text"
-                placeholder="0 0 0 0 0 0"
-                value={twoFa}
-                onChange={(e) => setTwoFa(e.target.value)}
-                maxLength={6}
-                className="w-full rounded-[14px] border border-gray-200 bg-white px-5 py-4 text-[18px] tracking-[0.25em] text-[#0A0F2C] placeholder-[#A0AEC0] outline-none transition-all focus:border-[#113285] focus:ring-1 focus:ring-[#113285] text-center"
-              />
+              <div className="flex gap-2 justify-center mb-4">
+                {otpDigits.map((digit, index) => (
+                  <input
+                    key={index}
+                    id={`otp-${index}`}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={digit}
+                    onChange={(e) => handleOtpChange(index, e.target.value)}
+                    onKeyDown={(e) => handleOtpKeyDown(index, e)}
+                    onPaste={handleOtpPaste}
+                    className="w-12 h-14 rounded-[12px] border border-gray-200 bg-white text-center text-[20px] font-bold text-[#0A0F2C] outline-none transition-all focus:border-[#113285] focus:ring-2 focus:ring-[#113285]/20"
+                  />
+                ))}
+              </div>
+              <div className="text-center">
+                {otpResendTimer > 0 ? (
+                  <span className="text-sm text-[#718096]">
+                    Resend code in {otpResendTimer}s
+                  </span>
+                ) : (
+                  <button
+                    onClick={handleResendOtp}
+                    disabled={sendingOtp}
+                    className="text-sm font-bold text-[#113285] hover:text-[#0c2461] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {sendingOtp ? "Sending..." : "Resend code"}
+                  </button>
+                )}
+              </div>
             </div>
 
             <div className="flex gap-4">
