@@ -107,6 +107,18 @@ export async function POST(
       })
       .eq("id", threadId);
 
+    // Send notification to admin about new message
+    await supabase
+      .from("notifications")
+      .insert({
+        audience: "Admin",
+        type: "Info",
+        title: "New Support Message",
+        message: `User has sent a new message in support ticket #${threadId.slice(0, 8).toUpperCase()}.`,
+        is_read: false,
+        link: "/dashboard/support/tickets/" + threadId,
+      });
+
     return NextResponse.json({ message: newMessage });
   } catch (error: any) {
     console.error("Error sending support message:", error);
