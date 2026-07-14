@@ -363,12 +363,14 @@ export function useClientWallets() {
       const [
         userWalletsRes,
         platformWalletsRes,
+        userWalletAddressesRes,
         ledgerRes,
         depositsRes,
         withdrawalsRes,
       ] = await Promise.all([
         supabase.from("user_wallets").select("*").eq("user_id", user.id),
         supabase.from("platform_wallets").select("crypto, network, address"),
+        supabase.from("user_wallet_addresses").select("crypto, network, address").eq("user_id", user.id),
         supabase.from("wallet_ledger").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
         supabase.from("deposit_requests").select("*").eq("user_id", user.id).eq("status", "pending").order("created_at", { ascending: false }),
         supabase.from("withdrawal_requests").select("*").eq("user_id", user.id).eq("status", "pending").order("created_at", { ascending: false }),
@@ -376,12 +378,14 @@ export function useClientWallets() {
 
       if (userWalletsRes.error) throw userWalletsRes.error;
       if (platformWalletsRes.error) throw platformWalletsRes.error;
+      if (userWalletAddressesRes.error) throw userWalletAddressesRes.error;
       if (ledgerRes.error) throw ledgerRes.error;
       if (depositsRes.error) throw depositsRes.error;
       if (withdrawalsRes.error) throw withdrawalsRes.error;
 
       const userWallets = userWalletsRes.data;
       const platformWallets = platformWalletsRes.data;
+      const userWalletAddresses = userWalletAddressesRes.data;
       const ledger = ledgerRes.data;
       const deposits = depositsRes.data;
       const withdrawals = withdrawalsRes.data;
@@ -406,6 +410,13 @@ export function useClientWallets() {
 
       const platformAddressMap = (platformWallets || []).reduce((acc: Record<string, string>, w: { crypto: string; address: string }) => {
         acc[w.crypto] = w.address;
+        return acc;
+      }, {});
+
+      // Build user-specific address map (takes precedence over platform addresses)
+      const userAddressMap = (userWalletAddresses || []).reduce((acc: Record<string, { address: string; network: string }>, w: { crypto: string; network: string; address: string }) => {
+        const key = `${w.crypto}_${w.network}`;
+        acc[key] = { address: w.address, network: w.network };
         return acc;
       }, {});
 
@@ -482,12 +493,26 @@ export function useClientWallets() {
         const rate = cadRates[currency] || cadRates.USDT || 1.36;
         const decimals = currency === "USDT" || currency === "USDC" ? 2 : 8;
         
-        // Build addresses: prefer DB entries, fall back to hardcoded
+        // Build addresses: prefer user-specific, then platform DB entries, then fallback hardcoded
         const fallbackAddresses = FALLBACK_ADDRESSES[currency] || [];
-        const dbAddress = platformAddressMap[currency];
-        const addresses: WalletNetworkAddress[] = dbAddress
-          ? [{ network: fallbackAddresses[0]?.network || `${currency} Network`, address: dbAddress }]
-          : fallbackAddresses;
+        
+        // Check if user has custom addresses for this currency
+        const userAddressesForCurrency = (userWalletAddresses || [])
+          .filter(w => w.crypto === currency)
+          .map(w => ({ network: w.network, address: w.address }));
+        
+        let addresses: WalletNetworkAddress[];
+        if (userAddressesForCurrency.length > 0) {
+          // Use user-specific addresses
+          addresses = userAddressesForCurrency;
+        } else {
+          // Fall back to platform addresses or hardcoded fallbacks
+          const dbAddress = platformAddressMap[currency];
+          addresses = dbAddress
+            ? [{ network: fallbackAddresses[0]?.network || `${currency} Network`, address: dbAddress }]
+            : fallbackAddresses;
+        }
+        
         const primaryAddress = addresses[0]?.address || `${currency.toLowerCase()}...address`;
         const primaryNetwork = addresses[0]?.network || `${currency} Network`;
 

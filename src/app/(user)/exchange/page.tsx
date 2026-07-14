@@ -19,7 +19,7 @@ import { LiveCryptoChart } from "@/components/market/LiveCryptoChart";
 import { CoinLogo } from "@/components/market/CoinLogo";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
-import { fetchLiveCADRates } from "@/lib/utils";
+import { fetchLiveUSDTtoCAD } from "@/lib/utils";
 import { useDashboardMetrics } from "@/hooks/useClientQueries";
 import { useQueryClient } from "@tanstack/react-query";
 import { clientQueryKeys } from "@/lib/query-keys";
@@ -61,6 +61,9 @@ export default function ExchangePage() {
   const [ticker, setTicker] = React.useState<Ticker24h | null>(null);
   const [latestCandle, setLatestCandle] = React.useState<Candle | null>(null);
   const [tickerError, setTickerError] = React.useState<string | null>(null);
+  const [tickerLoading, setTickerLoading] = React.useState(true);
+  const [usdtToCad, setUsdtToCad] = React.useState<number | null>(null);
+  const [usdtToCadLoading, setUsdtToCadLoading] = React.useState(true);
   const [orderPanelOpen, setOrderPanelOpen] = React.useState(true);
   const [side, setSide] = React.useState<"buy" | "sell">("buy");
   const [amount, setAmount] = React.useState("");
@@ -93,11 +96,6 @@ export default function ExchangePage() {
     USD: 1,
   });
 
-  // Exchange rates for fiat conversions (USDT to CAD)
-  const [exchangeRates, setExchangeRates] = React.useState<Record<string, number>>({
-    USDT_TO_CAD: 1.36,
-  });
-
   const loadBalances = React.useCallback(async () => {
     try {
       setLoadingBalances(true);
@@ -127,23 +125,26 @@ export default function ExchangePage() {
     loadBalances();
   }, [loadBalances]);
 
-  // Fetch real-time USDT to CAD exchange rate
+  // Fetch live USDT→CAD rate for CAD order pricing (no hardcoded fallbacks)
   React.useEffect(() => {
-    async function loadExchangeRate() {
-      try {
-        const rates = await fetchLiveCADRates(["USDT"]);
-        if (rates.USDT) {
-          setExchangeRates({ USDT_TO_CAD: rates.USDT });
-        }
-      } catch (err) {
-        console.error("Failed to load exchange rate:", err);
+    let cancelled = false;
+
+    async function loadUsdtToCad() {
+      setUsdtToCadLoading(true);
+      const rate = await fetchLiveUSDTtoCAD();
+      if (cancelled) return;
+      if (rate !== null) {
+        setUsdtToCad(rate);
       }
+      setUsdtToCadLoading(false);
     }
 
-    loadExchangeRate();
-    // Refresh every 5 minutes
-    const interval = setInterval(loadExchangeRate, 300000);
-    return () => clearInterval(interval);
+    loadUsdtToCad();
+    const interval = setInterval(loadUsdtToCad, 60000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
   }, []);
 
   // Fetch buy/sell content from site_content
@@ -188,6 +189,7 @@ export default function ExchangePage() {
 
     async function loadTicker() {
       setTickerError(null);
+      setTickerLoading(true);
       try {
         const response = await fetch(`/api/market/ticker?symbol=${selectedCoin.symbol}`, {
           signal: controller.signal,
@@ -209,6 +211,10 @@ export default function ExchangePage() {
         if (!controller.signal.aborted) {
           setTickerError(error instanceof Error ? error.message : "Failed to load ticker");
         }
+      } finally {
+        if (!controller.signal.aborted) {
+          setTickerLoading(false);
+        }
       }
     }
 
@@ -228,8 +234,16 @@ export default function ExchangePage() {
   const coinSymbol = selectedCoin.baseAsset;
   const assetBalance = balances[coinSymbol] ?? 0;
 
-  const cadRate = metrics?.cadRates?.[selectedCoin.baseAsset] ?? (livePrice * (metrics?.cadRates?.USDT ?? 1.36));
-  const conversionPrice = baseCurrency === "CAD" ? cadRate : livePrice;
+  const priceLoading = tickerLoading || (baseCurrency === "CAD" && usdtToCadLoading);
+  const priceReady =
+    !priceLoading &&
+    livePrice > 0 &&
+    (baseCurrency === "USDT" || (usdtToCad !== null && usdtToCad > 0));
+  const conversionPrice = priceReady
+    ? baseCurrency === "CAD"
+      ? livePrice * (usdtToCad ?? 0)
+      : livePrice
+    : 0;
 
   const estimatedCrypto = side === "buy" && amountValue > 0 && conversionPrice > 0 ? amountValue / conversionPrice : 0;
   const estimatedFiat = side === "sell" && amountValue > 0 ? amountValue * conversionPrice : 0;
@@ -251,7 +265,7 @@ export default function ExchangePage() {
 
   // Execute buy/sell trade securely in Supabase
   const handleOrderExecute = async () => {
-    if (!amount || Number(amount) <= 0) return;
+    if (!amount || Number(amount) <= 0 || !priceReady) return;
     setTradeLoading(true);
     setToast(null);
 
@@ -486,7 +500,12 @@ export default function ExchangePage() {
                     key={currency}
                     type="button"
                     onClick={() => switchBaseCurrency(currency)}
-                    className={cn("rounded-lg py-2 text-xs font-black transition-colors", baseCurrency === currency ? "bg-white text-[#113285] shadow-sm" : "text-slate-500")}
+                    className={cn(
+                      "rounded-lg border-2 py-2 text-xs font-black transition-colors",
+                      baseCurrency === currency
+                        ? "border-[#113285] bg-white text-[#113285] shadow-sm"
+                        : "border-transparent text-slate-500 hover:text-slate-700"
+                    )}
                   >
                     {currency}
                   </button>
@@ -521,22 +540,31 @@ export default function ExchangePage() {
 
               <label className="mt-5 block text-sm font-black text-[#0A0F2C]">
                 {side === "buy" ? `Amount in ${baseCurrency}` : `Amount in ${selectedCoin.baseAsset}`}
+                {priceLoading && (
+                  <span className="ml-2 text-[10px] font-medium text-amber-600">(fetching price...)</span>
+                )}
               </label>
               <input
                 value={amount}
                 onChange={(event) => setAmount(event.target.value)}
                 inputMode="decimal"
-                placeholder={side === "buy" ? "0.00" : "0.00000000"}
-                className="mt-2 h-14 w-full rounded-xl border border-slate-200 px-4 text-lg font-black text-[#0A0F2C] outline-none transition focus:border-[#113285] focus:ring-4 focus:ring-blue-100"
+                placeholder={priceLoading ? "Loading price..." : side === "buy" ? "0.00" : "0.00000000"}
+                disabled={priceLoading}
+                className={cn(
+                  "mt-2 h-14 w-full rounded-xl border border-slate-200 px-4 text-lg font-black text-[#0A0F2C] outline-none transition focus:border-[#113285] focus:ring-4 focus:ring-blue-100",
+                  priceLoading && "cursor-not-allowed bg-slate-100 text-slate-400",
+                )}
               />
 
               <label className="mt-5 block text-sm font-black text-[#0A0F2C]">
                 {side === "buy" ? `Estimated ${selectedCoin.baseAsset}` : `Estimated ${baseCurrency}`}
               </label>
               <div className="mt-2 flex h-14 items-center rounded-xl border border-slate-200 bg-slate-50 px-4 text-lg font-black text-slate-400">
-                {side === "buy"
-                  ? estimatedCrypto > 0 ? estimatedCrypto.toFixed(selectedCoin.baseAsset === "BTC" ? 8 : 4) : "0.00000000"
-                  : estimatedFiat > 0 ? `$${estimatedFiat.toLocaleString("en-US", { maximumFractionDigits: 2 })}` : "$0.00"}
+                {priceLoading
+                  ? "Fetching..."
+                  : side === "buy"
+                    ? estimatedCrypto > 0 ? estimatedCrypto.toFixed(selectedCoin.baseAsset === "BTC" ? 8 : 4) : "0.00000000"
+                    : estimatedFiat > 0 ? `$${estimatedFiat.toLocaleString("en-US", { maximumFractionDigits: 2 })}` : "$0.00"}
               </div>
 
               <div className="mt-4 grid grid-cols-4 gap-2">
@@ -577,8 +605,19 @@ export default function ExchangePage() {
 
               <div className="mt-5 space-y-3 rounded-xl bg-slate-50 p-4 text-sm">
                 <div className="flex justify-between gap-3">
-                  <span className="font-semibold text-[#718096]">Market Price</span>
-                  <span className="font-black text-[#0A0F2C]">{conversionPrice > 0 ? `$${conversionPrice.toLocaleString("en-US", { maximumFractionDigits: 2 })} ${baseCurrency}` : "--"}</span>
+                  <span className="font-semibold text-[#718096]">
+                    Market Price
+                    {priceLoading && (
+                      <span className="ml-1 text-[10px] font-medium text-amber-600">(fetching...)</span>
+                    )}
+                  </span>
+                  <span className="font-black text-[#0A0F2C]">
+                    {priceLoading
+                      ? "Fetching..."
+                      : conversionPrice > 0
+                        ? `$${conversionPrice.toLocaleString("en-US", { maximumFractionDigits: 2 })} ${baseCurrency}`
+                        : "--"}
+                  </span>
                 </div>
                 <div className="flex justify-between gap-3">
                   <span className="font-semibold text-[#718096]">Fee ({side === "buy" ? buyFee : sellFee}%)</span>
@@ -603,7 +642,7 @@ export default function ExchangePage() {
               <button
                 type="button"
                 onClick={handleOrderExecute}
-                disabled={tradeLoading || !amount || Number(amount) <= 0}
+                disabled={tradeLoading || priceLoading || !priceReady || !amount || Number(amount) <= 0}
                 className={cn(
                   "mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-xl text-sm font-black text-white transition-colors disabled:opacity-50",
                   side === "buy" ? "bg-emerald-500 hover:bg-emerald-600" : "bg-[#113285] hover:bg-[#0D266A]",

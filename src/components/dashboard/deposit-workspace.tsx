@@ -35,10 +35,10 @@ function formatAmount(value: number, symbol: string) {
 
 function getDbNetwork(asset: string, network: string): string {
   const upper = network.toUpperCase();
-  if (upper === "BTC") return "Bitcoin";
-  if (upper === "ETH") return "Ethereum";
-  if (upper === "TRC20") return "TRC20";
-  if (upper === "ERC20") return "ERC20";
+  if (upper === "BTC") return "Bitcoin Network";
+  if (upper === "ETH") return "Ethereum (ERC20)";
+  if (upper === "TRC20") return "TRC20 (Tron)";
+  if (upper === "ERC20") return "ERC20 (Ethereum)";
   return network;
 }
 

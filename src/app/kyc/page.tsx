@@ -336,7 +336,7 @@ const nextStep = () => {
 
   const StepIndicator = () => {
     return (
-      <div className="flex items-center justify-center w-full max-w-[400px] mb-6">
+      <div className="flex items-center justify-center w-full max-w-[400px] mb-6 px-2">
         {[1, 2, 3, 4].map((step, index) => {
           const isCompleted = step < currentStep;
           const isActive = step === currentStep;
@@ -373,7 +373,7 @@ const nextStep = () => {
     <div className="w-full flex flex-col items-center">
       {currentStep <= 4 && (
         <>
-          <h1 className="text-[28px] font-bold text-white mb-1 text-center">
+          <h1 className="text-[22px] sm:text-[28px] font-bold text-white mb-1 text-center">
             {heading}
           </h1>
           <p className="text-[14px] text-blue-100 mb-5 text-center font-medium">
@@ -383,7 +383,7 @@ const nextStep = () => {
         </>
       )}
 
-      <div className="bg-white rounded-2xl w-full p-6 shadow-xl shadow-blue-900/20">
+      <div className="bg-white rounded-2xl w-full p-4 sm:p-6 shadow-xl shadow-blue-900/20">
         
         {/* Step 1: Personal Information */}
       {currentStep === 1 && (
@@ -407,7 +407,7 @@ const nextStep = () => {
         {errors.fullName && <p className="text-[11px] text-red-500 mt-1">{errors.fullName}</p>}
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label className="block text-[12px] font-bold text-[#0A0F2C] mb-1">Date of Birth</label>
           <input 
@@ -421,16 +421,29 @@ const nextStep = () => {
         </div>
         <div>
           <label className="block text-[12px] font-bold text-[#0A0F2C] mb-1">Gender</label>
-          <div className={`flex items-center gap-4 px-3 py-2.5 rounded-xl border transition-all ${errors.gender ? 'border-red-400 bg-red-50/50' : 'border-gray-200 bg-white'}`}>
-            <label className="flex items-center gap-1.5 text-[14px] text-[#0A0F2C] cursor-pointer">
-              <input type="radio" name="gender" value="Male" checked={formData.gender === "Male"} onChange={handleInputChange} className="w-4 h-4 text-[#113285] focus:ring-[#113285] cursor-pointer" /> Male
-            </label>
-            <label className="flex items-center gap-1.5 text-[14px] text-[#0A0F2C] cursor-pointer">
-              <input type="radio" name="gender" value="Female" checked={formData.gender === "Female"} onChange={handleInputChange} className="w-4 h-4 text-[#113285] focus:ring-[#113285] cursor-pointer" /> Female
-            </label>
-            <label className="flex items-center gap-1.5 text-[14px] text-[#0A0F2C] cursor-pointer">
-              <input type="radio" name="gender" value="Other" checked={formData.gender === "Other"} onChange={handleInputChange} className="w-4 h-4 text-[#113285] focus:ring-[#113285] cursor-pointer" /> Other
-            </label>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { label: "M", value: "Male" },
+              { label: "F", value: "Female" },
+            ].map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => {
+                  setFormData({ ...formData, gender: option.value });
+                  setErrors((prev) => ({ ...prev, gender: "" }));
+                }}
+                className={cn(
+                  "h-[42px] rounded-xl border text-[14px] font-bold transition-all",
+                  formData.gender === option.value
+                    ? "border-[#113285] bg-[#113285]/10 text-[#113285]"
+                    : "border-gray-200 bg-white text-[#0A0F2C] hover:border-[#113285]/40",
+                  errors.gender && formData.gender !== option.value && "border-red-200",
+                )}
+              >
+                {option.label}
+              </button>
+            ))}
           </div>
           {errors.gender && <p className="text-[11px] text-red-500 mt-1">{errors.gender}</p>}
         </div>
@@ -480,7 +493,7 @@ const nextStep = () => {
         {errors.streetAddress && <p className="text-[11px] text-red-500 mt-1">{errors.streetAddress}</p>}
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label className="block text-[12px] font-bold text-[#0A0F2C] mb-1">City</label>
           <input 
@@ -507,7 +520,7 @@ const nextStep = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label className="block text-[12px] font-bold text-[#0A0F2C] mb-1">Postal Code</label>
           <input 
