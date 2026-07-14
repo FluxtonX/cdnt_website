@@ -203,7 +203,7 @@ export function DepositWorkspace({ initialAsset }: { initialAsset?: string }) {
     : null;
 
   return (
-    <div className="mx-auto w-full max-w-[1120px]">
+    <div className="mx-auto w-full max-w-[1120px]" suppressHydrationWarning>
       <div className="mb-6 flex items-start sm:items-center gap-3 sm:gap-4">
         <Link
           href="/wallets"
