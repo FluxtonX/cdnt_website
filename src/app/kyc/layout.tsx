@@ -10,9 +10,9 @@ export default function KYCLayout({ children }: { children: React.ReactNode }) {
           <Image 
             src="/cdnt-logo.png" 
             alt="CDNT Bank" 
-            width={120} 
-            height={50} 
-            className="w-[120px] h-auto object-contain"
+            width={450} 
+            height={150} 
+            className="h-20 md:h-24 w-auto object-contain"
             priority
             unoptimized
           />

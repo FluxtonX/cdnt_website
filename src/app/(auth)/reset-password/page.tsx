@@ -68,9 +68,9 @@ export default function ResetPasswordPage() {
           <Image 
             src="/cdnt-logo.png" 
             alt="CDNT Bank Logo" 
-            width={240} 
-            height={80} 
-            className="h-12 w-auto object-contain"
+            width={450} 
+            height={150} 
+            className="h-20 md:h-24 w-auto object-contain"
             priority
             unoptimized={true}
           />

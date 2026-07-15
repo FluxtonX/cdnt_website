@@ -33,15 +33,6 @@ function formatAmount(value: number, symbol: string) {
   })} ${symbol}`;
 }
 
-function getDbNetwork(asset: string, network: string): string {
-  const upper = network.toUpperCase();
-  if (upper === "BTC") return "Bitcoin Network";
-  if (upper === "ETH") return "Ethereum (ERC20)";
-  if (upper === "TRC20") return "TRC20 (Tron)";
-  if (upper === "ERC20") return "ERC20 (Ethereum)";
-  return network;
-}
-
 export function DepositWorkspace({ initialAsset }: { initialAsset?: string }) {
   const initialConfig = getDepositConfig(initialAsset ?? "BTC");
   const [asset, setAsset] = useState<DepositAsset | "fiat">(initialAsset === "fiat" ? "fiat" : initialConfig.asset);
@@ -168,12 +159,10 @@ export function DepositWorkspace({ initialAsset }: { initialAsset?: string }) {
     setAddressError(false);
     setLiveAddress(null);
     try {
-      const dbNetwork = getDbNetwork(cfg.asset, cfg.network);
-      
       const url = new URL("/api/deposit-address", window.location.origin);
       url.searchParams.set("crypto", cfg.asset);
-      if (dbNetwork) {
-        url.searchParams.set("network", dbNetwork);
+      if (cfg.network) {
+        url.searchParams.set("network", cfg.network);
       }
       
       const response = await fetch(url.toString());

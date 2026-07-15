@@ -22,7 +22,7 @@ export function AuthShell({
       <div className="mx-auto grid min-h-screen w-full max-w-7xl grid-cols-1 gap-10 px-5 py-6 lg:grid-cols-[1.05fr_0.95fr] lg:px-8">
         <section className="flex min-h-[42vh] flex-col justify-between py-4 lg:min-h-0 lg:py-8">
           <Link href="/" className="inline-flex w-fit items-center gap-3">
-            <div className="h-12 w-auto min-w-[160px]">
+            <div className="h-20 md:h-24 w-auto min-w-[270px]">
               <img 
                 src="/cdnt-logo.png" 
                 alt="CDNT Logo" 
