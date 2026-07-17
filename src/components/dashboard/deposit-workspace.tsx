@@ -22,7 +22,7 @@ import {
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 
-const steps = ["Details", "Review", "Transfer"];
+const steps = ["Details", "Transfer"];
 const assetOptions = Array.from(
   new Map(DEPOSIT_ADDRESSES.map((item) => [item.asset, item])).values(),
 );
@@ -167,7 +167,7 @@ export function DepositWorkspace({ initialAsset }: { initialAsset?: string }) {
 
   const handleGoToTransfer = async () => {
     if (!config) return;
-    setStep(2);
+    setStep(1);
     await fetchLiveAddress(config);
   };
 
@@ -371,10 +371,10 @@ export function DepositWorkspace({ initialAsset }: { initialAsset?: string }) {
 
                         <button
                           disabled={!amountIsValid}
-                          onClick={() => setStep(1)}
+                          onClick={handleGoToTransfer}
                           className="inline-flex w-full items-center justify-center rounded-2xl bg-[#113285] px-5 py-4 text-sm font-bold text-white transition-colors hover:bg-[#0D2768] disabled:cursor-not-allowed disabled:bg-gray-300 sm:w-auto"
                         >
-                          Continue to review
+                          Generate QR
                         </button>
                       </div>
 
@@ -383,55 +383,6 @@ export function DepositWorkspace({ initialAsset }: { initialAsset?: string }) {
                   ) : null}
 
                   {step === 1 ? (
-                    <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
-                      <div className="rounded-2xl border border-gray-100 bg-[#F8FAFC] p-5">
-                        <h3 className="text-base font-bold text-[#0A0F2C]">Review deposit details</h3>
-                        <dl className="mt-5 grid gap-4 sm:grid-cols-2">
-                          <ReviewItem label="Asset" value={`${config.assetName} (${config.asset})`} />
-                          <ReviewItem label="Network" value={config.networkName} />
-                          <ReviewItem label="Expected amount" value={formatAmount(numericAmount, config.asset)} />
-                          <ReviewItem label="Payment Method" value="Direct Crypto Transfer (Manual)" />
-                          <ReviewItem label="Deposit reference" value={reference} />
-                          <ReviewItem label="Confirmations" value={`${config.confirmations} required`} />
-                          <ReviewItem label="Estimated arrival" value={`~${config.arrivalTime}`} />
-                        </dl>
-                      </div>
-
-                      <div className="space-y-4">
-                        <div className="rounded-2xl border border-amber-200 bg-[#FFF9EA] p-4">
-                          <div className="flex gap-3">
-                            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-[#B7791F]" />
-                            <p className="text-sm font-semibold leading-6 text-[#7A4B00]">
-                              {warningBox}
-                            </p>
-                          </div>
-                        </div>
-
-                        {error && (
-                          <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">
-                            {error}
-                          </div>
-                        )}
-
-                        <div className="flex flex-col gap-3 sm:flex-row xl:flex-col">
-                          <button
-                            onClick={() => setStep(0)}
-                            className="flex-1 rounded-2xl border border-gray-200 bg-white px-5 py-3.5 text-sm font-bold text-[#0A0F2C] hover:bg-gray-50 disabled:opacity-50"
-                          >
-                            Edit details
-                          </button>
-                          <button
-                            onClick={handleGoToTransfer}
-                            className="flex-1 rounded-2xl bg-[#113285] px-5 py-3.5 text-sm font-bold text-white hover:bg-[#0D2768] flex items-center justify-center gap-2"
-                          >
-                            Generate QR
-                          </button>
-                        </div>
-                      </div>
-                    </section>
-                  ) : null}
-
-                  {step === 2 ? (
                     <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
                       <div className="space-y-5">
                         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
