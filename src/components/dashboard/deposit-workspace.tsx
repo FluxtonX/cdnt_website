@@ -44,7 +44,7 @@ export function DepositWorkspace({ initialAsset }: { initialAsset?: string }) {
   const [error, setError] = useState<string | null>(null);
 
   // Deposit content from CMS
-  const [pageSubheading, setPageSubheading] = useState("Select an asset, review the network, then scan the company deposit QR.");
+  const [pageSubheading, setPageSubheading] = useState("Select an asset, then scan the company deposit QR.");
   const [infoBox, setInfoBox] = useState("The QR contains the fixed company deposit address for this asset and network. The address is intentionally not displayed as plain text on this screen.");
   const [warningBox, setWarningBox] = useState("Sending the wrong asset or network can permanently lose funds.");
   const [cadBlocked, setCadBlocked] = useState("Canadian regulations absolutely forbid CAD deposits on fraud-refund accounts. The deposit function is permanently disabled.");
@@ -93,6 +93,19 @@ export function DepositWorkspace({ initialAsset }: { initialAsset?: string }) {
               case "deposit.instructions":
                 if (Array.isArray(row.value)) {
                   setInstructions(row.value);
+                } else if (typeof row.value === 'string') {
+                  try {
+                    const parsed = JSON.parse(row.value);
+                    if (Array.isArray(parsed)) {
+                      setInstructions(parsed);
+                    } else {
+                      console.warn("deposit.instructions parsed but not an array:", parsed);
+                    }
+                  } catch (e) {
+                    console.warn("Failed to parse deposit.instructions:", e);
+                  }
+                } else {
+                  console.warn("deposit.instructions is not an array or string:", row.value);
                 }
                 break;
               default:
@@ -465,6 +478,10 @@ function ReviewItem({ label, value }: { label: string; value: string }) {
 }
 
 function DepositRules({ config, instructions, formatAmount }: { config: DepositAddressConfig; instructions: string[]; formatAmount: (value: number, symbol: string) => string }) {
+  if (!instructions || !Array.isArray(instructions) || instructions.length === 0) {
+    return null;
+  }
+
   return (
     <div className="rounded-2xl border border-[#FFEDCC] bg-[#FFF9EA] p-5">
       <h3 className="mb-4 flex items-center gap-2 text-sm font-bold text-[#B7791F]">
