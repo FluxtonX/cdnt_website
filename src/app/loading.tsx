@@ -11,10 +11,10 @@ export default function Loading() {
       </div>
       <div className="mt-8 flex flex-col items-center">
         <p className="text-[10px] font-black uppercase tracking-[0.5em] text-banking-gold animate-pulse">
-          Establishing Secure Link
+          Securing Encrypted Gateway
         </p>
         <p className="mt-2 text-xs font-bold text-white/40">
-          Syncing with CDNT Global Nodes and market...
+          Synchronizing institutional network & live market feeds...
         </p>
       </div>
     </div>
