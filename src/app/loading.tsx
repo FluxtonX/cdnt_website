@@ -14,7 +14,7 @@ export default function Loading() {
           Establishing Secure Link
         </p>
         <p className="mt-2 text-xs font-bold text-white/40">
-          Syncing with CDNT Global Nodes...
+          Syncing with CDNT Global Nodes and market...
         </p>
       </div>
     </div>
