@@ -87,7 +87,7 @@ export function BinancePayCard({
           </div>
           <div className="w-full">
             {/* Also show company deposit QR (for record) */}
-            <FixedDepositQR config={config} amount={amount} reference={reference} qrValue={payUrl} />
+            <FixedDepositQR config={config} />
           </div>
         </div>
       ) : null}
