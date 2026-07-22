@@ -94,7 +94,7 @@ export default function PrivacyPage() {
               <div className="rounded-2xl border border-banking-border bg-white p-8">
                 <p className="font-bold text-banking-text">Privacy & Data Protection Office</p>
                 <p className="text-sm text-banking-muted mt-1">CDNT Financial Services Inc.</p>
-                <p className="text-sm text-banking-muted">privacy@northunion.io</p>
+                <p className="text-sm text-banking-muted">privacy@cdnt.io</p>
                 <p className="text-sm text-banking-muted mt-4">1200 Bay St, Toronto, ON M5R 2A5, Canada</p>
               </div>
             </section>

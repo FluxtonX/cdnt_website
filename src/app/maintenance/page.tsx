@@ -1,19 +1,34 @@
-import { Wrench } from "lucide-react";
-
 export default function MaintenancePage() {
   return (
-    <main className="grid min-h-screen place-items-center bg-auth-radial px-5 text-white">
-      <section className="w-full max-w-lg rounded-lg border border-white/14 bg-white/10 p-8 text-center backdrop-blur">
-        <div className="mx-auto grid h-16 w-16 place-items-center rounded-md bg-banking-gold text-banking-ink">
-          <Wrench className="h-8 w-8" />
-        </div>
-        <h1 className="mt-6 text-3xl font-semibold tracking-normal">
-          Maintenance in progress
-        </h1>
-        <p className="mt-3 leading-7 text-white/74">
-          CDNT is temporarily unavailable while system maintenance is completed.
-        </p>
-      </section>
-    </main>
-  );
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 px-4 text-center">
+      <div className="mb-8">
+        <svg
+          className="mx-auto h-24 w-24 text-blue-500"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={1.5}
+            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+          />
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={1.5}
+            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+          />
+        </svg>
+      </div>
+      <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight sm:text-5xl mb-4">
+        We'll be right back
+      </h1>
+      <p className="max-w-xl mx-auto text-lg text-gray-500">
+        We're currently performing scheduled maintenance to upgrade our systems.
+        The platform will be back online shortly. Thank you for your patience!
+      </p>
+    </div>
+  )
 }

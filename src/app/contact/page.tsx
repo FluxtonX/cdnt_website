@@ -17,9 +17,9 @@ export default function ContactPage() {
       <section className="mx-auto max-w-7xl px-5 py-24">
         <div className="grid gap-8 md:grid-cols-3">
           {[
-            { title: "Email Support", body: "support@northunion.io", detail: "2-hour typical response time", icon: Mail },
-            { title: "Institutional Desk", body: "partners@northunion.io", detail: "For high-net-worth & corporate", icon: Globe },
-            { title: "Media & PR", body: "press@northunion.io", detail: "Global media inquiries", icon: MessageSquare },
+            { title: "Email Support", body: "support@cdnt.io", detail: "2-hour typical response time", icon: Mail },
+            { title: "Institutional Desk", body: "partners@cdnt.io", detail: "For high-net-worth & corporate", icon: Globe },
+            { title: "Media & PR", body: "press@cdnt.io", detail: "Global media inquiries", icon: MessageSquare },
           ].map((item) => (
             <article key={item.title} className="rounded-2xl border border-banking-border bg-white p-8 shadow-sm hover:shadow-md transition-all group">
               <div className="grid h-12 w-12 place-items-center rounded-xl bg-banking-blue/5 text-banking-blue group-hover:bg-banking-blue group-hover:text-white transition-all">
@@ -39,7 +39,7 @@ export default function ContactPage() {
             <p className="mt-3 text-sm leading-7 text-banking-muted">
               For account-specific issues, please use the email address associated with your CDNT account.
             </p>
-            
+
             <form className="mt-8 grid gap-5" onSubmit={(e) => e.preventDefault()}>
               <div className="grid gap-5 md:grid-cols-2">
                 <div className="space-y-1.5">
@@ -118,13 +118,13 @@ export default function ContactPage() {
             <p className="mt-1 text-sm text-banking-muted">Visit our institutional desk for private wealth consultations.</p>
           </div>
           <div className="h-[450px] w-full bg-slate-100 relative">
-            <iframe 
+            <iframe
               src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2886.113476313788!2d-79.3934371234125!3d43.670732871101!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x882b349071f76d95%3A0xc39f99238386f7b!2s1200%20Bay%20St%2C%20Toronto%2C%20ON%20M5R%202A5!5e0!3m2!1sen!2sca!4v1715777000000!5m2!1sen!2sca"
-              width="100%" 
-              height="100%" 
-              style={{ border: 0 }} 
-              allowFullScreen={true} 
-              loading="lazy" 
+              width="100%"
+              height="100%"
+              style={{ border: 0 }}
+              allowFullScreen={true}
+              loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"
               className="grayscale contrast-[1.1] brightness-[1.02] hover:grayscale-0 transition-all duration-700"
             />
