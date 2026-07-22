@@ -6,15 +6,6 @@ import { AlertTriangle, ClipboardCheck, Copy, QrCode } from "lucide-react";
 import { CoinLogo } from "@/components/market/CoinLogo";
 import type { DepositAddressConfig } from "@/config/depositAddresses";
 
-const customAddresses: Record<string, string> = {
-  // Add your custom addresses here.
-  // The format is "ASSET_NETWORK". Leave empty ("") if you want to use the default DB address.
-  "BTC_BTC": "14iCRcHUGbvstjeYNy1LcUn7NHVy2AvhiU",
-  "ETH_ETH": "0xe5a322dc8373134fd41df4f59fd89a9f8699e952",
-  "USDT_TRC20": "TYxwmrTHZomFphzfzaXsqXBHUduFQYJU2E",
-  "USDT_ERC20": "0xe5a322dc8373134fd41df4f59fd89a9f8699e952",
-};
-
 interface FixedDepositQRProps {
   config?: DepositAddressConfig | null;
   /** When provided, overrides config.address / config.qrValue with a live DB address */
@@ -37,9 +28,6 @@ export function FixedDepositQR({ config, liveAddress, addressError }: FixedDepos
   // Use live DB address if available, otherwise fall back to config address
   const displayAddress = liveAddress ?? config.address;
 
-  const customAddressKey = `${config.asset}_${config.network}`;
-  const actualAddressForAction = customAddresses[customAddressKey] || displayAddress;
-
   if (addressError || !displayAddress) {
     return (
       <div className="rounded-2xl border border-red-200 bg-red-50 p-6">
@@ -54,11 +42,7 @@ export function FixedDepositQR({ config, liveAddress, addressError }: FixedDepos
   }
 
   const handleCopy = async () => {
-    // OLD CODE:
-    // await navigator.clipboard.writeText(displayAddress);
-
-    // NEW CODE (uses custom address if provided):
-    await navigator.clipboard.writeText(actualAddressForAction);
+    await navigator.clipboard.writeText(displayAddress);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1800);
   };
@@ -82,7 +66,7 @@ export function FixedDepositQR({ config, liveAddress, addressError }: FixedDepos
 
       <div className="flex justify-center rounded-2xl bg-white p-5">
         <QRCodeSVG
-          value={actualAddressForAction}
+          value={displayAddress}
           size={220}
           level="H"
           includeMargin
