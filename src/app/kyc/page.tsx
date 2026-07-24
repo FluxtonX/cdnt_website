@@ -260,8 +260,7 @@ const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, field: keyof t
           id_front_url: idFrontUrl,
           id_back_url: idBackUrl,
           selfie_url: selfieUrl,
-          status: 'pending',
-          updated_at: new Date().toISOString()
+          status: 'pending'
         }, { onConflict: 'user_id' });
 
       if (insertError) throw insertError;
