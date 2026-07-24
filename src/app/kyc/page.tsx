@@ -246,7 +246,7 @@ const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, field: keyof t
 
       const { error: insertError } = await supabase
         .from('kyc_submissions')
-        .insert({
+        .upsert({
           user_id: user.id,
           full_name: formData.fullName,
           date_of_birth: formData.dob,
@@ -260,8 +260,9 @@ const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, field: keyof t
           id_front_url: idFrontUrl,
           id_back_url: idBackUrl,
           selfie_url: selfieUrl,
-          status: 'pending'
-        });
+          status: 'pending',
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'user_id' });
 
       if (insertError) throw insertError;
 
