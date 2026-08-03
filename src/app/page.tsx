@@ -1,18 +1,7 @@
-/**
- * Landing Page — Async Server Component
- *
- * Fetches all landing content server-side (never in the browser) then
- * passes typed props down to each section. With ISR enabled, Next.js
- * caches the rendered HTML and only re-fetches Supabase after the
- * revalidation window expires — users always get pre-rendered HTML
- * with zero blank flash.
- *
- * Revalidation: 300 seconds (5 minutes).
- * For instant propagation after admin edits, wire up an on-demand
- * revalidation webhook that calls: revalidatePath('/') from a
- * protected API route triggered by the admin "Save" button.
- */
+import type { Metadata } from "next";
 import { getLandingContent } from "@/lib/site-content";
+import { constructMetadata } from "@/config/seo";
+import { FinancialServiceJsonLd, SoftwareApplicationJsonLd } from "@/components/seo/json-ld";
 
 import { AnnouncementBanner } from "@/components/AnnouncementBanner";
 import Navbar from "@/components/Navbar";
@@ -25,15 +14,22 @@ import AppPreviewSection from "@/components/AppPreviewSection";
 import CTASection from "@/components/CTASection";
 import Footer from "@/components/Footer";
 
-// ISR: re-render this page at most every 5 minutes.
-// Remove or set to 0 for fully dynamic (per-request) rendering.
 export const revalidate = 300;
+
+export const metadata: Metadata = constructMetadata({
+  title: "Canadian National Trust Bank — Regulated Digital Banking & Crypto Engine",
+  description:
+    "Tier-one Canadian digital banking integrated with crypto intelligence. Manage CAD, USD, BTC, ETH, and USDT with enterprise 2FA protection.",
+  canonicalPath: "/",
+});
 
 export default async function Home() {
   const content = await getLandingContent();
 
   return (
     <main className="min-h-screen">
+      <FinancialServiceJsonLd />
+      <SoftwareApplicationJsonLd />
       <AnnouncementBanner />
       <Navbar />
       <HeroSection content={content.hero} />

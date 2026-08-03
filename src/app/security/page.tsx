@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { 
@@ -12,8 +13,18 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { getSiteContent } from "@/lib/site-content";
+import { constructMetadata } from "@/config/seo";
+import { WebPageJsonLd } from "@/components/seo/json-ld";
+import { Breadcrumb } from "@/components/seo/breadcrumb";
 
 export const revalidate = 300;
+
+export const metadata: Metadata = constructMetadata({
+  title: "Bank-Grade Security Architecture — Multi-Layer Protection & 2FA",
+  description:
+    "Learn about Canadian National Trust Bank's multi-layered security infrastructure, cold-storage asset vaults, FINTRAC compliance, and 2FA user protection.",
+  canonicalPath: "/security",
+});
 
 const IconMap: Record<string, React.ComponentType<any>> = {
   ShieldCheck,
@@ -31,9 +42,18 @@ export default async function SecurityPage() {
 
   return (
     <main className="bg-[#F8F9FA] pb-0 min-h-screen flex flex-col">
+      <WebPageJsonLd
+        title="Bank-Grade Security Architecture"
+        description="Learn about Canadian National Trust Bank's multi-layered security infrastructure, cold-storage asset vaults, and FINTRAC compliance."
+        urlPath="/security"
+      />
       <Navbar />
       
-      <div className="flex-grow pt-24">
+      <div className="flex-grow pt-20">
+        <div className="bg-white border-b border-gray-100">
+          <Breadcrumb items={[{ label: "Security", href: "/security" }]} />
+        </div>
+
         {/* Header Section */}
         <section className="pt-16 pb-12 px-6">
           <div className="mx-auto max-w-7xl text-center">

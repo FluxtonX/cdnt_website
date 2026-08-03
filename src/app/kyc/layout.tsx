@@ -1,4 +1,11 @@
+import type { Metadata } from "next";
 import Image from "next/image";
+import { constructMetadata } from "@/config/seo";
+
+export const metadata: Metadata = constructMetadata({
+  title: "Identity Verification (KYC)",
+  noIndex: true,
+});
 
 export default function KYCLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -17,7 +24,6 @@ export default function KYCLayout({ children }: { children: React.ReactNode }) {
             unoptimized
           />
         </div>
-
 
         {children}
       </div>

@@ -1,57 +1,39 @@
 import type { MetadataRoute } from "next";
+import { getSiteUrl } from "@/config/seo";
 
-const routes = [
-  "",
-  "/about",
-  "/pricing",
-  "/security",
-  "/help",
-  "/accounts",
-  "/login",
-  "/register",
-  "/forgot-password",
-  "/reset-password",
-  "/verify-email",
-  "/phone-otp",
-  "/two-factor",
-  "/two-factor-setup",
-  "/dashboard",
-  "/kyc",
-  "/kyc/status",
-  "/kyc/approved",
-  "/kyc/rejected",
-  "/wallets",
-  "/wallets/btc",
-  "/deposit",
-  "/deposit/success",
-  "/withdraw",
-  "/withdraw/status",
-  "/withdraw/WDR-2204",
-  "/portfolio",
-  "/transactions",
-  "/transactions/TXN-90841",
-  "/notifications",
-  "/notifications/preferences",
-  "/support",
-  "/support/tickets",
-  "/support/tickets/SUP-1402",
-  "/statements",
-  "/statements/may-2026",
-  "/price-alerts",
-  "/referral",
-  "/settings",
-  "/settings/security",
-  "/settings/devices",
-  "/account-restricted",
-  "/maintenance",
-  "/ui-completion",
+interface RouteConfig {
+  path: string;
+  changeFrequency: "always" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "never";
+  priority: number;
+}
+
+const publicRoutes: RouteConfig[] = [
+  { path: "", changeFrequency: "daily", priority: 1.0 },
+  { path: "/about", changeFrequency: "monthly", priority: 0.8 },
+  { path: "/pricing", changeFrequency: "weekly", priority: 0.9 },
+  { path: "/security", changeFrequency: "monthly", priority: 0.8 },
+  { path: "/help", changeFrequency: "weekly", priority: 0.8 },
+  { path: "/accounts", changeFrequency: "weekly", priority: 0.9 },
+  { path: "/accounts/chequing-accounts", changeFrequency: "weekly", priority: 0.8 },
+  { path: "/accounts/savings-accounts", changeFrequency: "weekly", priority: 0.8 },
+  { path: "/accounts/international-banking", changeFrequency: "weekly", priority: 0.8 },
+  { path: "/accounts/student-banking", changeFrequency: "weekly", priority: 0.8 },
+  { path: "/accounts/help-with-my-account", changeFrequency: "monthly", priority: 0.7 },
+  { path: "/accounts/nub-vantage", changeFrequency: "weekly", priority: 0.8 },
+  { path: "/accounts/advantage", changeFrequency: "monthly", priority: 0.7 },
+  { path: "/accounts/current-rates", changeFrequency: "weekly", priority: 0.8 },
+  { path: "/accounts/faq", changeFrequency: "monthly", priority: 0.7 },
+  { path: "/accounts/apply", changeFrequency: "monthly", priority: 0.7 },
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  return routes.map((route) => ({
-    url: `https://northunion.example${route}`,
-    lastModified: new Date("2026-05-13"),
-    changeFrequency: "weekly",
-    priority: route === "" ? 1 : 0.7,
+  const baseUrl = getSiteUrl();
+  const lastModified = new Date();
+
+  return publicRoutes.map((route) => ({
+    url: `${baseUrl}${route.path}`,
+    lastModified,
+    changeFrequency: route.changeFrequency,
+    priority: route.priority,
   }));
 }

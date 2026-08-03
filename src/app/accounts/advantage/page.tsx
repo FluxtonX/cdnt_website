@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { 
   CheckCircle2, 
@@ -11,10 +12,31 @@ import {
   Landmark
 } from "lucide-react";
 import { SiteShell } from "@/components/public/site-shell";
+import { constructMetadata } from "@/config/seo";
+import { BreadcrumbJsonLd, WebPageJsonLd } from "@/components/seo/json-ld";
+
+export const metadata: Metadata = constructMetadata({
+  title: "CDNT Advantage Banking — Premium Chequing & Unlimited Transfers",
+  description:
+    "CDNT Advantage Banking: Our most versatile chequing account with unlimited Interac e-Transfers, mobile deposit, and fee waiver options.",
+  canonicalPath: "/accounts/advantage",
+});
 
 export default function AdvantageBankingPage() {
   return (
     <SiteShell>
+      <WebPageJsonLd
+        title="CDNT Advantage Banking"
+        description="CDNT Advantage Banking: Versatile chequing with unlimited Interac e-Transfers, mobile deposit, and fee waiver options."
+        urlPath="/accounts/advantage"
+      />
+      <BreadcrumbJsonLd
+        items={[
+          { name: "Home", item: "/" },
+          { name: "Accounts", item: "/accounts" },
+          { name: "Advantage Banking", item: "/accounts/advantage" },
+        ]}
+      />
       {/* Product Hero */}
       <section className="bg-white border-b border-banking-border">
         <div className="mx-auto max-w-7xl px-5 py-16 grid gap-12 lg:grid-cols-2 items-center">

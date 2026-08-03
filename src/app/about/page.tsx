@@ -1,10 +1,21 @@
+import type { Metadata } from "next";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Target, TrendingUp, Shield, Users, Award } from "lucide-react";
 import Link from "next/link";
 import { getSiteContent } from "@/lib/site-content";
+import { constructMetadata } from "@/config/seo";
+import { WebPageJsonLd } from "@/components/seo/json-ld";
+import { Breadcrumb } from "@/components/seo/breadcrumb";
 
 export const revalidate = 300;
+
+export const metadata: Metadata = constructMetadata({
+  title: "About Us — Regulated Canadian Digital Banking & Crypto Pioneer",
+  description:
+    "Learn how Canadian National Trust Bank combines regulated Canadian financial security with next-generation crypto asset intelligence.",
+  canonicalPath: "/about",
+});
 
 const IconMap: Record<string, React.ComponentType<any>> = {
   Target,
@@ -19,9 +30,19 @@ export default async function AboutPage() {
 
   return (
     <main className="bg-[#F8F9FA] pb-0 min-h-screen">
+      <WebPageJsonLd
+        title="About Canadian National Trust Bank"
+        description="Learn how Canadian National Trust Bank combines regulated Canadian financial security with next-generation crypto asset intelligence."
+        urlPath="/about"
+      />
       <Navbar />
+
+      <div className="pt-20 bg-white border-b border-gray-100">
+        <Breadcrumb items={[{ label: "About Us", href: "/about" }]} />
+      </div>
+
       {/* Header Section */}
-      <section className="pt-24 pb-16 px-6">
+      <section className="pt-16 pb-16 px-6">
         <div className="mx-auto max-w-7xl text-center">
           <h1 className="text-4xl md:text-5xl font-bold text-[#1A3FBB] mb-6 tracking-tight">
             {content.hero.heading}
