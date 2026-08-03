@@ -1,19 +1,45 @@
+import type { Metadata } from "next";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { getSiteContent } from "@/lib/site-content";
+import { constructMetadata } from "@/config/seo";
+import { FaqJsonLd, WebPageJsonLd } from "@/components/seo/json-ld";
+import { Breadcrumb } from "@/components/seo/breadcrumb";
 
 export const revalidate = 300;
+
+export const metadata: Metadata = constructMetadata({
+  title: "Account Pricing & Fee Schedules — Transparent Canadian Banking & FX Rates",
+  description:
+    "Explore transparent fee schedules for CDNT chequing, savings, student, and international accounts. Zero hidden maintenance fees and clear crypto transaction pricing.",
+  canonicalPath: "/pricing",
+});
 
 export default async function PricingPage() {
   const content = await getSiteContent("pricing");
 
+  const faqData = content.faq.list.map((faq) => ({
+    question: faq.question,
+    answer: faq.answer,
+  }));
+
   return (
     <main className="bg-[#F8F9FA] pb-0 min-h-screen flex flex-col">
+      <WebPageJsonLd
+        title="Account Pricing & Fee Schedules"
+        description="Explore transparent fee schedules for CDNT chequing, savings, student, and international accounts."
+        urlPath="/pricing"
+      />
+      <FaqJsonLd faqs={faqData} />
       <Navbar />
-      
-      <div className="flex-grow pt-24">
+
+      <div className="flex-grow pt-20">
+        <div className="bg-white border-b border-gray-100">
+          <Breadcrumb items={[{ label: "Pricing", href: "/pricing" }]} />
+        </div>
+
         {/* Header Section */}
         <section className="pt-16 pb-12 px-6">
           <div className="mx-auto max-w-7xl text-center">

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -13,6 +14,16 @@ import {
   Zap,
 } from "lucide-react";
 import { SiteShell } from "@/components/public/site-shell";
+import { constructMetadata } from "@/config/seo";
+import { FinancialServiceJsonLd, WebPageJsonLd } from "@/components/seo/json-ld";
+import { Breadcrumb } from "@/components/seo/breadcrumb";
+
+export const metadata: Metadata = constructMetadata({
+  title: "Personal & Enterprise Accounts Overview — Chequing, Savings & Vantage",
+  description:
+    "Explore Canadian National Trust Bank accounts: Chequing, Savings, Student, International Banking, and NUB Vantage. Compare options designed for personal and digital asset management.",
+  canonicalPath: "/accounts",
+});
 
 const accountFamilies = [
   {
@@ -83,7 +94,16 @@ const dropdownActions = [
 export default function AccountsOverviewPage() {
   return (
     <SiteShell>
+      <WebPageJsonLd
+        title="Personal & Enterprise Accounts Overview"
+        description="Explore Canadian National Trust Bank accounts: Chequing, Savings, Student, International Banking, and NUB Vantage."
+        urlPath="/accounts"
+      />
+      <FinancialServiceJsonLd />
       <main className="bg-white">
+        <div className="bg-banking-ink border-b border-white/10 pt-4">
+          <Breadcrumb items={[{ label: "Accounts", href: "/accounts" }]} className="text-white/70" />
+        </div>
         <section className="relative overflow-hidden bg-banking-ink text-white">
           <img
             src="https://images.unsplash.com/photo-1563013544-824ae1b704d3?auto=format&fit=crop&q=80&w=2200"

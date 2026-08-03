@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { 
@@ -13,8 +14,18 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { getSiteContent } from "@/lib/site-content";
+import { constructMetadata } from "@/config/seo";
+import { FaqJsonLd, WebPageJsonLd } from "@/components/seo/json-ld";
+import { Breadcrumb } from "@/components/seo/breadcrumb";
 
 export const revalidate = 300;
+
+export const metadata: Metadata = constructMetadata({
+  title: "Help & Client Support Center — FAQs & Knowledge Base",
+  description:
+    "Find answers to frequently asked questions regarding CDNT accounts, identity verification (KYC), transfers, security settings, and digital asset management.",
+  canonicalPath: "/help",
+});
 
 const IconMap: Record<string, React.ComponentType<any>> = {
   Search,
@@ -31,11 +42,26 @@ const IconMap: Record<string, React.ComponentType<any>> = {
 export default async function HelpPage() {
   const content = await getSiteContent("help");
 
+  const faqData = content.faq.list.map((qText) => ({
+    question: qText,
+    answer: "Visit CDNT Bank support or open a secure support ticket in your client dashboard for step-by-step assistance.",
+  }));
+
   return (
     <main className="bg-[#F8F9FA] pb-0 min-h-screen flex flex-col">
+      <WebPageJsonLd
+        title="Help & Client Support Center"
+        description="Find answers to frequently asked questions regarding CDNT accounts, identity verification (KYC), transfers, and digital asset management."
+        urlPath="/help"
+      />
+      <FaqJsonLd faqs={faqData} />
       <Navbar />
       
-      <div className="flex-grow pt-24">
+      <div className="flex-grow pt-20">
+        <div className="bg-white border-b border-gray-100">
+          <Breadcrumb items={[{ label: "Help Center", href: "/help" }]} />
+        </div>
+
         {/* Header Section */}
         <section className="pt-16 pb-16 px-6">
           <div className="mx-auto max-w-7xl text-center">

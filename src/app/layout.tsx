@@ -3,6 +3,8 @@ import { Plus_Jakarta_Sans, Inter } from "next/font/google";
 import NextTopLoader from "nextjs-toploader";
 import { AppProviders } from "@/providers/app-providers";
 import MaintenanceGuard from "@/components/MaintenanceGuard";
+import { constructMetadata } from "@/config/seo";
+import { OrganizationJsonLd, WebSiteJsonLd } from "@/components/seo/json-ld";
 import "./globals.css";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
@@ -17,10 +19,7 @@ const inter = Inter({
   weight: ["400", "500", "600", "700"],
 });
 
-export const metadata: Metadata = {
-  title: "Canadian National Trust Bank — Banking Meets Crypto Intelligence",
-  description: "A regulated Canadian digital bank with a built-in crypto engine.",
-};
+export const metadata: Metadata = constructMetadata();
 
 export default function RootLayout({
   children,
@@ -29,6 +28,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning className={`${plusJakartaSans.variable} ${inter.variable}`}>
+      <head>
+        <OrganizationJsonLd />
+        <WebSiteJsonLd />
+      </head>
       <body className="antialiased" suppressHydrationWarning>
         <NextTopLoader color="#2563eb" height={3} showSpinner={false} crawl={true} crawlSpeed={200} initialPosition={0.08} />
         <AppProviders>
