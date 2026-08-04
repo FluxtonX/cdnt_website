@@ -25,15 +25,45 @@ export const siteConfig = {
     "https://facebook.com/cdntbank",
   ],
   keywords: [
-    "Canadian Digital Banking",
-    "Tier-1 Canadian Bank",
-    "Regulated Crypto Banking",
+    // Canadian Digital & Online Banking Keywords
+    "Canadian Digital Bank",
+    "Best Online Bank Canada",
+    "Tier-1 Canadian Digital Banking",
+    "Regulated Canadian Online Bank",
+    "No Fee Chequing Account Canada",
+    "High Interest Savings Account Canada",
+    "Interac e-Transfer Online Bank",
+    "Canadian National Trust Bank",
+    "CDNT Bank Canada",
+    
+    // Crypto & Digital Asset Banking Keywords
+    "Crypto Banking Canada",
+    "Regulated Crypto Bank Canada",
     "Bitcoin Chequing Account",
-    "USDT Savings Account",
+    "USDT Savings Account Canada",
+    "Ethereum Banking Services",
+    "Buy Sell Crypto Bank Canada",
+    "Crypto Wallet Banking Integration",
+    "Bitcoin Bank Account Canada",
+    "Tether USDT Bank Deposit",
+
+    // Cross-Border & Financial Services Keywords
     "Cross-Border Transfer Canada",
+    "International Money Transfer Canada",
+    "Multi-Currency Account Canada",
+    "CAD USD Foreign Exchange Banking",
+    "Wire Transfer Canadian Bank",
+
+    // Security & Compliance Keywords
     "2FA Banking Protection",
-    "CDNT Vantage",
-    "Canadian Trust Bank",
+    "FINTRAC Regulated Digital Bank",
+    "Cold Storage Crypto Security",
+    "Bank Grade Encryption Canada",
+
+    // Relationship Banking Keywords
+    "CDNT Vantage Relationship Banking",
+    "Student Banking Account Canada",
+    "Canadian Wealth Management Digital Bank",
   ],
 };
 
