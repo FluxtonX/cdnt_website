@@ -31,7 +31,7 @@ export function ReferralProgram() {
           <div className="mt-5 flex gap-2">
             <input
               className="h-12 min-w-0 flex-1 rounded-md border border-banking-border px-4 text-sm"
-              value="https://northunion.example/register?ref=NORTH-4821"
+              value="https://www.cdntbank.com/register?ref=NORTH-4821"
               readOnly
             />
             <button
