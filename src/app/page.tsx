@@ -19,8 +19,20 @@ export const revalidate = 300;
 export const metadata: Metadata = constructMetadata({
   title: "Canadian National Trust Bank — Regulated Digital Banking & Crypto Engine",
   description:
-    "Tier-one Canadian digital banking integrated with crypto intelligence. Manage CAD, USD, BTC, ETH, and USDT with enterprise 2FA protection.",
+    "Tier-one Canadian digital bank combining personal & business banking with a secure crypto engine. Manage CAD, USD, BTC, ETH, and USDT with enterprise 2FA protection.",
   canonicalPath: "/",
+  keywords: [
+    "Canadian Digital Bank",
+    "Best Online Bank Canada",
+    "Regulated Crypto Bank Canada",
+    "Bitcoin Chequing Account Canada",
+    "USDT Savings Account",
+    "Tier-1 Canadian Digital Banking",
+    "CDNT Bank",
+    "Crypto Banking Platform Canada",
+    "Interac e-Transfer Digital Bank",
+    "High Interest Crypto Savings",
+  ],
 });
 
 export default async function Home() {
