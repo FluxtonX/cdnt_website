@@ -146,7 +146,7 @@ export function NotificationCenter() {
         .eq("user_id", user.id)
         .eq("is_read", false);
 
-      // Update local state
+      //      Update local state                    
       setDbNotifications(prev =>
         prev.map(n => ({ ...n, is_read: true }))
       );
@@ -248,6 +248,8 @@ export function NotificationCenter() {
           Mark all as read
         </button>
       </div>
+
+                   
       <div className="space-y-3">
         {loading ? (
           <div className="py-12 text-center text-sm font-semibold text-banking-muted animate-pulse">
