@@ -55,31 +55,32 @@ export default function SupportPage() {
     loadSupportContent();
   }, [supabase]);
 
-  useEffect(() => {
-    async function loadTickets() {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          setLoading(false);
-          return;
-        }
-
-        const { data } = await supabase
-          .from("support_threads")
-          .select("*")
-          .eq("user_id", user.id)
-          .eq("is_ticket", true)
-          .order("created_at", { ascending: false });
-        
-        if (data) setTickets(data);
-      } catch (err) {
-        console.error("Error loading tickets:", err);
-      } finally {
+  const loadTickets = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
         setLoading(false);
+        return;
       }
+
+      const { data } = await supabase
+        .from("support_threads")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("is_ticket", true)
+        .order("created_at", { ascending: false });
+      
+      if (data) setTickets(data);
+    } catch (err) {
+      console.error("Error loading tickets:", err);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
     loadTickets();
-  }, [supabase]);
+  }, []);
 
   return (
 
@@ -115,7 +116,7 @@ export default function SupportPage() {
 
       <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
 
-        <SupportConsole />
+        <SupportConsole onTicketCreated={loadTickets} />
 
         <Panel title="Latest tickets">
           <div className="space-y-3">
