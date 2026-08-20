@@ -175,8 +175,22 @@ const [kycChecked, setKycChecked] = useState(false);
     const video = videoRef.current;
     const canvas = canvasRef.current;
     
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    // Scale down dimensions to max 1200 for clean efficiency
+    const maxDim = 1200;
+    let width = video.videoWidth;
+    let height = video.videoHeight;
+    if (width > maxDim || height > maxDim) {
+      if (width > height) {
+        height = Math.round((height * maxDim) / width);
+        width = maxDim;
+      } else {
+        width = Math.round((width * maxDim) / height);
+        height = maxDim;
+      }
+    }
+
+    canvas.width = width;
+    canvas.height = height;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     
@@ -197,26 +211,88 @@ const [kycChecked, setKycChecked] = useState(false);
       setErrors(prev => ({ ...prev, [cameraState.field!]: "" }));
       
       closeCamera();
-    }, 'image/jpeg', 0.9);
+    }, 'image/jpeg', 0.82);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, field: keyof typeof files) => {
-  if (e.target.files && e.target.files[0]) {
-    const file = e.target.files[0];
-    if (file.size > 10 * 1024 * 1024) {
-      setErrors({ ...errors, [field]: "File too large. Maximum size is 10MB" });
-      return;
+  async function compressImageForUpload(file: File, maxDimension = 1400, quality = 0.82): Promise<File> {
+    if (!file.type.startsWith("image/")) {
+      return file;
     }
-    setFiles({ ...files, [field]: file });
-    const preview = URL.createObjectURL(file);
-    setFilePreviews({ ...filePreviews, [field]: preview });
-    setErrors({ ...errors, [field]: "" });
+
+    return new Promise((resolve) => {
+      const img = new Image();
+      const reader = new FileReader();
+
+      reader.onload = (e) => {
+        img.src = e.target?.result as string;
+      };
+
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxDimension || height > maxDimension) {
+          if (width > height) {
+            height = Math.round((height * maxDimension) / width);
+            width = maxDimension;
+          } else {
+            width = Math.round((width * maxDimension) / height);
+            height = maxDimension;
+          }
+        }
+
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          resolve(file);
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              resolve(file);
+              return;
+            }
+            const compressed = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
+              type: "image/jpeg",
+              lastModified: Date.now(),
+            });
+            resolve(compressed);
+          },
+          "image/jpeg",
+          quality
+        );
+      };
+
+      img.onerror = () => resolve(file);
+      reader.onerror = () => resolve(file);
+      reader.readAsDataURL(file);
+    });
   }
-};
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, field: keyof typeof files) => {
+    if (e.target.files && e.target.files[0]) {
+      const originalFile = e.target.files[0];
+      if (originalFile.size > 15 * 1024 * 1024) {
+        setErrors({ ...errors, [field]: "File too large. Maximum size is 15MB" });
+        return;
+      }
+      
+      // Auto compress and optimize image on client side before upload
+      const file = await compressImageForUpload(originalFile);
+      setFiles({ ...files, [field]: file });
+      const preview = URL.createObjectURL(file);
+      setFilePreviews({ ...filePreviews, [field]: preview });
+      setErrors({ ...errors, [field]: "" });
+    }
+  };
+
   const submitKyc = async () => {
     if (!files.idFront || !files.idBack || !files.selfie) {
       alert("Please upload all required documents");
@@ -229,10 +305,11 @@ const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, field: keyof t
       if (!user) throw new Error("Not authenticated");
 
       const uploadFile = async (file: File, filename: string) => {
+        const optimizedFile = await compressImageForUpload(file);
         const filePath = `${user.id}/${filename}`;
         const { error: uploadError } = await supabase.storage
           .from('kyc-documents')
-          .upload(filePath, file, { upsert: true });
+          .upload(filePath, optimizedFile, { upsert: true, contentType: 'image/jpeg' });
         
         if (uploadError) throw uploadError;
         

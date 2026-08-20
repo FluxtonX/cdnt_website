@@ -248,17 +248,31 @@ export function OpenBankAccountModal({ isOpen, onClose }: { isOpen: boolean; onC
               <div className="bg-white rounded-2xl p-6 border border-gray-200 space-y-4">
                 <h4 className="font-semibold text-sm text-gray-900">Application Preferences</h4>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1.5">Initial Deposit Amount ({selectedAccount.currency})</label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="100"
-                    value={initialDeposit}
-                    onChange={(e) => setInitialDeposit(e.target.value)}
-                    className="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 text-sm text-gray-900 focus:ring-2 focus:ring-primary-blue focus:outline-none"
-                    placeholder="Enter deposit amount (optional)"
-                  />
-                  <p className="text-[11px] text-gray-500 mt-1.5">Optional initial deposit amount.</p>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-medium text-gray-700">
+                      Initial Deposit Amount ({selectedAccount.currency})
+                    </label>
+                    <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">
+                      Optional · $0 Min
+                    </span>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min="0"
+                      step="50"
+                      value={initialDeposit}
+                      onChange={(e) => setInitialDeposit(e.target.value)}
+                      className="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 text-sm text-gray-900 focus:ring-2 focus:ring-primary-blue focus:outline-none"
+                      placeholder="0.00 (leave blank for $0)"
+                    />
+                    <div className="absolute right-4 top-3 text-xs font-bold text-gray-400">
+                      {selectedAccount.currency}
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-gray-500 mt-1.5">
+                    No initial investment or deposit is required to open this account. You can fund it at any time via internal transfer or deposit.
+                  </p>
                 </div>
               </div>
 
