@@ -5,11 +5,6 @@ import {
   Landmark, 
   PlusCircle, 
   ArrowRightLeft, 
-  FileText, 
-  BellRing, 
-  Gift, 
-  Compass, 
-  Printer, 
   Search, 
   CheckCircle2, 
   Clock, 
@@ -17,14 +12,20 @@ import {
   XCircle,
   TrendingUp,
   ShieldCheck,
-  ChevronRight
+  ChevronRight,
+  DollarSign
 } from "lucide-react";
-import { useUserBankAccounts, useTransferBankFunds, BankAccount } from "@/hooks/useClientQueries";
+import { useUserBankAccounts, useTransferBankFunds, useClientWallets, BankAccount } from "@/hooks/useClientQueries";
 import { OpenBankAccountModal } from "@/components/accounts/open-account-modal";
 
 export function AccountsSummary({ userName }: { userName: string }) {
   const { data: bankAccounts = [], isLoading } = useUserBankAccounts();
   const transferMutation = useTransferBankFunds();
+  const { data: cryptoWallets = [] } = useClientWallets();
+
+  // Get CAD wallet balance from crypto wallets
+  const cadWallet = cryptoWallets.find(w => w.symbol === "CAD");
+  const cadWalletBalance = cadWallet?.rawBalance ?? 0;
 
   const [isOpenModal, setIsOpenModal] = useState(false);
   const [fromAccountId, setFromAccountId] = useState<string>("");
@@ -32,7 +33,15 @@ export function AccountsSummary({ userName }: { userName: string }) {
   const [transferAmount, setTransferAmount] = useState<string>("");
   const [transferSuccess, setTransferSuccess] = useState<string | null>(null);
 
-  const activeAccounts = bankAccounts.filter((a) => a.status === "active");
+  // Map bank accounts to override chequing account balance with CAD wallet balance
+  const mappedBankAccounts = bankAccounts.map((a) => {
+    if (a.account_type === "chequing") {
+      return { ...a, balance: cadWalletBalance };
+    }
+    return a;
+  });
+
+  const activeAccounts = mappedBankAccounts.filter((a) => a.status === "active");
 
   const totalCadBalance = activeAccounts
     .filter((a) => a.currency === "CAD")
@@ -87,24 +96,18 @@ export function AccountsSummary({ userName }: { userName: string }) {
             <p className="text-blue-100 text-sm mt-1">Good Day, <span className="font-semibold text-white uppercase">{userName || "Valued Client"}</span></p>
           </div>
 
-          {/* Quick Toolbar */}
-          <div className="flex flex-wrap gap-4 bg-white/10 backdrop-blur-md p-3 rounded-2xl border border-white/10 text-xs font-medium">
-            <button className="flex items-center gap-1.5 hover:text-blue-200 transition-colors px-2.5 py-1">
-              <FileText className="w-4 h-4 text-blue-300" /> Statements / Documents
-            </button>
-            <button className="flex items-center gap-1.5 hover:text-blue-200 transition-colors px-2.5 py-1">
-              <BellRing className="w-4 h-4 text-blue-300" /> Messages / Alerts
-            </button>
-            <button className="flex items-center gap-1.5 hover:text-blue-200 transition-colors px-2.5 py-1">
-              <Gift className="w-4 h-4 text-blue-300" /> Offers For You
-            </button>
-            <button className="flex items-center gap-1.5 hover:text-blue-200 transition-colors px-2.5 py-1">
-              <Compass className="w-4 h-4 text-blue-300" /> Beyond Banking
-            </button>
-            <button className="flex items-center gap-1.5 hover:text-blue-200 transition-colors px-2.5 py-1">
-              <Printer className="w-4 h-4 text-blue-300" /> Print
-            </button>
-          </div>
+          {/* CAD Wallet Balance */}
+          {cadWalletBalance > 0 && (
+            <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/10">
+              <div className="flex items-center gap-2 text-blue-200 text-xs font-medium mb-1">
+                <DollarSign className="w-3.5 h-3.5 text-emerald-400" /> CAD Wallet Balance
+              </div>
+              <div className="text-2xl font-bold text-white">
+                ${cadWalletBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                <span className="text-xs font-semibold text-blue-200 ml-1">CAD</span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -137,7 +140,7 @@ export function AccountsSummary({ userName }: { userName: string }) {
                     <div key={i} className="h-16 bg-gray-100 rounded-xl animate-pulse" />
                   ))}
                 </div>
-              ) : bankAccounts.length === 0 ? (
+              ) : mappedBankAccounts.length === 0 ? (
                 <div className="text-center py-10 px-4 bg-gray-50/50 rounded-2xl border border-dashed border-gray-200">
                   <Landmark className="w-10 h-10 text-gray-400 mx-auto mb-3" />
                   <h3 className="font-semibold text-gray-900 text-base">No Active Bank Accounts</h3>
@@ -153,7 +156,7 @@ export function AccountsSummary({ userName }: { userName: string }) {
                 </div>
               ) : (
                 <div className="divide-y divide-gray-100">
-                  {bankAccounts.map((account) => {
+                  {mappedBankAccounts.map((account) => {
                     const statusLower = (account.status || "").toLowerCase();
                     const isPending = statusLower === "pending";
                     const isRejected = statusLower === "rejected";

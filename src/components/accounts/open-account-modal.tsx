@@ -116,7 +116,7 @@ export const ACCOUNT_CATALOG: AccountCatalogItem[] = [
 export function OpenBankAccountModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const [selectedCategory, setSelectedCategory] = useState<"all" | "everyday" | "registered" | "other">("all");
   const [selectedAccount, setSelectedAccount] = useState<AccountCatalogItem | null>(null);
-  const [initialDeposit, setInitialDeposit] = useState<string>("");
+
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const applyMutation = useApplyBankAccount();
@@ -124,7 +124,6 @@ export function OpenBankAccountModal({ isOpen, onClose }: { isOpen: boolean; onC
   // Clean state whenever modal is closed or reopened
   const handleClose = () => {
     setSelectedAccount(null);
-    setInitialDeposit("");
     setSuccessMessage(null);
     onClose();
   };
@@ -132,7 +131,6 @@ export function OpenBankAccountModal({ isOpen, onClose }: { isOpen: boolean; onC
   useEffect(() => {
     if (!isOpen) {
       setSelectedAccount(null);
-      setInitialDeposit("");
       setSuccessMessage(null);
     }
   }, [isOpen]);
@@ -152,7 +150,6 @@ export function OpenBankAccountModal({ isOpen, onClose }: { isOpen: boolean; onC
         account_type: selectedAccount.type,
         account_name: selectedAccount.name,
         currency: selectedAccount.currency,
-        initial_deposit: Number(initialDeposit) || 0,
       });
       setSuccessMessage(`Your application for ${selectedAccount.name} has been submitted successfully.`);
       setTimeout(() => {
@@ -223,7 +220,6 @@ export function OpenBankAccountModal({ isOpen, onClose }: { isOpen: boolean; onC
               <button
                 onClick={() => {
                   setSelectedAccount(null);
-                  setInitialDeposit("");
                 }}
                 className="text-xs font-semibold text-primary-blue hover:underline flex items-center gap-1 mb-2"
               >
@@ -246,32 +242,11 @@ export function OpenBankAccountModal({ isOpen, onClose }: { isOpen: boolean; onC
               </div>
 
               <div className="bg-white rounded-2xl p-6 border border-gray-200 space-y-4">
-                <h4 className="font-semibold text-sm text-gray-900">Application Preferences</h4>
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="block text-xs font-medium text-gray-700">
-                      Initial Deposit Amount ({selectedAccount.currency})
-                    </label>
-                    <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">
-                      Optional · $0 Min
-                    </span>
-                  </div>
-                  <div className="relative">
-                    <input
-                      type="number"
-                      min="0"
-                      step="50"
-                      value={initialDeposit}
-                      onChange={(e) => setInitialDeposit(e.target.value)}
-                      className="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 text-sm text-gray-900 focus:ring-2 focus:ring-primary-blue focus:outline-none"
-                      placeholder="0.00 (leave blank for $0)"
-                    />
-                    <div className="absolute right-4 top-3 text-xs font-bold text-gray-400">
-                      {selectedAccount.currency}
-                    </div>
-                  </div>
-                  <p className="text-[11px] text-gray-500 mt-1.5">
-                    No initial investment or deposit is required to open this account. You can fund it at any time via internal transfer or deposit.
+                <h4 className="font-semibold text-sm text-gray-900">Account Details</h4>
+                <div className="flex items-center gap-3 p-3 bg-emerald-50/60 rounded-xl border border-emerald-100">
+                  <span className="text-emerald-600 text-lg">✓</span>
+                  <p className="text-xs text-emerald-800">
+                    No initial deposit is required. You can fund your account at any time via internal transfer or deposit after approval.
                   </p>
                 </div>
               </div>
@@ -286,7 +261,6 @@ export function OpenBankAccountModal({ isOpen, onClose }: { isOpen: boolean; onC
                 <button
                   onClick={() => {
                     setSelectedAccount(null);
-                    setInitialDeposit("");
                   }}
                   className="px-5 py-2.5 rounded-xl border border-gray-300 font-semibold text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                 >
@@ -336,7 +310,6 @@ export function OpenBankAccountModal({ isOpen, onClose }: { isOpen: boolean; onC
                   <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-end">
                     <button
                       onClick={() => {
-                        setInitialDeposit("");
                         setSelectedAccount(account);
                       }}
                       className="px-4 py-2 bg-primary-blue/10 hover:bg-primary-blue text-primary-blue hover:text-white rounded-xl font-semibold text-xs transition-all flex items-center gap-1"

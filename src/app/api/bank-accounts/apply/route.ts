@@ -17,7 +17,6 @@ export async function POST(request: Request) {
       account_type,
       account_name,
       currency = "CAD",
-      initial_deposit = 0.00,
     } = body;
 
     if (!account_name || !account_type) {
@@ -26,7 +25,7 @@ export async function POST(request: Request) {
 
     const supabaseAdmin = createAdminClient();
 
-    // 1. Insert bank account application
+    // 1. Insert bank account application (always starts at $0 balance)
     const { data: newAccount, error: accErr } = await supabaseAdmin
       .from("user_bank_accounts")
       .insert({
@@ -35,7 +34,7 @@ export async function POST(request: Request) {
         account_type,
         account_name,
         currency,
-        balance: Number(initial_deposit) || 0.00,
+        balance: 0.00,
         status: "pending",
       })
       .select()

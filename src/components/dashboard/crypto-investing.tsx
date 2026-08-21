@@ -9,12 +9,14 @@ import { QRCodeSVG } from "qrcode.react";
 
 export function CryptoInvesting() {
   const { data: wallets = [], isLoading: loading } = useClientWallets();
+  // Filter out CAD wallets - CAD is fiat and belongs in Accounts Summary, not Crypto
+  const cryptoWallets = wallets.filter(w => w.symbol !== "CAD");
   const [selectedWalletId, setSelectedWalletId] = useState("");
   const [copied, setCopied] = useState(false);
   const [showQr, setShowQr] = useState(false);
   const [selectedNetworkIndex, setSelectedNetworkIndex] = useState(0);
 
-  const selectedWallet = wallets.find(w => w.id === selectedWalletId) || wallets[0];
+  const selectedWallet = cryptoWallets.find(w => w.id === selectedWalletId) || cryptoWallets[0];
 
   const handleCopy = (address: string) => {
     navigator.clipboard.writeText(address);
@@ -56,12 +58,12 @@ export function CryptoInvesting() {
             <div key={i} className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm h-[148px] animate-pulse" />
           ))}
         </div>
-      ) : wallets.length > 0 ? (
+      ) : cryptoWallets.length > 0 ? (
         <>
           {/* Wallets Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {wallets.map((wallet) => {
-              const isSelected = wallet.id === (selectedWalletId || wallets[0]?.id);
+            {cryptoWallets.map((wallet) => {
+              const isSelected = wallet.id === (selectedWalletId || cryptoWallets[0]?.id);
               return (
                 <div
                   key={wallet.id}
