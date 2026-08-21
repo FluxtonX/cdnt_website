@@ -83,10 +83,15 @@ export function SupportConsole({ onTicketCreated }: SupportConsoleProps) {
   const [triageStep, setTriageStep] = useState<"category" | "subcategory" | "describe" | "completed">("category");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
+  const [isTimedOut, setIsTimedOut] = useState(false);
 
   const { notify } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Inactivity timeout duration: 3 minutes (180,000 ms)
+  const INACTIVITY_TIMEOUT_MS = 3 * 60 * 1000;
 
   // Use useRef for supabase client to ensure stable reference across renders
   const supabaseRef = useRef(createClient());
@@ -96,7 +101,12 @@ export function SupportConsole({ onTicketCreated }: SupportConsoleProps) {
   const mountedRef = useRef(true);
   useEffect(() => {
     mountedRef.current = true;
-    return () => { mountedRef.current = false; };
+    return () => { 
+      mountedRef.current = false; 
+      if (inactivityTimerRef.current) {
+        clearTimeout(inactivityTimerRef.current);
+      }
+    };
   }, []);
 
   // ─── Load User + Thread + Messages ────────────────────────────────────────
@@ -307,14 +317,36 @@ export function SupportConsole({ onTicketCreated }: SupportConsoleProps) {
     };
   }, [thread?.id, supabase, notify]);
 
+  // ─── Inactivity Timer Helpers ─────────────────────────────────────────────
+  const clearInactivityTimer = useCallback(() => {
+    if (inactivityTimerRef.current) {
+      clearTimeout(inactivityTimerRef.current);
+      inactivityTimerRef.current = null;
+    }
+  }, []);
+
+  const resetInactivityTimer = useCallback(() => {
+    clearInactivityTimer();
+    // Only arm inactivity timer during active triage before first ticket submission
+    if (triageStep !== "completed") {
+      inactivityTimerRef.current = setTimeout(() => {
+        if (mountedRef.current) {
+          setIsTimedOut(true);
+        }
+      }, INACTIVITY_TIMEOUT_MS);
+    }
+  }, [clearInactivityTimer, triageStep, INACTIVITY_TIMEOUT_MS]);
+
   // ─── Auto-scroll to bottom ───────────────────────────────────────────────
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, triageStep, isBotTyping]);
+  }, [messages, triageStep, isBotTyping, isTimedOut]);
 
   // ─── Handle Category Selection ──────────────────────────────────────────
   const handleSelectCategory = (category: string) => {
+    setIsTimedOut(false);
     setSelectedCategory(category);
+    resetInactivityTimer();
     const categoryConfig = CATEGORIES.find((c) => c.id === category);
 
     if (categoryConfig && categoryConfig.subcategories.length > 0) {
@@ -337,7 +369,9 @@ export function SupportConsole({ onTicketCreated }: SupportConsoleProps) {
 
   // ─── Handle Subcategory Selection ───────────────────────────────────────
   const handleSelectSubcategory = (subcategory: string) => {
+    setIsTimedOut(false);
     setSelectedSubcategory(subcategory);
+    resetInactivityTimer();
     setIsBotTyping(true);
     setTimeout(() => {
       setIsBotTyping(false);
@@ -348,6 +382,8 @@ export function SupportConsole({ onTicketCreated }: SupportConsoleProps) {
 
   // ─── Reset / Start New Inquiry ──────────────────────────────────────────
   const handleStartNewInquiry = async () => {
+    clearInactivityTimer();
+    setIsTimedOut(false);
     setThread(null);
     setMessages([]);
     setSelectedCategory(null);
@@ -358,7 +394,8 @@ export function SupportConsole({ onTicketCreated }: SupportConsoleProps) {
 
   // ─── Send Message & Automated Ticket Creation ───────────────────────────
   const sendMessage = useCallback(async () => {
-    if (!draft.trim() || !user || sending) return;
+    if (!draft.trim() || !user || sending || isTimedOut) return;
+    clearInactivityTimer();
     const messageText = draft.trim();
     setDraft("");
     setSending(true);
@@ -734,6 +771,36 @@ export function SupportConsole({ onTicketCreated }: SupportConsoleProps) {
           </div>
         )}
 
+        {/* Inactivity Timeout Notice Bubble */}
+        {isTimedOut && (
+          <div className="flex justify-start items-start gap-2.5 animate-fadeIn">
+            <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-amber-500 text-white text-xs shadow-sm mt-0.5">
+              <Clock className="h-4 w-4" />
+            </div>
+            <div className="space-y-2.5 max-w-[88%] sm:max-w-[80%]">
+              <div className="rounded-2xl rounded-tl-none border border-amber-200 bg-amber-50 p-3.5 text-xs leading-relaxed text-amber-900 shadow-sm">
+                <p className="font-bold flex items-center gap-1.5 text-amber-950 mb-1">
+                  <Clock className="h-3.5 w-3.5 text-amber-700" />
+                  Inactivity Timeout Notice
+                </p>
+                <p className="text-amber-800">
+                  No response was entered for over 3 minutes, so this session has been automatically closed. If you still need help, feel free to start from the beginning.
+                </p>
+              </div>
+
+              <div>
+                <button
+                  onClick={handleStartNewInquiry}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-banking-blue px-4 py-2 text-xs font-semibold text-white shadow-sm hover:opacity-90 active:scale-95 transition-all cursor-pointer"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  Start From Start
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div ref={messagesEndRef} />
       </div>
 
@@ -750,6 +817,20 @@ export function SupportConsole({ onTicketCreated }: SupportConsoleProps) {
             Start New Inquiry
           </button>
         </div>
+      ) : isTimedOut ? (
+        <div className="flex items-center justify-between p-3.5 border-t border-banking-border bg-amber-50/50">
+          <div className="flex items-center gap-2 text-xs text-amber-800 font-medium pl-1">
+            <Clock className="h-4 w-4 text-amber-600" />
+            <span>Bot session closed due to inactivity.</span>
+          </div>
+          <button
+            onClick={handleStartNewInquiry}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-banking-blue px-3.5 py-2 text-xs font-semibold text-white shadow-xs hover:opacity-90 transition-all cursor-pointer"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            Start From Start
+          </button>
+        </div>
       ) : (
         <div className="p-3.5 border-t border-banking-border bg-white">
           <div className="flex items-center gap-2">
@@ -763,7 +844,10 @@ export function SupportConsole({ onTicketCreated }: SupportConsoleProps) {
             <input
               ref={inputRef}
               value={draft}
-              onChange={(event) => setDraft(event.target.value)}
+              onChange={(event) => {
+                setDraft(event.target.value);
+                if (triageStep !== "completed") resetInactivityTimer();
+              }}
               onKeyDown={(event) => {
                 if (event.key === "Enter" && !event.shiftKey) {
                   event.preventDefault();
