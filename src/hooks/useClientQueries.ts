@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { fetchLiveCADRates, calculateCADBalance } from "@/lib/utils";
@@ -717,6 +718,31 @@ export type BankAccount = {
 };
 
 export function useUserBankAccounts() {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel("user_bank_accounts_realtime_sync")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "user_bank_accounts",
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: clientQueryKeys.bankAccounts() });
+          queryClient.invalidateQueries({ queryKey: clientQueryKeys.dashboard() });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
   return useQuery({
     queryKey: clientQueryKeys.bankAccounts(),
     queryFn: async (): Promise<BankAccount[]> => {
@@ -752,33 +778,18 @@ export function useApplyBankAccount() {
 
   return useMutation({
     mutationFn: async (input: ApplyBankAccountInput) => {
-      const supabase = createClient();
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) throw new Error("User session not found.");
+      const res = await fetch("/api/bank-accounts/apply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      });
 
-      const { data, error } = await supabase.from("user_bank_accounts").insert({
-        user_id: user.id,
-        account_category: input.account_category,
-        account_type: input.account_type,
-        account_name: input.account_name,
-        currency: input.currency || "CAD",
-        balance: input.initial_deposit || 0.00,
-        status: "pending",
-      }).select().single();
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        throw new Error(data.error || "Failed to apply for bank account.");
+      }
 
-      if (error) throw new Error(error.message);
-
-      // Notify admin
-      await supabase.from("notifications").insert([{
-        audience: "Admin",
-        type: "Info",
-        title: "New Bank Account Application",
-        message: `A client applied to open a new ${input.account_name} (${input.currency}).`,
-        is_read: false,
-        link: "/dashboard/bank-accounts",
-      }]);
-
-      return data;
+      return data.account;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: clientQueryKeys.bankAccounts() });

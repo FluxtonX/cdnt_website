@@ -14,6 +14,7 @@ import {
   CheckCircle2, 
   Clock, 
   AlertCircle,
+  XCircle,
   TrendingUp,
   ShieldCheck,
   ChevronRight
@@ -153,17 +154,29 @@ export function AccountsSummary({ userName }: { userName: string }) {
               ) : (
                 <div className="divide-y divide-gray-100">
                   {bankAccounts.map((account) => {
-                    const isPending = account.status === "pending";
+                    const statusLower = (account.status || "").toLowerCase();
+                    const isPending = statusLower === "pending";
+                    const isRejected = statusLower === "rejected";
+                    const isClosed = statusLower === "closed";
+
                     return (
                       <div key={account.id} className="py-4 first:pt-0 last:pb-0 flex flex-col sm:flex-row sm:items-center justify-between gap-4 group">
                         <div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-bold text-gray-900 text-base hover:text-primary-blue transition-colors cursor-pointer">
                               {account.account_name}
                             </span>
                             {isPending ? (
                               <span className="px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-semibold rounded-full flex items-center gap-1">
                                 <Clock className="w-3 h-3 text-amber-600" /> Pending Approval
+                              </span>
+                            ) : isRejected ? (
+                              <span className="px-2 py-0.5 bg-red-50 text-red-700 border border-red-200 text-[10px] font-semibold rounded-full flex items-center gap-1">
+                                <XCircle className="w-3 h-3 text-red-600" /> Rejected
+                              </span>
+                            ) : isClosed ? (
+                              <span className="px-2 py-0.5 bg-gray-100 text-gray-700 border border-gray-200 text-[10px] font-semibold rounded-full flex items-center gap-1">
+                                <AlertCircle className="w-3 h-3 text-gray-500" /> Closed
                               </span>
                             ) : (
                               <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-semibold rounded-full flex items-center gap-1">
@@ -172,7 +185,14 @@ export function AccountsSummary({ userName }: { userName: string }) {
                             )}
                           </div>
                           <p className="text-xs text-gray-500 mt-1 font-mono">
-                            {account.account_type.toUpperCase()} {account.account_number ? `• ${account.account_number}` : "• Verification in progress"}
+                            {account.account_type.toUpperCase()}{" "}
+                            {isRejected
+                              ? `• Application Rejected${account.admin_notes ? `: ${account.admin_notes}` : ""}`
+                              : isPending
+                              ? "• Verification in progress"
+                              : account.account_number
+                              ? `• ${account.account_number}`
+                              : ""}
                           </p>
                         </div>
 
