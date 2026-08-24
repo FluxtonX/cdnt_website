@@ -833,6 +833,9 @@ export function useTransferBankFunds() {
 
       if (toErr || !toAcc) throw new Error("Destination account not found.");
       if (toAcc.status !== "active") throw new Error("Destination account is not active.");
+      if (fromAcc.currency !== toAcc.currency) {
+        throw new Error(`Transfers between different currencies (${fromAcc.currency} to ${toAcc.currency}) are not supported.`);
+      }
 
       const newFromBalance = Number(fromAcc.balance) - input.amount;
       const newToBalance = Number(toAcc.balance) + input.amount;
