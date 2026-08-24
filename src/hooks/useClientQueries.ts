@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { fetchLiveCADRates, calculateCADBalance } from "@/lib/utils";
@@ -253,7 +254,7 @@ export function useClientTransactions() {
     queryFn: async (): Promise<TransactionRow[]> => {
       const { supabase, user } = await getAuthenticatedUserId();
 
-      const [depositsRes, withdrawalsRes] = await Promise.all([
+      const [depositsRes, withdrawalsRes, ledgerRes] = await Promise.all([
         supabase
           .from("deposit_requests")
           .select("id, created_at, expected_amount, asset, status, tx_hash, admin_note")
@@ -261,6 +262,10 @@ export function useClientTransactions() {
         supabase
           .from("withdrawal_requests")
           .select("id, created_at, amount, method, status, wallet_address, interac_email, rejection_reason, admin_note, asset")
+          .eq("user_id", user.id),
+        supabase
+          .from("wallet_ledger")
+          .select("id, created_at, amount, currency, type, status, reference_id, metadata")
           .eq("user_id", user.id),
       ]);
 
@@ -270,18 +275,22 @@ export function useClientTransactions() {
       if (withdrawalsRes.error) {
         console.error("Failed to fetch withdrawal_requests:", withdrawalsRes.error);
       }
+      if (ledgerRes.error) {
+        console.error("Failed to fetch wallet_ledger:", ledgerRes.error);
+      }
 
       const allAssets = Array.from(new Set([
         ...(depositsRes.data || []).map((d) => (d.asset || "USDT").toUpperCase()),
         ...(withdrawalsRes.data || []).map((w) => (w.asset || "USDT").toUpperCase()),
+        ...(ledgerRes.data || []).map((l) => (l.currency || "CAD").toUpperCase()),
       ]));
       const cadRates = await fetchLiveCADRates(allAssets.length > 0 ? allAssets : ["BTC", "ETH", "USDT"]);
 
       const getCadValue = (asset: string, amount: number): string => {
         const sym = (asset || "USDT").toUpperCase();
-        if (sym === "CAD") return `$${amount.toFixed(2)} CAD`;
+        if (sym === "CAD") return `$${Math.abs(amount).toFixed(2)} CAD`;
         const rate = cadRates[sym] || cadRates["USDT"] || 1.36;
-        const cadVal = amount * rate;
+        const cadVal = Math.abs(amount) * rate;
         return `$${cadVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CAD`;
       };
 
@@ -297,7 +306,7 @@ export function useClientTransactions() {
         description: `TXN-${d.id.substring(0, 8).toUpperCase()}`,
         rawDate: new Date(d.created_at),
         txHash: d.tx_hash || undefined,
-        rejectionReason: d.admin_note, // deposit_requests only has admin_note
+        rejectionReason: d.admin_note,
         adminNote: d.admin_note,
       }));
 
@@ -317,7 +326,25 @@ export function useClientTransactions() {
         adminNote: w.admin_note,
       }));
 
-      return [...deposits, ...withdrawals].sort((a, b) => b.rawDate.getTime() - a.rawDate.getTime());
+      const ledgerEntries: TransactionRow[] = (ledgerRes.data || []).map((l) => {
+        const typeLower = (l.type || "transaction").toLowerCase();
+        const metaDesc = l.metadata?.description || l.reference_id || `Ledger Entry #${l.id.substring(0, 8)}`;
+        return {
+          id: l.id,
+          type: typeLower as any,
+          asset: (l.currency || "CAD").toUpperCase(),
+          amount: String(l.amount),
+          rawAmount: Number(l.amount),
+          fiat: getCadValue(l.currency || "CAD", Number(l.amount)),
+          status: (l.status || "completed").toLowerCase(),
+          date: new Date(l.created_at).toLocaleDateString(),
+          description: metaDesc,
+          rawDate: new Date(l.created_at),
+          txHash: l.reference_id || undefined,
+        };
+      });
+
+      return [...deposits, ...withdrawals, ...ledgerEntries].sort((a, b) => b.rawDate.getTime() - a.rawDate.getTime());
     },
     staleTime: 0,
   });
@@ -673,3 +700,192 @@ export function useCreateWithdrawalRequest() {
     },
   });
 }
+
+export type BankAccount = {
+  id: string;
+  user_id: string;
+  account_category: "everyday" | "registered" | "other";
+  account_type: "chequing" | "savings" | "tfsa" | "rrsp" | "fhsa" | "resp" | "rrif" | "non_registered" | "joint" | "business" | "usd";
+  account_name: string;
+  account_number: string | null;
+  currency: string;
+  balance: number;
+  status: "pending" | "active" | "rejected" | "closed";
+  admin_notes?: string | null;
+  created_at: string;
+  updated_at: string;
+  approved_at?: string | null;
+};
+
+export function useUserBankAccounts() {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel("user_bank_accounts_realtime_sync")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "user_bank_accounts",
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: clientQueryKeys.bankAccounts() });
+          queryClient.invalidateQueries({ queryKey: clientQueryKeys.dashboard() });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
+  return useQuery({
+    queryKey: clientQueryKeys.bankAccounts(),
+    queryFn: async (): Promise<BankAccount[]> => {
+      const { supabase, user } = await getAuthenticatedUserId();
+      const { data, error } = await supabase
+        .from("user_bank_accounts")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: true });
+
+      if (error) {
+        console.warn("Error loading user_bank_accounts:", error.message);
+        return [];
+      }
+      return (data || []).map((item: any) => ({
+        ...item,
+        balance: Number(item.balance || 0),
+      }));
+    },
+  });
+}
+
+export type ApplyBankAccountInput = {
+  account_category: "everyday" | "registered" | "other";
+  account_type: "chequing" | "savings" | "tfsa" | "rrsp" | "fhsa" | "resp" | "rrif" | "non_registered" | "joint" | "business" | "usd";
+  account_name: string;
+  currency: string;
+  initial_deposit?: number;
+};
+
+export function useApplyBankAccount() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: ApplyBankAccountInput) => {
+      const res = await fetch("/api/bank-accounts/apply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      });
+
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        throw new Error(data.error || "Failed to apply for bank account.");
+      }
+
+      return data.account;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: clientQueryKeys.bankAccounts() });
+      queryClient.invalidateQueries({ queryKey: clientQueryKeys.dashboard() });
+    },
+  });
+}
+
+export type TransferBankFundsInput = {
+  fromAccountId: string;
+  toAccountId: string;
+  amount: number;
+};
+
+export function useTransferBankFunds() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: TransferBankFundsInput) => {
+      const supabase = createClient();
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) throw new Error("User session not found.");
+
+      const { data: fromAcc, error: fromErr } = await supabase
+        .from("user_bank_accounts")
+        .select("*")
+        .eq("id", input.fromAccountId)
+        .eq("user_id", user.id)
+        .single();
+
+      if (fromErr || !fromAcc) throw new Error("Source account not found.");
+      if (fromAcc.status !== "active") throw new Error("Source account is not active.");
+      if (Number(fromAcc.balance) < input.amount) throw new Error("Insufficient funds in source account.");
+
+      const { data: toAcc, error: toErr } = await supabase
+        .from("user_bank_accounts")
+        .select("*")
+        .eq("id", input.toAccountId)
+        .eq("user_id", user.id)
+        .single();
+
+      if (toErr || !toAcc) throw new Error("Destination account not found.");
+      if (toAcc.status !== "active") throw new Error("Destination account is not active.");
+      if (fromAcc.currency !== toAcc.currency) {
+        throw new Error(`Transfers between different currencies (${fromAcc.currency} to ${toAcc.currency}) are not supported.`);
+      }
+
+      const newFromBalance = Number(fromAcc.balance) - input.amount;
+      const newToBalance = Number(toAcc.balance) + input.amount;
+
+      const { error: updFromErr } = await supabase
+        .from("user_bank_accounts")
+        .update({ balance: newFromBalance })
+        .eq("id", fromAcc.id);
+      if (updFromErr) throw new Error(updFromErr.message);
+
+      const { error: updToErr } = await supabase
+        .from("user_bank_accounts")
+        .update({ balance: newToBalance })
+        .eq("id", toAcc.id);
+      if (updToErr) throw new Error(updToErr.message);
+
+      await supabase.from("wallet_ledger").insert([
+        {
+          user_id: user.id,
+          amount: -input.amount,
+          currency: fromAcc.currency,
+          type: "TRANSFER",
+          status: "COMPLETED",
+          reference_id: `TRF-OUT-${Date.now()}`,
+          metadata: {
+            description: `Transfer to ${toAcc.account_name} (${toAcc.account_number || 'Pending'})`,
+            from_account_id: fromAcc.id,
+            to_account_id: toAcc.id,
+          },
+        },
+        {
+          user_id: user.id,
+          amount: input.amount,
+          currency: toAcc.currency,
+          type: "TRANSFER",
+          status: "COMPLETED",
+          reference_id: `TRF-IN-${Date.now()}`,
+          metadata: {
+            description: `Transfer from ${fromAcc.account_name} (${fromAcc.account_number || 'Pending'})`,
+            from_account_id: fromAcc.id,
+            to_account_id: toAcc.id,
+          },
+        },
+      ]);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: clientQueryKeys.bankAccounts() });
+      queryClient.invalidateQueries({ queryKey: clientQueryKeys.dashboard() });
+      queryClient.invalidateQueries({ queryKey: clientQueryKeys.transactions() });
+    },
+  });
+}
+

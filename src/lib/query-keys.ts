@@ -5,4 +5,6 @@ export const clientQueryKeys = {
   transactions: () => [...clientQueryKeys.all, "transactions"] as const,
   withdrawalRequests: () => [...clientQueryKeys.all, "withdrawal-requests"] as const,
   withdrawBalance: () => [...clientQueryKeys.all, "withdraw-balance"] as const,
+  bankAccounts: () => [...clientQueryKeys.all, "bank-accounts"] as const,
 };
+
