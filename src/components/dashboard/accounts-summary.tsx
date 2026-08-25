@@ -11,11 +11,12 @@ import {
   XCircle,
   ShieldCheck
 } from "lucide-react";
-import { useUserBankAccounts, useTransferBankFunds } from "@/hooks/useClientQueries";
+import { useUserBankAccounts, useTransferBankFunds, useDashboardMetrics } from "@/hooks/useClientQueries";
 import { OpenBankAccountModal } from "@/components/accounts/open-account-modal";
 
 export function AccountsSummary({ userName }: { userName: string }) {
   const { data: bankAccounts = [], isLoading } = useUserBankAccounts();
+  const { data: metrics } = useDashboardMetrics();
   const transferMutation = useTransferBankFunds();
 
   const [isOpenModal, setIsOpenModal] = useState(false);
@@ -26,9 +27,11 @@ export function AccountsSummary({ userName }: { userName: string }) {
 
   const activeAccounts = bankAccounts.filter((a) => a.status === "active");
 
-  const totalCadBalance = activeAccounts
+  const totalBankCadBalance = activeAccounts
     .filter((a) => a.currency === "CAD")
     .reduce((sum, a) => sum + Number(a.balance), 0);
+
+  const totalCadBalance = metrics?.cadBalance ?? totalBankCadBalance;
 
   const totalUsdBalance = activeAccounts
     .filter((a) => a.currency === "USD")

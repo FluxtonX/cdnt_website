@@ -293,7 +293,7 @@ create trigger on_user_wallets_cad_sync
 -- ==============================================================================
 -- 6. Initial Data Backfill & Sync for All Existing Users
 -- ==============================================================================
--- Ensure all users with a CAD wallet have their Chequing account synced immediately
+-- Ensure all users with a CAD wallet have an active Chequing account
 insert into public.user_bank_accounts (
   user_id,
   account_category,
@@ -324,15 +324,14 @@ where uw.currency = 'CAD'
       and ba.account_type = 'chequing'
   );
 
--- Update any existing chequing accounts with 0 balance to match CAD wallet balance
-update public.user_bank_accounts ba
+-- Sync user_wallets CAD balance to match user_bank_accounts Chequing balance
+update public.user_wallets uw
 set 
-  balance = uw.balance,
+  balance = ba.balance,
   updated_at = now()
-from public.user_wallets uw
-where ba.user_id = uw.user_id
-  and ba.account_type = 'chequing'
-  and ba.currency = 'CAD'
+from public.user_bank_accounts ba
+where uw.user_id = ba.user_id
   and uw.currency = 'CAD'
-  and ba.balance = 0
-  and uw.balance > 0;
+  and ba.account_type = 'chequing'
+  and ba.currency = 'CAD';
+

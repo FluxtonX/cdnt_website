@@ -90,6 +90,11 @@ export function useDashboardMetrics() {
       const { supabase, user } = await getAuthenticatedUserId();
 
       const walletsPromise = supabase.from("user_wallets").select("*").eq("user_id", user.id);
+      const bankAccountsPromise = supabase
+        .from("user_bank_accounts")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("status", "active");
       const ledgerPromise = supabase
         .from("wallet_ledger")
         .select("amount, currency, created_at")
@@ -97,8 +102,13 @@ export function useDashboardMetrics() {
         .eq("type", "DEPOSIT")
         .gte("created_at", new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).toISOString());
 
-      const [{ data: userWallets, error: walletsErr }, { data: ledger }] = await Promise.all([
+      const [
+        { data: userWallets, error: walletsErr },
+        { data: userBankAccounts },
+        { data: ledger },
+      ] = await Promise.all([
         walletsPromise,
+        bankAccountsPromise,
         ledgerPromise,
       ]);
 
@@ -113,26 +123,38 @@ export function useDashboardMetrics() {
       const pricePromise = fetchMarketPrices();
       const prices = await pricePromise;
 
-      let portfolioValue = 0;
-      let cadBalance = 0;
-      const wallets: Array<{ currency: string; balance: number }> = [];
+      // Calculate CAD Fiat from active bank accounts
+      let totalBankCad = 0;
+      if (userBankAccounts && userBankAccounts.length > 0) {
+        const cadBankAccs = userBankAccounts.filter((a: any) => a.currency === "CAD" && a.status === "active");
+        totalBankCad = cadBankAccs.reduce((sum: number, a: any) => sum + Number(a.balance || 0), 0);
+      }
+
+      let walletCadBalance = 0;
+      if (!walletsErr && userWallets) {
+        const cadW = userWallets.find((w: any) => w.currency?.toUpperCase() === "CAD");
+        if (cadW) walletCadBalance = Number(cadW.balance || 0);
+      }
+
+      // Combined Total CAD = user_wallets (CAD) + user_bank_accounts (CAD)
+      // e.g. $132,000 + $3,300 = $135,300.00
+      const cadBalance = walletCadBalance + totalBankCad;
+
+      let portfolioValue = cadBalance;
+      const wallets: Array<{ currency: string; balance: number }> = [
+        { currency: "CAD", balance: cadBalance },
+      ];
 
       if (!walletsErr && userWallets) {
         userWallets.forEach((w: any) => {
           const balance = Number(w.balance || 0);
-          // Include CAD wallet even if balance is 0 (for withdrawal functionality)
-          if (balance > 0 || w.currency.toUpperCase() === 'CAD') {
+          if (w.currency.toUpperCase() !== "CAD" && balance > 0) {
             wallets.push({ currency: w.currency, balance });
-            // If it's CAD, add directly to portfolio value (no conversion needed)
-            if (w.currency.toUpperCase() === 'CAD') {
-              portfolioValue += balance;
-              cadBalance += balance;
-            }
           }
         });
-        
-        // Calculate portfolio value for non-CAD currencies only
-        const nonCadWallets = userWallets.filter((w: any) => w.currency.toUpperCase() !== 'CAD');
+
+        // Calculate portfolio value for non-CAD currencies converted to CAD at live rates
+        const nonCadWallets = userWallets.filter((w: any) => w.currency.toUpperCase() !== "CAD");
         portfolioValue += calculateCADBalance(nonCadWallets, liveCadRates);
       }
 
@@ -636,19 +658,28 @@ export function useWithdrawBalance() {
     queryKey: clientQueryKeys.withdrawBalance(),
     queryFn: async () => {
       const { supabase, user } = await getAuthenticatedUserId();
-      const { data: wallets } = await supabase
-        .from("user_wallets")
-        .select("currency, balance")
-        .eq("user_id", user.id);
+      const [
+        { data: wallets },
+        { data: bankAccounts },
+      ] = await Promise.all([
+        supabase.from("user_wallets").select("currency, balance").eq("user_id", user.id),
+        supabase.from("user_bank_accounts").select("currency, balance, status").eq("user_id", user.id).eq("status", "active"),
+      ]);
 
-      if (!wallets || wallets.length === 0) return 0;
+      let totalBankCad = 0;
+      if (bankAccounts && bankAccounts.length > 0) {
+        totalBankCad = bankAccounts
+          .filter((a: any) => a.currency === "CAD")
+          .reduce((sum: number, a: any) => sum + Number(a.balance || 0), 0);
+      }
+      let walletCadBalance = 0;
+      if (wallets) {
+        const cadWallet = wallets.find((w: any) => w.currency?.toUpperCase() === "CAD");
+        walletCadBalance = Number(cadWallet?.balance || 0);
+      }
+      const cadBalance = walletCadBalance + totalBankCad;
 
-      // CAD balance is stored directly — do NOT multiply by any exchange rate.
-      // Only convert non-CAD crypto wallets to CAD using live rates.
-      const cadWallet = wallets.find((w: any) => w.currency?.toUpperCase() === "CAD");
-      const cadBalance = Number(cadWallet?.balance || 0);
-
-      const nonCadWallets = wallets.filter((w: any) => w.currency?.toUpperCase() !== "CAD");
+      const nonCadWallets = (wallets || []).filter((w: any) => w.currency?.toUpperCase() !== "CAD");
       const rates = await fetchLiveCADRates();
       const cryptoValueInCad = calculateCADBalance(nonCadWallets, rates);
 
