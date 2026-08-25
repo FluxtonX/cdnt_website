@@ -47,6 +47,43 @@ export type DashboardMetrics = {
 };
 
 export function useDashboardMetrics() {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel("dashboard_realtime_sync")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "user_wallets",
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: clientQueryKeys.dashboard() });
+          queryClient.invalidateQueries({ queryKey: clientQueryKeys.wallets() });
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "user_bank_accounts",
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: clientQueryKeys.dashboard() });
+          queryClient.invalidateQueries({ queryKey: clientQueryKeys.bankAccounts() });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
   return useQuery({
     queryKey: clientQueryKeys.dashboard(),
     queryFn: async (): Promise<DashboardMetrics> => {
