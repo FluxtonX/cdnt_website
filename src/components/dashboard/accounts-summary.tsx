@@ -88,7 +88,7 @@ export function AccountsSummary({ userName }: { userName: string }) {
               <Landmark className="w-3.5 h-3.5 text-emerald-400" /> Total Banking Assets
             </div>
             <div className="text-2xl font-bold text-white">
-              ${totalCadBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              ${totalBankCadBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               <span className="text-xs font-semibold text-blue-200 ml-1">CAD</span>
             </div>
           </div>
@@ -111,8 +111,7 @@ export function AccountsSummary({ userName }: { userName: string }) {
 
               <div className="flex items-center gap-3">
                 <div className="bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-200 text-xs font-semibold text-gray-700">
-                  Total: <span className="text-gray-900 font-bold">${totalCadBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })} CAD</span>
-                  {totalUsdBalance > 0 && <span className="ml-1 text-gray-500"> / ${totalUsdBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })} USD</span>}
+                  Total: <span className="text-gray-900 font-bold">${totalBankCadBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })} CAD</span>
                 </div>
               </div>
             </div>

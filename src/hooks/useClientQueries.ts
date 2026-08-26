@@ -123,22 +123,15 @@ export function useDashboardMetrics() {
       const pricePromise = fetchMarketPrices();
       const prices = await pricePromise;
 
-      // Calculate CAD Fiat from active bank accounts
+      // Calculate CAD Fiat from active bank accounts (Chequing, Savings, TFSA, RRSP, etc.)
       let totalBankCad = 0;
       if (userBankAccounts && userBankAccounts.length > 0) {
-        const cadBankAccs = userBankAccounts.filter((a: any) => a.currency === "CAD" && a.status === "active");
+        const cadBankAccs = userBankAccounts.filter((a: any) => (a.currency || "CAD").toUpperCase() === "CAD" && a.status === "active");
         totalBankCad = cadBankAccs.reduce((sum: number, a: any) => sum + Number(a.balance || 0), 0);
       }
 
-      let walletCadBalance = 0;
-      if (!walletsErr && userWallets) {
-        const cadW = userWallets.find((w: any) => w.currency?.toUpperCase() === "CAD");
-        if (cadW) walletCadBalance = Number(cadW.balance || 0);
-      }
-
-      // Combined Total CAD = user_wallets (CAD) + user_bank_accounts (CAD)
-      // e.g. $132,000 + $3,300 = $135,300.00
-      const cadBalance = walletCadBalance + totalBankCad;
+      // CAD Balance represents the user's total banking assets
+      const cadBalance = totalBankCad;
 
       let portfolioValue = cadBalance;
       const wallets: Array<{ currency: string; balance: number }> = [
