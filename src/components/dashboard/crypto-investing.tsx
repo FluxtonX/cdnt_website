@@ -88,9 +88,16 @@ export function CryptoInvesting() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-lg text-gray-900">{wallet.name}</h3>
-                    <div className="text-2xl font-bold text-gray-900 mt-0.5">{wallet.value}</div>
+                    <div className="text-2xl font-bold text-gray-900 mt-0.5">
+                      {wallet.symbol === "CAD"
+                        ? `$${Number(wallet.balance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CAD`
+                        : `${Number(wallet.balance).toLocaleString(undefined, {
+                            minimumFractionDigits: wallet.symbol === "USDT" || wallet.symbol === "USDC" ? 2 : 0,
+                            maximumFractionDigits: wallet.symbol === "USDT" || wallet.symbol === "USDC" ? 2 : 8,
+                          })} ${wallet.symbol}`}
+                    </div>
                     <div className="text-xs text-gray-500 mt-1">
-                      {Number(wallet.balance).toLocaleString(undefined, { maximumFractionDigits: 8 })} {wallet.symbol}
+                      {wallet.symbol === "CAD" ? "Canadian Dollar" : `≈ ${wallet.value} CAD`}
                     </div>
                   </div>
                 </div>

@@ -451,12 +451,13 @@ export default function DashboardPage() {
   const percentChange = metrics?.percentChange ?? 0;
 
   const allocationData = useMemo(() => {
-    const buildItem = (symbol: string, value: number) => {
+    const buildItem = (symbol: string, value: number, rawBalance: number) => {
       const grad = ASSET_GRADIENTS[symbol] || buildAssetGradient(symbol);
       return {
         name: grad.label,
         symbol,
         value,
+        rawBalance,
         gradientId: grad.id,
         dotColor: grad.dot,
       };
@@ -470,7 +471,7 @@ export default function DashboardPage() {
       // If CAD, use balance directly (no conversion needed)
       const isCAD = w.currency === 'CAD';
       const value = isCAD ? w.balance : w.balance * (cadRates[w.currency] || cadRates.USDT || 1.36);
-      return buildItem(w.currency, value);
+      return buildItem(w.currency, value, w.balance);
     }).filter((item) => item.value > 0);
   }, [visibleWallets, cadRates, portfolioValue]);
 
@@ -569,45 +570,25 @@ export default function DashboardPage() {
                 <Eye className="w-4 h-4" />
               </button>
             </div>
-            <h1 className="text-4xl md:text-[44px] font-bold tracking-tight mb-2">
+            <h1 className="text-4xl md:text-[44px] font-bold tracking-tight">
               {hideBalance ? (
-                "$••,•••.••"
+                "$••,•••.•• CAD"
               ) : loadingBalance ? (
                 <div className="h-8 w-48 bg-gray-200 animate-pulse rounded" />
               ) : (
-                `$${portfolioValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                `$${portfolioValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CAD`
               )}
             </h1>
-            <div className="flex items-center gap-1.5 text-[14px]">
-              <TrendingUp
-                className={cn("w-4 h-4", percentChange >= 0 ? "text-[#FFD166]" : "text-red-400")}
-              />
-              <span
-                className={cn(
-                  "font-semibold",
-                  percentChange >= 0 ? "text-[#FFD166]" : "text-red-400",
-                )}
-              >
-                {percentChange >= 0 ? "+" : "-"}$
-                {Math.abs(thisMonthDeposits).toLocaleString(undefined, {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}{" "}
-                ({percentChange >= 0 ? "+" : ""}
-                {percentChange.toFixed(1)}%)
-              </span>
-              <span className="text-blue-200/80">{timeframeLabel}</span>
-            </div>
           </div>
           <div className="md:text-right">
             <span className="text-[13px] text-blue-100/90 font-medium">{cadBalanceLabel}</span>
             <div className="text-xl md:text-2xl font-bold mt-1">
               {hideBalance ? (
-                "$•,•••.••"
+                "$•,•••.•• CAD"
               ) : loadingBalance ? (
                 <div className="h-8 w-48 bg-gray-200 animate-pulse rounded" />
               ) : (
-                `$${cadBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                `$${cadBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CAD`
               )}
             </div>
           </div>
@@ -794,9 +775,21 @@ export default function DashboardPage() {
                           {item.name}
                         </span>
                       </div>
-                      <span className="text-[13px] font-bold text-[#111827]">
-                        ${item.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </span>
+                      <div className="text-right">
+                        <div className="text-[13px] font-bold text-[#111827]">
+                          {item.symbol === "CAD"
+                            ? `$${item.rawBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CAD`
+                            : `${item.rawBalance.toLocaleString(undefined, {
+                                minimumFractionDigits: item.symbol === "USDT" || item.symbol === "USDC" ? 2 : 0,
+                                maximumFractionDigits: item.symbol === "USDT" || item.symbol === "USDC" ? 2 : 8,
+                              })} ${item.symbol}`}
+                        </div>
+                        {item.symbol !== "CAD" && (
+                          <div className="text-[11px] text-[#A0AEC0] font-medium">
+                            ≈ ${item.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CAD
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -823,10 +816,14 @@ export default function DashboardPage() {
               </div>
               <h3 className="text-[15px] font-bold text-[#0A0F2C] mb-1">{w.currency}</h3>
               <div className="text-[20px] font-bold text-[#0A0F2C] mb-0.5">
-                ${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {isCAD
+                  ? `$${w.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CAD`
+                  : `${w.balance.toLocaleString(undefined, { minimumFractionDigits: w.currency === "USDT" || w.currency === "USDC" ? 2 : 0, maximumFractionDigits: decimals })} ${w.currency}`}
               </div>
               <div className="text-[11px] text-[#A0AEC0] font-medium">
-                {w.balance.toLocaleString(undefined, { maximumFractionDigits: decimals })} {w.currency}
+                {isCAD
+                  ? "Canadian Dollar"
+                  : `≈ $${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CAD`}
               </div>
             </div>
           );
