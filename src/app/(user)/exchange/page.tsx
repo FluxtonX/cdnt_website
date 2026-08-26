@@ -102,18 +102,27 @@ export default function ExchangePage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data } = await supabase
-        .from("user_wallets")
-        .select("*")
-        .eq("user_id", user.id);
+      const [walletsRes, bankAccsRes] = await Promise.all([
+        supabase.from("user_wallets").select("*").eq("user_id", user.id),
+        supabase.from("user_bank_accounts").select("*").eq("user_id", user.id).eq("status", "active"),
+      ]);
 
-      if (data) {
-        const balanceMap = data.reduce((acc: any, w: any) => {
-          acc[w.currency] = Number(w.balance);
-          return acc;
-        }, {});
-        setBalances((prev) => ({ ...prev, ...balanceMap }));
+      const balanceMap: Record<string, number> = {};
+      if (walletsRes.data) {
+        walletsRes.data.forEach((w: any) => {
+          balanceMap[w.currency] = Number(w.balance || 0);
+        });
       }
+
+      // Read active CAD balance directly from user's bank accounts (Chequing)
+      if (bankAccsRes.data && bankAccsRes.data.length > 0) {
+        const totalBankCad = bankAccsRes.data
+          .filter((a: any) => a.currency === "CAD")
+          .reduce((sum: number, a: any) => sum + Number(a.balance || 0), 0);
+        balanceMap["CAD"] = totalBankCad + Number(balanceMap["CAD"] || 0);
+      }
+
+      setBalances((prev) => ({ ...prev, ...balanceMap }));
     } catch (err) {
       console.error("Failed to load user balances:", err);
     } finally {
@@ -295,6 +304,9 @@ export default function ExchangePage() {
       setAmount("");
       await loadBalances();
       queryClient.invalidateQueries({ queryKey: clientQueryKeys.dashboard() });
+      queryClient.invalidateQueries({ queryKey: clientQueryKeys.bankAccounts() });
+      queryClient.invalidateQueries({ queryKey: clientQueryKeys.wallets() });
+      queryClient.invalidateQueries({ queryKey: clientQueryKeys.transactions() });
     } catch (err: any) {
       console.error(err);
       setToast({
