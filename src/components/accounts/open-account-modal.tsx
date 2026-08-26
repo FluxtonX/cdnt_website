@@ -101,15 +101,6 @@ export const ACCOUNT_CATALOG: AccountCatalogItem[] = [
     name: "Business Account",
     currency: "CAD",
     description: "Designed for business owners to manage company finances and transactions."
-  },
-  {
-    category: "other",
-    categoryLabel: "Investment & Special Accounts",
-    type: "usd",
-    name: "US Dollar Account",
-    currency: "USD",
-    badge: "USD Currency",
-    description: "Hold and grow savings directly in U.S. dollars without foreign exchange fees."
   }
 ];
 
