@@ -1,8 +1,11 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import {
   ArrowUpRight,
+  ArrowRightLeft,
+  ArrowDownLeft,
   CircleDollarSign,
   PanelRightClose,
   PanelRightOpen,
@@ -20,7 +23,7 @@ import { CoinLogo } from "@/components/market/CoinLogo";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { fetchLiveUSDTtoCAD } from "@/lib/utils";
-import { useDashboardMetrics } from "@/hooks/useClientQueries";
+import { useDashboardMetrics, useUserBankAccounts } from "@/hooks/useClientQueries";
 import { useQueryClient } from "@tanstack/react-query";
 import { clientQueryKeys } from "@/lib/query-keys";
 
@@ -235,6 +238,13 @@ export default function ExchangePage() {
     };
   }, [selectedCoin]);
 
+  const { data: bankAccounts = [], isLoading: loadingBankAccounts } = useUserBankAccounts();
+  const totalCadBankBalance = React.useMemo(() => {
+    return bankAccounts
+      .filter((a) => a.currency === "CAD" && a.status === "active")
+      .reduce((sum, a) => sum + Number(a.balance || 0), 0);
+  }, [bankAccounts]);
+
   const livePrice = latestCandle?.close ?? ticker?.lastPrice ?? 0;
   const changePercent = ticker?.priceChangePercent ?? 0;
   const amountValue = Number(amount) || 0;
@@ -242,6 +252,10 @@ export default function ExchangePage() {
   // Available coin balance is dynamically determined
   const coinSymbol = selectedCoin.baseAsset;
   const assetBalance = balances[coinSymbol] ?? 0;
+
+  const availableFiat = baseCurrency === "CAD"
+    ? (totalCadBankBalance > 0 ? totalCadBankBalance : (balances["CAD"] ?? 0))
+    : (balances["USDT"] ?? 0);
 
   const priceLoading = tickerLoading || (baseCurrency === "CAD" && usdtToCadLoading);
   const priceReady =
@@ -262,6 +276,10 @@ export default function ExchangePage() {
   const feeInFiat = side === "buy" ? amountValue * (buyFeePercent / 100) : estimatedFiat * (sellFeePercent / 100);
   const totalFiat = side === "buy" ? amountValue + feeInFiat : Math.max(0, estimatedFiat - feeInFiat);
 
+  const isInsufficientFiat = side === "buy" && amountValue > 0 && totalFiat > availableFiat;
+  const isInsufficientCrypto = side === "sell" && amountValue > 0 && amountValue > assetBalance;
+  const hasBalanceError = isInsufficientFiat || isInsufficientCrypto;
+
   function switchSide(nextSide: "buy" | "sell") {
     setSide(nextSide);
     setAmount("");
@@ -274,7 +292,7 @@ export default function ExchangePage() {
 
   // Execute buy/sell trade securely in Supabase
   const handleOrderExecute = async () => {
-    if (!amount || Number(amount) <= 0 || !priceReady) return;
+    if (!amount || Number(amount) <= 0 || !priceReady || hasBalanceError) return;
     setTradeLoading(true);
     setToast(null);
 
@@ -299,7 +317,9 @@ export default function ExchangePage() {
 
       setToast({
         type: "success",
-        msg: `${side === "buy" ? "Bought" : "Sold"} ${cryptoVal.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${selectedCoin.baseAsset} successfully!`,
+        msg: side === "buy"
+          ? `Bought ${cryptoVal.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${selectedCoin.baseAsset} successfully!${baseCurrency === "CAD" ? ` $${fiatAmount.toFixed(2)} CAD deducted from Chequing Account.` : ""}`
+          : `Sold ${cryptoVal.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${selectedCoin.baseAsset} successfully!${baseCurrency === "CAD" ? ` $${fiatAmount.toFixed(2)} CAD credited to your Chequing Account.` : ""}`,
       });
       setAmount("");
       await loadBalances();
@@ -534,21 +554,73 @@ export default function ExchangePage() {
               </div>
 
               <div className={cn("mt-4 rounded-xl border p-4", side === "buy" ? "border-blue-200 bg-blue-50" : "border-emerald-200 bg-emerald-50")}>
-                <div className="flex items-center gap-2 text-xs font-bold text-[#113285]">
-                  <Wallet className="h-4 w-4" />
-                  Available Balance
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-bold text-[#113285]">
+                    <Wallet className="h-4 w-4" />
+                    Available Balance
+                  </div>
+                  {side === "buy" && baseCurrency === "CAD" && (
+                    <span className="text-[11px] font-semibold text-blue-700 bg-blue-100/70 px-2 py-0.5 rounded-md">
+                      Chequing Account
+                    </span>
+                  )}
                 </div>
                 <p className="mt-2 text-lg font-black text-[#113285]">
                   {side === "buy"
-                    ? loadingBalances ? "--" : `${(
-                        baseCurrency === "CAD"
-                          ? (balances["CAD"] ?? 0)          // ← read actual stored CAD wallet balance
-                          : (balances["USDT"] ?? 0)          // ← read actual stored USDT wallet balance
-                      ).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${baseCurrency}`
+                    ? loadingBalances && loadingBankAccounts ? "--" : `${availableFiat.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${baseCurrency}`
                     : loadingBalances ? "--" : `${assetBalance.toLocaleString("en-US", { maximumFractionDigits: 8 })} ${selectedCoin.baseAsset}`
                   }
                 </p>
               </div>
+
+              {/* Insufficient Balance Alert Banner */}
+              {isInsufficientFiat && (
+                <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3.5 text-xs text-amber-900 shadow-sm animate-in fade-in duration-200">
+                  <div className="flex items-start gap-2.5">
+                    <AlertCircle className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
+                    <div className="space-y-1.5 flex-1">
+                      <p className="font-bold text-amber-900">
+                        Insufficient {baseCurrency} Balance
+                      </p>
+                      <p className="text-amber-700 leading-relaxed">
+                        Total cost is <span className="font-bold">${totalFiat.toFixed(2)} {baseCurrency}</span> (incl. fee), but your {baseCurrency === "CAD" ? "Chequing Account" : "wallet"} only has <span className="font-bold">${availableFiat.toFixed(2)} {baseCurrency}</span>.
+                      </p>
+                      {baseCurrency === "CAD" && (
+                        <div className="pt-1.5 flex flex-wrap gap-2">
+                          <Link
+                            href="/wallets"
+                            className="inline-flex items-center gap-1 font-bold text-[#003366] bg-white hover:bg-blue-50 px-2.5 py-1.5 rounded-lg border border-amber-300 shadow-sm transition-colors text-[11px]"
+                          >
+                            <ArrowRightLeft className="w-3.5 h-3.5 text-[#003366]" /> Transfer from other bank account
+                          </Link>
+                          <Link
+                            href="/deposit?asset=CAD"
+                            className="inline-flex items-center gap-1 font-bold text-emerald-800 bg-white hover:bg-emerald-50 px-2.5 py-1.5 rounded-lg border border-amber-300 shadow-sm transition-colors text-[11px]"
+                          >
+                            <ArrowDownLeft className="w-3.5 h-3.5 text-emerald-600" /> Deposit CAD
+                          </Link>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {isInsufficientCrypto && (
+                <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3.5 text-xs text-amber-900 shadow-sm animate-in fade-in duration-200">
+                  <div className="flex items-start gap-2.5">
+                    <AlertCircle className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
+                    <div>
+                      <p className="font-bold text-amber-900">
+                        Insufficient {selectedCoin.baseAsset} Balance
+                      </p>
+                      <p className="text-amber-700 mt-0.5">
+                        You entered {amountValue} {selectedCoin.baseAsset}, but only have {assetBalance.toFixed(selectedCoin.baseAsset === "BTC" ? 8 : 4)} {selectedCoin.baseAsset} available.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <label className="mt-5 block text-sm font-black text-[#0A0F2C]">
                 {side === "buy" ? `Amount in ${baseCurrency}` : `Amount in ${selectedCoin.baseAsset}`}
@@ -565,6 +637,7 @@ export default function ExchangePage() {
                 className={cn(
                   "mt-2 h-14 w-full rounded-xl border border-slate-200 px-4 text-lg font-black text-[#0A0F2C] outline-none transition focus:border-[#113285] focus:ring-4 focus:ring-blue-100",
                   priceLoading && "cursor-not-allowed bg-slate-100 text-slate-400",
+                  hasBalanceError && "border-amber-400 bg-amber-50/20 focus:border-amber-500 focus:ring-amber-100",
                 )}
               />
 
@@ -586,8 +659,7 @@ export default function ExchangePage() {
                     type="button"
                     onClick={() => {
                       if (side === "buy") {
-                        const maxFiat = baseCurrency === "CAD" ? (balances["CAD"] ?? 0) : (balances["USDT"] ?? 0);
-                        const maxPossible = Math.floor((maxFiat / (1 + buyFeePercent / 100)) * 10000) / 10000;
+                        const maxPossible = Math.floor((availableFiat / (1 + buyFeePercent / 100)) * 10000) / 10000;
                         setAmount(String(Math.min(value, maxPossible)));
                       } else {
                         setAmount(((assetBalance * value) / 100).toFixed(selectedCoin.baseAsset === "BTC" ? 8 : 4));
@@ -602,9 +674,8 @@ export default function ExchangePage() {
                   type="button"
                   onClick={() => {
                     if (side === "buy") {
-                      const maxFiat = baseCurrency === "CAD" ? (balances["CAD"] ?? 0) : (balances["USDT"] ?? 0);
-                      const maxPossible = Math.floor((maxFiat / (1 + buyFeePercent / 100)) * 10000) / 10000;
-                      setAmount(String(maxPossible));
+                      const maxPossible = Math.floor((availableFiat / (1 + buyFeePercent / 100)) * 10000) / 10000;
+                      setAmount(String(Math.max(0, maxPossible)));
                     } else {
                       setAmount(assetBalance.toFixed(selectedCoin.baseAsset === "BTC" ? 8 : 4));
                     }
@@ -654,10 +725,12 @@ export default function ExchangePage() {
               <button
                 type="button"
                 onClick={handleOrderExecute}
-                disabled={tradeLoading || priceLoading || !priceReady || !amount || Number(amount) <= 0}
+                disabled={tradeLoading || priceLoading || !priceReady || !amount || Number(amount) <= 0 || hasBalanceError}
                 className={cn(
                   "mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-xl text-sm font-black text-white transition-colors disabled:opacity-50",
-                  side === "buy" ? "bg-emerald-500 hover:bg-emerald-600" : "bg-[#113285] hover:bg-[#0D266A]",
+                  hasBalanceError
+                    ? "bg-amber-600 hover:bg-amber-700 cursor-not-allowed"
+                    : side === "buy" ? "bg-emerald-500 hover:bg-emerald-600" : "bg-[#113285] hover:bg-[#0D266A]",
                 )}
               >
                 {tradeLoading ? (
@@ -665,6 +738,10 @@ export default function ExchangePage() {
                     <Loader2 className="h-4 w-4 animate-spin text-white" />
                     Executing...
                   </>
+                ) : hasBalanceError ? (
+                  isInsufficientFiat
+                    ? `Insufficient ${baseCurrency} Balance`
+                    : `Insufficient ${selectedCoin.baseAsset} Balance`
                 ) : (
                   <>
                     {side === "buy" ? "Buy" : "Sell"} Order
