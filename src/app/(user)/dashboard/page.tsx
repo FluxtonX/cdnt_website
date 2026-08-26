@@ -735,16 +735,42 @@ export default function DashboardPage() {
               <div className="h-[220px] w-full relative">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
+                    <Tooltip
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          const data = payload[0].payload;
+                          const percent = allocationTotal > 0 ? ((data.value / allocationTotal) * 100).toFixed(1) : "0";
+                          return (
+                            <div className="bg-[#0A0F2C] text-white px-3 py-2 rounded-xl shadow-lg text-xs">
+                              <p className="font-bold flex items-center gap-1.5">
+                                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: data.dotColor }} />
+                                {data.name}
+                              </p>
+                              <p className="text-slate-300 mt-0.5 font-medium">
+                                {data.symbol === "CAD"
+                                  ? `$${data.rawBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CAD`
+                                  : `${data.rawBalance.toLocaleString(undefined, { maximumFractionDigits: 8 })} ${data.symbol}`}
+                              </p>
+                              <p className="text-slate-400 text-[10px]">
+                                ≈ ${data.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CAD ({percent}%)
+                              </p>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
                     <Pie
                       data={allocationData}
                       cx="50%"
                       cy="50%"
-                      innerRadius={62}
-                      outerRadius={92}
-                      paddingAngle={2}
+                      innerRadius={58}
+                      outerRadius={90}
+                      minAngle={16}
+                      paddingAngle={3}
                       dataKey="value"
                       stroke="#ffffff"
-                      strokeWidth={3}
+                      strokeWidth={2}
                       isAnimationActive
                       animationDuration={900}
                       animationEasing="ease-out"
