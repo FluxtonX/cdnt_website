@@ -91,19 +91,23 @@ export function calculateCADBalance(wallets: any[], rates: Record<string, number
 let cachedRates: Record<string, number> | null = null;
 let lastFetchTime = 0;
 
-/** Fetch live USDT→CAD rate without hardcoded fallbacks (for order pricing). */
-export async function fetchLiveUSDTtoCAD(): Promise<number | null> {
+/** Fetch live USDT→CAD rate with reliable fallbacks (for order pricing). */
+export async function fetchLiveUSDTtoCAD(): Promise<number> {
   try {
     const res = await fetch(
       "https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies=cad",
       { cache: "no-store" },
     );
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data?.tether?.cad ?? null;
-  } catch {
-    return null;
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.tether?.cad && Number(data.tether.cad) > 0) {
+        return Number(data.tether.cad);
+      }
+    }
+  } catch (err) {
+    console.warn("CoinGecko USDT->CAD fetch failed, using fallback rate:", err);
   }
+  return 1.37; // Standard USD/CAD market baseline
 }
 
 export async function fetchLiveCADRates(symbols?: string[]): Promise<Record<string, number>> {

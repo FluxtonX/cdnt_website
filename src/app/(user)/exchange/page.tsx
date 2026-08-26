@@ -65,8 +65,8 @@ export default function ExchangePage() {
   const [latestCandle, setLatestCandle] = React.useState<Candle | null>(null);
   const [tickerError, setTickerError] = React.useState<string | null>(null);
   const [tickerLoading, setTickerLoading] = React.useState(true);
-  const [usdtToCad, setUsdtToCad] = React.useState<number | null>(null);
-  const [usdtToCadLoading, setUsdtToCadLoading] = React.useState(true);
+  const [usdtToCad, setUsdtToCad] = React.useState<number>(1.37);
+  const [usdtToCadLoading, setUsdtToCadLoading] = React.useState(false);
   const [orderPanelOpen, setOrderPanelOpen] = React.useState(true);
   const [side, setSide] = React.useState<"buy" | "sell">("buy");
   const [amount, setAmount] = React.useState("");
@@ -239,11 +239,22 @@ export default function ExchangePage() {
   }, [selectedCoin]);
 
   const { data: bankAccounts = [], isLoading: loadingBankAccounts } = useUserBankAccounts();
+  
+  const chequingAccount = React.useMemo(() => {
+    return bankAccounts.find(
+      (a) => a.currency === "CAD" && a.account_type === "chequing" && a.status?.toLowerCase() === "active"
+    );
+  }, [bankAccounts]);
+
+  const chequingBalance = Number(chequingAccount?.balance || 0);
+
   const totalCadBankBalance = React.useMemo(() => {
     return bankAccounts
-      .filter((a) => a.currency === "CAD" && a.status === "active")
+      .filter((a) => a.currency === "CAD" && a.status?.toLowerCase() === "active")
       .reduce((sum, a) => sum + Number(a.balance || 0), 0);
   }, [bankAccounts]);
+
+  const otherCadBalance = Math.max(0, totalCadBankBalance - chequingBalance);
 
   const livePrice = latestCandle?.close ?? ticker?.lastPrice ?? 0;
   const changePercent = ticker?.priceChangePercent ?? 0;
@@ -254,7 +265,7 @@ export default function ExchangePage() {
   const assetBalance = balances[coinSymbol] ?? 0;
 
   const availableFiat = baseCurrency === "CAD"
-    ? (totalCadBankBalance > 0 ? totalCadBankBalance : (balances["CAD"] ?? 0))
+    ? (chequingBalance > 0 ? chequingBalance : totalCadBankBalance > 0 ? totalCadBankBalance : (metrics?.cadBalance ?? balances["CAD"] ?? 0))
     : (balances["USDT"] ?? 0);
 
   const priceLoading = tickerLoading || (baseCurrency === "CAD" && usdtToCadLoading);
@@ -565,12 +576,24 @@ export default function ExchangePage() {
                     </span>
                   )}
                 </div>
-                <p className="mt-2 text-lg font-black text-[#113285]">
-                  {side === "buy"
-                    ? loadingBalances && loadingBankAccounts ? "--" : `${availableFiat.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${baseCurrency}`
-                    : loadingBalances ? "--" : `${assetBalance.toLocaleString("en-US", { maximumFractionDigits: 8 })} ${selectedCoin.baseAsset}`
-                  }
-                </p>
+                <div className="mt-2 flex flex-wrap items-baseline justify-between gap-2">
+                  <p className="text-lg font-black text-[#113285]">
+                    {side === "buy"
+                      ? loadingBalances && loadingBankAccounts ? "--" : `${availableFiat.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${baseCurrency}`
+                      : loadingBalances ? "--" : `${assetBalance.toLocaleString("en-US", { maximumFractionDigits: 8 })} ${selectedCoin.baseAsset}`
+                    }
+                  </p>
+                  {side === "buy" && baseCurrency === "CAD" && otherCadBalance > 0 && (
+                    <Link
+                      href="/wallets"
+                      className="text-[11px] font-semibold text-[#003366] bg-blue-100/60 hover:bg-blue-100 px-2 py-0.5 rounded-md transition-colors flex items-center gap-1"
+                      title="Transfer from Savings or Investment account to Chequing"
+                    >
+                      <span>+${otherCadBalance.toLocaleString("en-US", { minimumFractionDigits: 2 })} other CAD</span>
+                      <ArrowRightLeft className="w-3 h-3 text-[#003366]" />
+                    </Link>
+                  )}
+                </div>
               </div>
 
               {/* Insufficient Balance Alert Banner */}
