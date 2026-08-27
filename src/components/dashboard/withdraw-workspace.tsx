@@ -496,9 +496,9 @@ export function WithdrawWorkspace() {
 
             {/* Select Asset */}
             <div className="mb-6">
-              <label className="mb-2 block text-[14px] font-bold text-[#0A0F2C]">Select Asset</label>
+              <label className="mb-2 block text-[14px] font-bold text-[#0A0F2C]">Withdrawal Source</label>
               <div className="w-full rounded-[14px] border border-gray-200 bg-gray-50 px-5 py-4 text-[16px] font-bold text-[#0A0F2C] flex justify-between items-center cursor-not-allowed">
-                <span>CAD</span>
+                <span>CAD (Bank Accounts Balance)</span>
                 <span className="text-[#718096]">${selectedWallet.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </div>
               {/*
