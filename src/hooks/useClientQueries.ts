@@ -123,15 +123,21 @@ export function useDashboardMetrics() {
       const pricePromise = fetchMarketPrices();
       const prices = await pricePromise;
 
-      // Calculate CAD Fiat from active bank accounts (Chequing, Savings, TFSA, RRSP, etc.)
+      // Calculate CAD Fiat from bank accounts (Chequing, Savings, TFSA, RRSP, etc.) + fallback wallet CAD
       let totalBankCad = 0;
       if (userBankAccounts && userBankAccounts.length > 0) {
-        const cadBankAccs = userBankAccounts.filter((a: any) => (a.currency || "CAD").toUpperCase() === "CAD" && a.status === "active");
+        const cadBankAccs = userBankAccounts.filter((a: any) => (a.currency || "CAD").toUpperCase() === "CAD" && a.status !== "rejected" && a.status !== "closed");
         totalBankCad = cadBankAccs.reduce((sum: number, a: any) => sum + Number(a.balance || 0), 0);
       }
 
-      // CAD Balance represents the user's total banking assets
-      const cadBalance = totalBankCad;
+      let walletCad = 0;
+      if (userWallets) {
+        const cadW = userWallets.find((w: any) => w.currency?.toUpperCase() === "CAD");
+        walletCad = Number(cadW?.balance || 0);
+      }
+
+      // CAD Balance represents the user's total banking assets + any legacy wallet CAD
+      const cadBalance = totalBankCad + walletCad;
 
       let portfolioValue = cadBalance;
       const wallets: Array<{ currency: string; balance: number }> = [
@@ -446,6 +452,7 @@ export function useClientWallets() {
         ledgerRes,
         depositsRes,
         withdrawalsRes,
+        bankAccountsRes,
       ] = await Promise.all([
         supabase.from("user_wallets").select("*").eq("user_id", user.id),
         supabase.from("platform_wallets").select("crypto, network, address"),
@@ -453,6 +460,7 @@ export function useClientWallets() {
         supabase.from("wallet_ledger").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
         supabase.from("deposit_requests").select("*").eq("user_id", user.id).eq("status", "pending").order("created_at", { ascending: false }),
         supabase.from("withdrawal_requests").select("*").eq("user_id", user.id).eq("status", "pending").order("created_at", { ascending: false }),
+        supabase.from("user_bank_accounts").select("*").eq("user_id", user.id).eq("status", "active"),
       ]);
 
       if (userWalletsRes.error) throw userWalletsRes.error;
@@ -461,6 +469,7 @@ export function useClientWallets() {
       if (ledgerRes.error) throw ledgerRes.error;
       if (depositsRes.error) throw depositsRes.error;
       if (withdrawalsRes.error) throw withdrawalsRes.error;
+      if (bankAccountsRes.error) console.warn("Could not fetch user_bank_accounts:", bankAccountsRes.error.message);
 
       const userWallets = userWalletsRes.data;
       const platformWallets = platformWalletsRes.data;
@@ -468,6 +477,7 @@ export function useClientWallets() {
       const ledger = ledgerRes.data;
       const deposits = depositsRes.data;
       const withdrawals = withdrawalsRes.data;
+      const userBankAccounts = bankAccountsRes.data;
 
       // Extract unique currencies for dynamic rate fetching
       const uniqueCurrencies = new Set<string>();
@@ -553,9 +563,14 @@ export function useClientWallets() {
         totalPortfolioValue += balance * rate;
       });
       
-      // Add CAD balance directly if it exists
-      const cadWallet = (userWallets || []).find((w: any) => w.currency?.toUpperCase() === 'CAD');
-      const cadBalance = Number(cadWallet?.balance || 0);
+      // Add CAD balance directly from active user_bank_accounts (across all CAD bank accounts)
+      let totalBankCad = 0;
+      if (userBankAccounts && userBankAccounts.length > 0) {
+        totalBankCad = userBankAccounts
+          .filter((a: any) => (a.currency || "CAD").toUpperCase() === "CAD" && a.status === "active")
+          .reduce((sum: number, a: any) => sum + Number(a.balance || 0), 0);
+      }
+      const cadBalance = totalBankCad;
       totalPortfolioValue += cadBalance;
       
       allCurrencies.forEach((currency) => {
@@ -656,21 +671,23 @@ export function useWithdrawBalance() {
         { data: bankAccounts },
       ] = await Promise.all([
         supabase.from("user_wallets").select("currency, balance").eq("user_id", user.id),
-        supabase.from("user_bank_accounts").select("currency, balance, status").eq("user_id", user.id).eq("status", "active"),
+        supabase.from("user_bank_accounts").select("currency, balance, status").eq("user_id", user.id),
       ]);
 
       let totalBankCad = 0;
       if (bankAccounts && bankAccounts.length > 0) {
         totalBankCad = bankAccounts
-          .filter((a: any) => a.currency === "CAD")
+          .filter((a: any) => (a.currency || "CAD").toUpperCase() === "CAD" && a.status !== "rejected" && a.status !== "closed")
           .reduce((sum: number, a: any) => sum + Number(a.balance || 0), 0);
       }
+
       let walletCadBalance = 0;
       if (wallets) {
         const cadWallet = wallets.find((w: any) => w.currency?.toUpperCase() === "CAD");
         walletCadBalance = Number(cadWallet?.balance || 0);
       }
-      const cadBalance = walletCadBalance + totalBankCad;
+
+      const cadBalance = totalBankCad + walletCadBalance;
 
       const nonCadWallets = (wallets || []).filter((w: any) => w.currency?.toUpperCase() !== "CAD");
       const rates = await fetchLiveCADRates();
