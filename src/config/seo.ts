@@ -35,7 +35,7 @@ export const siteConfig = {
     "Interac e-Transfer Online Bank",
     "Canadian National Trust Bank",
     "CDNT Bank Canada",
-    
+
     // Crypto & Digital Asset Banking Keywords
     "Crypto Banking Canada",
     "Regulated Crypto Bank Canada",
@@ -94,13 +94,22 @@ export function constructMetadata({
     : baseUrl;
 
   const fullTitle = title
-    ? `${title} | ${siteConfig.name}`
-    : `${siteConfig.name} — Banking Meets Crypto Intelligence`;
+    ? title
+    : siteConfig.shortName;
 
   return {
     title: fullTitle,
     description,
     keywords,
+    icons: {
+      icon: [
+        { url: "/icon.png", sizes: "192x192", type: "image/png" },
+        { url: "/favicon.ico", sizes: "any" },
+        { url: "/bluelogo.png", type: "image/png" },
+      ],
+      shortcut: "/icon.png",
+      apple: "/apple-icon.png",
+    },
     metadataBase: new URL(baseUrl),
     alternates: {
       canonical: url,
@@ -135,25 +144,25 @@ export function constructMetadata({
     },
     robots: noIndex
       ? {
+        index: false,
+        follow: false,
+        nocache: true,
+        googleBot: {
           index: false,
           follow: false,
-          nocache: true,
-          googleBot: {
-            index: false,
-            follow: false,
-            noimageindex: true,
-          },
-        }
+          noimageindex: true,
+        },
+      }
       : {
+        index: true,
+        follow: true,
+        googleBot: {
           index: true,
           follow: true,
-          googleBot: {
-            index: true,
-            follow: true,
-            "max-video-preview": -1,
-            "max-image-preview": "large",
-            "max-snippet": -1,
-          },
+          "max-video-preview": -1,
+          "max-image-preview": "large",
+          "max-snippet": -1,
         },
+      },
   };
 }

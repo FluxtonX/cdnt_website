@@ -17,7 +17,7 @@ import Footer from "@/components/Footer";
 export const revalidate = 300;
 
 export const metadata: Metadata = constructMetadata({
-  title: "Canadian National Trust Bank — Regulated Digital Banking & Crypto Engine",
+  title: "Canadian National Trust Bank",
   description:
     "Tier-one Canadian digital bank combining personal & business banking with a secure crypto engine. Manage CAD, USD, BTC, ETH, and USDT with enterprise 2FA protection.",
   canonicalPath: "/",
