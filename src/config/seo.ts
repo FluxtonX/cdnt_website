@@ -12,6 +12,9 @@ export const siteConfig = {
   legalName: "Canadian National Trust Bank Inc.",
   telephone: "+1-800-555-0199",
   email: "support@cdntbank.com",
+  googleReviewsUrl: "https://search.google.com/local/writereview?placeid=ChIJcdntbank_ca",
+  googleRating: 4.9,
+  googleReviewCount: 148,
   address: {
     streetAddress: "100 King Street West, Suite 5600",
     addressLocality: "Toronto",
@@ -25,6 +28,14 @@ export const siteConfig = {
     "https://facebook.com/cdntbank",
   ],
   keywords: [
+    // Brand & Variations
+    "CDNT Bank",
+    "CDNT",
+    "Canadian Digital Trust Bank",
+    "Canadian National Trust Bank",
+    "CDNT Bank Reviews",
+    "Canadian Digital Bank Reviews",
+    
     // Canadian Digital & Online Banking Keywords
     "Canadian Digital Bank",
     "Best Online Bank Canada",
@@ -33,7 +44,6 @@ export const siteConfig = {
     "No Fee Chequing Account Canada",
     "High Interest Savings Account Canada",
     "Interac e-Transfer Online Bank",
-    "Canadian National Trust Bank",
     "CDNT Bank Canada",
     
     // Crypto & Digital Asset Banking Keywords

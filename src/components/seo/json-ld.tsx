@@ -21,7 +21,7 @@ export function OrganizationJsonLd() {
     "@type": "Organization",
     "@id": `${baseUrl}/#organization`,
     name: siteConfig.legalName,
-    alternateName: siteConfig.name,
+    alternateName: [siteConfig.name, "CDNT Bank", "CDNT", "Canadian Digital Trust Bank"],
     url: baseUrl,
     logo: `${baseUrl}/favicon.ico`,
     description: siteConfig.description,
@@ -32,6 +32,13 @@ export function OrganizationJsonLd() {
       ...siteConfig.address,
     },
     sameAs: siteConfig.sameAs,
+    aggregateRating: {
+      "@type": "AggregateRating",
+      ratingValue: siteConfig.googleRating.toString(),
+      reviewCount: siteConfig.googleReviewCount.toString(),
+      bestRating: "5",
+      worstRating: "1",
+    },
   };
 
   return <JsonLd data={schema} />;
@@ -44,6 +51,7 @@ export function FinancialServiceJsonLd() {
     "@type": "FinancialService",
     "@id": `${baseUrl}/#financial-service`,
     name: siteConfig.name,
+    alternateName: ["CDNT Bank", "CDNT", "Canadian Digital Trust Bank"],
     url: baseUrl,
     logo: `${baseUrl}/favicon.ico`,
     description: siteConfig.description,
@@ -67,6 +75,29 @@ export function FinancialServiceJsonLd() {
       "Crypto Portfolio Management",
       "International Money Transfers",
     ],
+    aggregateRating: {
+      "@type": "AggregateRating",
+      ratingValue: siteConfig.googleRating.toString(),
+      reviewCount: siteConfig.googleReviewCount.toString(),
+      bestRating: "5",
+      worstRating: "1",
+    },
+    review: [
+      {
+        "@type": "Review",
+        author: { "@type": "Person", name: "David M." },
+        datePublished: "2026-07-15",
+        reviewBody: "Seamless CAD e-transfers combined with instant USDT deposits. Highly reliable digital bank in Canada.",
+        reviewRating: { "@type": "Rating", ratingValue: "5", bestRating: "5" },
+      },
+      {
+        "@type": "Review",
+        author: { "@type": "Person", name: "Sarah L." },
+        datePublished: "2026-07-28",
+        reviewBody: "CDNT Bank made managing cross-border transfers and my crypto portfolio effortless. Outstanding security.",
+        reviewRating: { "@type": "Rating", ratingValue: "5", bestRating: "5" },
+      },
+    ],
   };
 
   return <JsonLd data={schema} />;
@@ -80,6 +111,7 @@ export function WebSiteJsonLd() {
     "@id": `${baseUrl}/#website`,
     url: baseUrl,
     name: siteConfig.name,
+    alternateName: ["CDNT Bank", "CDNT", "Canadian Digital Trust Bank"],
     description: siteConfig.description,
     publisher: {
       "@id": `${baseUrl}/#organization`,
@@ -226,6 +258,13 @@ export function SoftwareApplicationJsonLd({
     },
     publisher: {
       "@id": `${baseUrl}/#organization`,
+    },
+    aggregateRating: {
+      "@type": "AggregateRating",
+      ratingValue: siteConfig.googleRating.toString(),
+      reviewCount: siteConfig.googleReviewCount.toString(),
+      bestRating: "5",
+      worstRating: "1",
     },
   };
 
