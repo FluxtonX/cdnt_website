@@ -21,7 +21,8 @@ import {
   AlertCircle,
   CheckCircle2,
   Info,
-  XCircle
+  XCircle,
+  Lock
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AnnouncementBanner } from "@/components/AnnouncementBanner";
@@ -51,6 +52,7 @@ export function UserShell({ children }: { children: React.ReactNode }) {
   const [userProfile, setUserProfile] = useState<{ email: string, fullName: string, initials: string, isKycVerified: boolean, kycStatus: string | null } | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [isFrozen, setIsFrozen] = useState(false);
+  const [isLocked, setIsLocked] = useState(false);
   const [dbNotifications, setDbNotifications] = useState<any[]>([]);
   const [notificationsLoading, setNotificationsLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -186,16 +188,31 @@ export function UserShell({ children }: { children: React.ReactNode }) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data } = await supabase
-        .from("profiles")
-        .select("is_frozen")
-        .eq("id", user.id)
-        .single();
+      try {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("is_frozen, is_locked")
+          .eq("id", user.id)
+          .single();
 
-      setIsFrozen(data?.is_frozen ?? false);
+        if (!error && data) {
+          setIsFrozen(data.is_frozen ?? false);
+          setIsLocked((data as any).is_locked ?? false);
+        } else {
+          // Fallback if is_locked column not yet applied to db
+          const { data: fallback } = await supabase
+            .from("profiles")
+            .select("is_frozen")
+            .eq("id", user.id)
+            .single();
+          setIsFrozen(fallback?.is_frozen ?? false);
+        }
+      } catch {
+        // Safe fallback
+      }
 
       channel = supabase
-        .channel("freeze-watch")
+        .channel("freeze-lock-watch")
         .on(
           "postgres_changes",
           {
@@ -205,7 +222,9 @@ export function UserShell({ children }: { children: React.ReactNode }) {
             filter: `id=eq.${user.id}`,
           },
           (payload) => {
-            setIsFrozen((payload.new as { is_frozen?: boolean }).is_frozen ?? false);
+            const row = payload.new as { is_frozen?: boolean; is_locked?: boolean };
+            if (typeof row.is_frozen === "boolean") setIsFrozen(row.is_frozen);
+            if (typeof row.is_locked === "boolean") setIsLocked(row.is_locked);
           }
         )
         .subscribe();
@@ -609,6 +628,29 @@ export function UserShell({ children }: { children: React.ReactNode }) {
 
         {/* Page Content */}
         <main className={cn("mx-auto w-full p-4 md:p-8", showFreezeOverlay && "pointer-events-none")}>
+          {/* Show Account Locked banner in view-only mode */}
+          {isLocked && !isFrozen && (
+            <div className="mb-6 rounded-xl bg-amber-500/10 border border-amber-500/30 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
+              <div className="flex items-start sm:items-center gap-3">
+                <div className="p-2 rounded-lg bg-amber-500/20 text-amber-700 flex-shrink-0">
+                  <Lock className="h-5 w-5" strokeWidth={2.5} />
+                </div>
+                <div>
+                  <h3 className="text-[14px] font-bold text-amber-900">Account Locked (View-Only Mode)</h3>
+                  <p className="text-[13px] text-amber-800 mt-0.5">
+                    Your account is currently locked. You can browse your portfolio, balances, and history, but trading, currency exchanges, and fund transfers are restricted. Please contact support if you need assistance.
+                  </p>
+                </div>
+              </div>
+              <Link
+                href="/support"
+                className="whitespace-nowrap rounded-lg bg-amber-600 px-4 py-2 text-[13px] font-bold text-white shadow-sm hover:bg-amber-700 transition-colors flex-shrink-0"
+              >
+                Contact Support
+              </Link>
+            </div>
+          )}
+
           {/* Show KYC warning only when profile indicates not verified */}
        {userProfile && userProfile.kycStatus === null && (
   <div className="mb-6 rounded-xl bg-amber-50 border border-amber-200 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">

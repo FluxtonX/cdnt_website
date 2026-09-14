@@ -15,7 +15,10 @@ import {
   User, 
   HelpCircle,
   RotateCcw,
-  Tag
+  Tag,
+  FileText,
+  X,
+  Download
 } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 import { createClient } from "@/lib/supabase/client";
@@ -29,6 +32,9 @@ type Message = {
   text: string;
   time: string;
   status: MessageStatus;
+  attachmentUrl?: string | null;
+  attachmentName?: string | null;
+  attachmentType?: string | null;
 };
 
 // ─── Triage Options Structure ────────────────────────────────────────────────
@@ -84,10 +90,12 @@ export function SupportConsole({ onTicketCreated }: SupportConsoleProps) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
   const [isTimedOut, setIsTimedOut] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const { notify } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Inactivity timeout duration: 3 minutes (180,000 ms)
@@ -163,6 +171,9 @@ export function SupportConsole({ onTicketCreated }: SupportConsoleProps) {
             status: m.sender === "Client"
               ? (threadData.unread_count_admin === 0 ? "seen" : "delivered") as MessageStatus
               : "seen" as MessageStatus,
+            attachmentUrl: m.attachment_url || null,
+            attachmentName: m.attachment_name || null,
+            attachmentType: m.attachment_type || null,
           }));
           setMessages(formattedMsgs);
         } else {
@@ -222,6 +233,9 @@ export function SupportConsole({ onTicketCreated }: SupportConsoleProps) {
             text: newMsg.text,
             time: new Date(newMsg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
             status: newMsg.sender === "Client" ? "delivered" : "seen",
+            attachmentUrl: newMsg.attachment_url || null,
+            attachmentName: newMsg.attachment_name || null,
+            attachmentType: newMsg.attachment_type || null,
           };
 
           setMessages((current) => {
@@ -394,10 +408,13 @@ export function SupportConsole({ onTicketCreated }: SupportConsoleProps) {
 
   // ─── Send Message & Automated Ticket Creation ───────────────────────────
   const sendMessage = useCallback(async () => {
-    if (!draft.trim() || !user || sending || isTimedOut) return;
+    if ((!draft.trim() && !selectedFile) || !user || sending || isTimedOut) return;
     clearInactivityTimer();
-    const messageText = draft.trim();
+    const fileToSend = selectedFile;
+    const messageText = draft.trim() || (fileToSend ? `Sent an attachment: ${fileToSend.name}` : "");
     setDraft("");
+    setSelectedFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
     setSending(true);
 
     const currentTime = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -410,6 +427,9 @@ export function SupportConsole({ onTicketCreated }: SupportConsoleProps) {
       text: messageText,
       time: currentTime,
       status: "sending",
+      attachmentName: fileToSend?.name,
+      attachmentType: fileToSend?.type,
+      attachmentUrl: fileToSend ? URL.createObjectURL(fileToSend) : undefined,
     };
 
     setMessages((current) => [...current, tempUserMsg]);
@@ -467,14 +487,51 @@ export function SupportConsole({ onTicketCreated }: SupportConsoleProps) {
         }
       }
 
+      // If there is an attachment, upload to Supabase storage
+      let uploadedUrl: string | null = null;
+      let uploadedName: string | null = null;
+      let uploadedType: string | null = null;
+
+      if (fileToSend) {
+        try {
+          const fileExt = fileToSend.name.split(".").pop() || "bin";
+          const safeName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+          const filePath = `${currentThread.id}/${safeName}`;
+
+          const { error: uploadErr } = await supabase.storage
+            .from("chat-attachments")
+            .upload(filePath, fileToSend);
+
+          if (!uploadErr) {
+            const { data: urlData } = supabase.storage
+              .from("chat-attachments")
+              .getPublicUrl(filePath);
+            uploadedUrl = urlData.publicUrl;
+            uploadedName = fileToSend.name;
+            uploadedType = fileToSend.type;
+          } else {
+            console.error("Failed to upload attachment:", uploadErr);
+          }
+        } catch (uploadException) {
+          console.error("Chat attachment upload exception:", uploadException);
+        }
+      }
+
       // 1. Insert the user's message
+      const insertPayload: any = {
+        thread_id: currentThread.id,
+        sender: "Client",
+        text: messageText,
+      };
+      if (uploadedUrl) {
+        insertPayload.attachment_url = uploadedUrl;
+        insertPayload.attachment_name = uploadedName;
+        insertPayload.attachment_type = uploadedType;
+      }
+
       const { data: newMsg, error: msgErr } = await supabase
         .from("support_messages")
-        .insert({
-          thread_id: currentThread.id,
-          sender: "Client",
-          text: messageText,
-        })
+        .insert(insertPayload)
         .select()
         .single();
 
@@ -490,6 +547,9 @@ export function SupportConsole({ onTicketCreated }: SupportConsoleProps) {
                   text: newMsg.text,
                   time: new Date(newMsg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
                   status: "delivered" as MessageStatus,
+                  attachmentUrl: newMsg.attachment_url || uploadedUrl,
+                  attachmentName: newMsg.attachment_name || uploadedName,
+                  attachmentType: newMsg.attachment_type || uploadedType,
                 }
               : m
           )
@@ -744,6 +804,41 @@ export function SupportConsole({ onTicketCreated }: SupportConsoleProps) {
                 style={isUser ? { background: "linear-gradient(135deg, #0A3D91 0%, #1650AB 100%)" } : {}}
               >
                 <p className="break-words whitespace-pre-wrap">{message.text}</p>
+                {message.attachmentUrl && (
+                  <div className="mt-2">
+                    {message.attachmentType?.startsWith("image/") || /\.(png|jpg|jpeg|webp|gif)$/i.test(message.attachmentUrl) ? (
+                      <a
+                        href={message.attachmentUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block overflow-hidden rounded-xl border border-white/20 shadow-sm hover:opacity-95 transition-opacity"
+                      >
+                        <img
+                          src={message.attachmentUrl}
+                          alt={message.attachmentName || "Attachment"}
+                          className="max-h-52 max-w-full rounded-xl object-contain bg-black/5"
+                        />
+                      </a>
+                    ) : (
+                      <a
+                        href={message.attachmentUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        download={message.attachmentName || "attachment"}
+                        className={cn(
+                          "flex items-center gap-2 p-2 rounded-xl border transition-colors text-xs font-semibold",
+                          isUser
+                            ? "bg-white/10 hover:bg-white/20 border-white/20 text-white"
+                            : "bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-800"
+                        )}
+                      >
+                        <FileText className="h-4 w-4 shrink-0" />
+                        <span className="truncate flex-1">{message.attachmentName || "Download Attachment"}</span>
+                        <Download className="h-3.5 w-3.5 shrink-0" />
+                      </a>
+                    )}
+                  </div>
+                )}
                 <div className="mt-1.5 flex items-center justify-end gap-1.5">
                   <span className={isUser ? "text-[9px] text-white/70 font-semibold" : "text-[9px] text-slate-600 font-semibold"}>
                     {message.time}
@@ -832,11 +927,52 @@ export function SupportConsole({ onTicketCreated }: SupportConsoleProps) {
           </button>
         </div>
       ) : (
-        <div className="p-3.5 border-t border-banking-border bg-white">
-          <div className="flex items-center gap-2">
+        <div className="border-t border-banking-border bg-white">
+          {/* Attachment Preview Chip */}
+          {selectedFile && (
+            <div className="px-3.5 pt-2.5 flex items-center justify-between">
+              <div className="flex items-center gap-2 rounded-lg bg-blue-50 border border-blue-200 px-2.5 py-1.5 text-xs text-banking-blue font-medium">
+                <Paperclip className="h-3.5 w-3.5" />
+                <span className="truncate max-w-[220px] font-semibold">{selectedFile.name}</span>
+                <span className="text-[10px] text-slate-500">
+                  ({(selectedFile.size / 1024).toFixed(0)} KB)
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedFile(null);
+                    if (fileInputRef.current) fileInputRef.current.value = "";
+                  }}
+                  className="ml-1 text-slate-400 hover:text-red-500 transition-colors cursor-pointer"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="p-3.5 flex items-center gap-2">
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                if (file.size > 20 * 1024 * 1024) {
+                  notify({ title: "File too large", description: "Attachment must be under 20MB." });
+                  return;
+                }
+                setSelectedFile(file);
+              }}
+              className="hidden"
+            />
             <button 
               type="button"
-              className="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-banking-muted hover:bg-slate-100 transition-colors"
+              onClick={() => fileInputRef.current?.click()}
+              className={cn(
+                "grid h-10 w-10 shrink-0 place-items-center rounded-xl text-banking-muted hover:bg-slate-100 transition-colors cursor-pointer",
+                selectedFile && "text-banking-blue bg-blue-50 border border-blue-200"
+              )}
               title="Attach document or screenshot"
             >
               <Paperclip className="h-4 w-4" />
@@ -856,7 +992,9 @@ export function SupportConsole({ onTicketCreated }: SupportConsoleProps) {
               }}
               className="h-10 flex-1 rounded-xl border border-slate-200 px-3.5 outline-none focus:border-banking-blue focus:ring-2 focus:ring-blue-100 text-xs sm:text-sm text-slate-900 placeholder:text-slate-600"
               placeholder={
-                triageStep === "category"
+                selectedFile
+                  ? "Add a message (optional)..."
+                  : triageStep === "category"
                   ? "Select an issue above or describe your question..."
                   : triageStep === "subcategory"
                   ? "Select a subtopic above or type your issue..."
@@ -866,7 +1004,7 @@ export function SupportConsole({ onTicketCreated }: SupportConsoleProps) {
             />
             <button
               onClick={sendMessage}
-              disabled={!draft.trim() || sending}
+              disabled={(!draft.trim() && !selectedFile) || sending}
               className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-banking-blue text-white shadow-xs disabled:opacity-40 hover:bg-blue-700 transition-all cursor-pointer"
               title="Send message"
             >

@@ -75,13 +75,11 @@ export function CryptoInvesting() {
                   }`}
                 >
                   <div className="flex justify-between items-start mb-6">
-                    {wallet.symbol === "CAD" ? (
-                      <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
-                        <span className="text-emerald-700 font-bold text-lg">$</span>
-                      </div>
-                    ) : (
-                      <CoinLogo src={wallet.image} symbol={wallet.symbol} className="h-10 w-10 p-1.5" />
-                    )}
+                    <CoinLogo
+                      src={wallet.image}
+                      symbol={wallet.symbol}
+                      className={wallet.symbol === "CAD" ? "h-10 w-10 p-0 overflow-hidden border-slate-200" : "h-10 w-10 p-1.5"}
+                    />
                     <div className="px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700">
                       {wallet.change || "Crypto"}
                     </div>

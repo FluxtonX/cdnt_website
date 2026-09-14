@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, ReactNode } from "react";
 import Link from "next/link";
-import { ArrowLeft, AlertCircle, Loader2, RefreshCw } from "lucide-react";
+import { ArrowLeft, AlertCircle, Loader2, RefreshCw, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/ui/toast";
@@ -89,6 +89,24 @@ export function WithdrawWorkspace() {
   const cadRates = metrics?.cadRates || {};
 
   // Auto-select CAD wallet
+  const [isLocked, setIsLocked] = useState(false);
+
+  useEffect(() => {
+    async function checkLocked() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const { data } = await supabase
+          .from("profiles")
+          .select("is_locked")
+          .eq("id", user.id)
+          .single();
+        if (data) setIsLocked(Boolean((data as any).is_locked));
+      } catch {}
+    }
+    checkLocked();
+  }, [supabase]);
+
   useEffect(() => {
     setSelectedAsset("CAD");
     /*
@@ -494,6 +512,18 @@ export function WithdrawWorkspace() {
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
             <h2 className="mb-8 text-center text-[18px] font-bold text-[#0A0F2C]">Withdraw Funds</h2>
 
+            {isLocked && (
+              <div className="mb-6 rounded-xl bg-amber-50 border border-amber-200 p-4 flex items-start gap-3">
+                <Lock className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
+                <div>
+                  <h4 className="text-sm font-bold text-amber-900">Withdrawals Disabled (Account Locked)</h4>
+                  <p className="text-xs text-amber-700 mt-0.5">
+                    Your account is currently in view-only locked mode. Fund withdrawals and transfers are temporarily restricted. Please contact support to unlock.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Select Asset */}
             <div className="mb-6">
               <label className="mb-2 block text-[14px] font-bold text-[#0A0F2C]">Withdrawal Source</label>
@@ -725,7 +755,7 @@ export function WithdrawWorkspace() {
                 setErrorMsg(null);
                 setStep(2);
               }}
-              disabled={!amount || numAmount <= 0 || metricsLoading || rateLoading}
+              disabled={!amount || numAmount <= 0 || metricsLoading || rateLoading || isLocked}
               className="w-full rounded-[14px] bg-[#113285] py-4 text-[15px] font-bold text-white transition-colors hover:bg-[#0c2461] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Continue
@@ -904,7 +934,7 @@ export function WithdrawWorkspace() {
               </button>
               <button
                 className="flex-1 rounded-[14px] bg-[#113285] py-4 text-[15px] font-bold text-white transition-colors hover:bg-[#0c2461] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                disabled={twoFa.length < 6 || submitting}
+                disabled={twoFa.length < 6 || submitting || isLocked}
                 onClick={handleConfirmWithdrawal}
               >
                 {submitting ? (

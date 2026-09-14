@@ -15,7 +15,8 @@ import {
   Wallet,
   Loader2,
   Check,
-  AlertCircle
+  AlertCircle,
+  Lock
 } from "lucide-react";
 import { COINS } from "@/config/coins";
 import { LiveCryptoChart } from "@/components/market/LiveCryptoChart";
@@ -80,6 +81,23 @@ export default function ExchangePage() {
   const [loadingBalances, setLoadingBalances] = React.useState(true);
   const [tradeLoading, setTradeLoading] = React.useState(false);
   const [toast, setToast] = React.useState<{ type: "success" | "error"; msg: string } | null>(null);
+  const [isLocked, setIsLocked] = React.useState(false);
+
+  React.useEffect(() => {
+    async function checkLocked() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const { data } = await supabase
+          .from("profiles")
+          .select("is_locked")
+          .eq("id", user.id)
+          .single();
+        if (data) setIsLocked(Boolean((data as any).is_locked));
+      } catch {}
+    }
+    checkLocked();
+  }, []);
 
   // Buy/Sell content from CMS
   const [subheading, setSubheading] = React.useState("Live Binance market data for crypto charting and market stats");
@@ -520,6 +538,18 @@ export default function ExchangePage() {
 
           {orderPanelOpen && (
             <>
+              {isLocked && (
+                <div className="mb-4 rounded-xl bg-amber-50 border border-amber-200 p-3 flex items-start gap-2.5">
+                  <Lock className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                  <div>
+                    <h4 className="text-xs font-bold text-amber-900">Trading Disabled (Account Locked)</h4>
+                    <p className="text-[11px] text-amber-700 mt-0.5">
+                      Your account is currently in view-only locked mode. You can view live market charts and rates, but order placement is restricted.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 rounded-xl bg-slate-50 p-1">
                 <button
                   type="button"
@@ -748,10 +778,12 @@ export default function ExchangePage() {
               <button
                 type="button"
                 onClick={handleOrderExecute}
-                disabled={tradeLoading || priceLoading || !priceReady || !amount || Number(amount) <= 0 || hasBalanceError}
+                disabled={tradeLoading || priceLoading || !priceReady || !amount || Number(amount) <= 0 || hasBalanceError || isLocked}
                 className={cn(
                   "mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-xl text-sm font-black text-white transition-colors disabled:opacity-50",
-                  hasBalanceError
+                  isLocked
+                    ? "bg-slate-400 hover:bg-slate-400 cursor-not-allowed"
+                    : hasBalanceError
                     ? "bg-amber-600 hover:bg-amber-700 cursor-not-allowed"
                     : side === "buy" ? "bg-emerald-500 hover:bg-emerald-600" : "bg-[#113285] hover:bg-[#0D266A]",
                 )}
@@ -760,6 +792,11 @@ export default function ExchangePage() {
                   <>
                     <Loader2 className="h-4 w-4 animate-spin text-white" />
                     Executing...
+                  </>
+                ) : isLocked ? (
+                  <>
+                    <Lock className="h-4 w-4" />
+                    Trading Disabled (Locked)
                   </>
                 ) : hasBalanceError ? (
                   isInsufficientFiat
