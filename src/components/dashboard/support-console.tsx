@@ -94,7 +94,7 @@ export function SupportConsole({ onTicketCreated }: SupportConsoleProps) {
 
   const { notify } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -977,8 +977,9 @@ export function SupportConsole({ onTicketCreated }: SupportConsoleProps) {
             >
               <Paperclip className="h-4 w-4" />
             </button>
-            <input
+            <textarea
               ref={inputRef}
+              rows={1}
               value={draft}
               onChange={(event) => {
                 setDraft(event.target.value);
@@ -990,7 +991,7 @@ export function SupportConsole({ onTicketCreated }: SupportConsoleProps) {
                   sendMessage();
                 }
               }}
-              className="h-10 flex-1 rounded-xl border border-slate-200 px-3.5 outline-none focus:border-banking-blue focus:ring-2 focus:ring-blue-100 text-xs sm:text-sm text-slate-900 placeholder:text-slate-600"
+              className="min-h-[40px] max-h-32 py-2.5 flex-1 rounded-xl border border-slate-200 px-3.5 outline-none focus:border-banking-blue focus:ring-2 focus:ring-blue-100 text-xs sm:text-sm text-slate-900 placeholder:text-slate-600 resize-none overflow-y-auto leading-relaxed"
               placeholder={
                 selectedFile
                   ? "Add a message (optional)..."
@@ -998,7 +999,7 @@ export function SupportConsole({ onTicketCreated }: SupportConsoleProps) {
                   ? "Select an issue above or describe your question..."
                   : triageStep === "subcategory"
                   ? "Select a subtopic above or type your issue..."
-                  : "Describe your issue in detail..."
+                  : "Describe your issue in detail (Shift+Enter for new line)..."
               }
               disabled={sending}
             />

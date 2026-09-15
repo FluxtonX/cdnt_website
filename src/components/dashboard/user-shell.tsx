@@ -53,6 +53,7 @@ export function UserShell({ children }: { children: React.ReactNode }) {
   const [profileLoading, setProfileLoading] = useState(true);
   const [isFrozen, setIsFrozen] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
+  const [lockReason, setLockReason] = useState<string | null>(null);
   const [dbNotifications, setDbNotifications] = useState<any[]>([]);
   const [notificationsLoading, setNotificationsLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -191,21 +192,25 @@ export function UserShell({ children }: { children: React.ReactNode }) {
       try {
         const { data, error } = await supabase
           .from("profiles")
-          .select("is_frozen, is_locked")
+          .select("is_frozen, is_locked, lock_reason")
           .eq("id", user.id)
           .single();
 
         if (!error && data) {
           setIsFrozen(data.is_frozen ?? false);
           setIsLocked((data as any).is_locked ?? false);
+          setLockReason((data as any).lock_reason ?? null);
         } else {
-          // Fallback if is_locked column not yet applied to db
+          // Fallback if lock_reason column not yet applied to db
           const { data: fallback } = await supabase
             .from("profiles")
-            .select("is_frozen")
+            .select("is_frozen, is_locked")
             .eq("id", user.id)
             .single();
-          setIsFrozen(fallback?.is_frozen ?? false);
+          if (fallback) {
+            setIsFrozen(fallback.is_frozen ?? false);
+            setIsLocked((fallback as any).is_locked ?? false);
+          }
         }
       } catch {
         // Safe fallback
@@ -222,9 +227,10 @@ export function UserShell({ children }: { children: React.ReactNode }) {
             filter: `id=eq.${user.id}`,
           },
           (payload) => {
-            const row = payload.new as { is_frozen?: boolean; is_locked?: boolean };
+            const row = payload.new as { is_frozen?: boolean; is_locked?: boolean; lock_reason?: string | null };
             if (typeof row.is_frozen === "boolean") setIsFrozen(row.is_frozen);
             if (typeof row.is_locked === "boolean") setIsLocked(row.is_locked);
+            if ("lock_reason" in row) setLockReason(row.lock_reason ?? null);
           }
         )
         .subscribe();
@@ -640,6 +646,12 @@ export function UserShell({ children }: { children: React.ReactNode }) {
                   <p className="text-[13px] text-amber-800 mt-0.5">
                     Your account is currently locked. You can browse your portfolio, balances, and history, but trading, currency exchanges, and fund transfers are restricted. Please contact support if you need assistance.
                   </p>
+                  {lockReason && (
+                    <div className="mt-2.5 flex items-start gap-2 rounded-lg bg-amber-500/15 border border-amber-500/30 px-3 py-2 text-[12px] text-amber-950">
+                      <span className="font-bold text-amber-900 shrink-0">Admin Message:</span>
+                      <span className="break-words whitespace-pre-wrap font-medium">{lockReason}</span>
+                    </div>
+                  )}
                 </div>
               </div>
               <Link
