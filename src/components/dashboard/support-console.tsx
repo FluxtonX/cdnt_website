@@ -72,6 +72,14 @@ const CATEGORIES: CategoryOption[] = [
   },
 ];
 
+function isImageAttachment(url?: string | null, name?: string | null, type?: string | null): boolean {
+  if (type && type.startsWith("image/")) return true;
+  const cleanUrl = (url || "").split("?")[0].toLowerCase();
+  const cleanName = (name || "").toLowerCase();
+  const imageRegex = /\.(png|jpe?g|webp|gif|svg|bmp|ico|tiff)$/i;
+  return imageRegex.test(cleanUrl) || imageRegex.test(cleanName);
+}
+
 interface SupportConsoleProps {
   onTicketCreated?: () => void;
 }
@@ -250,9 +258,12 @@ export function SupportConsole({ onTicketCreated }: SupportConsoleProps) {
               return updated;
             }
 
-            // Check for temp-id messages matching text (optimistic adds)
+            // Check for temp-id messages matching text or attachment (optimistic adds)
             const tempIndex = current.findIndex(
-              (m) => m.id.startsWith("temp-") && m.text === newMsg.text && m.from === "user"
+              (m) =>
+                m.id.startsWith("temp-") &&
+                (m.text === newMsg.text || (m.attachmentName && m.attachmentName === newMsg.attachment_name)) &&
+                m.from === "user"
             );
             if (tempIndex !== -1) {
               const updated = [...current];
@@ -487,33 +498,43 @@ export function SupportConsole({ onTicketCreated }: SupportConsoleProps) {
         }
       }
 
-      // If there is an attachment, upload to Supabase storage
+      // If there is an attachment, upload to Supabase storage via server route
       let uploadedUrl: string | null = null;
       let uploadedName: string | null = null;
       let uploadedType: string | null = null;
 
       if (fileToSend) {
         try {
-          const fileExt = fileToSend.name.split(".").pop() || "bin";
-          const safeName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-          const filePath = `${currentThread.id}/${safeName}`;
+          const formData = new FormData();
+          formData.append("file", fileToSend);
+          formData.append("threadId", currentThread.id);
 
-          const { error: uploadErr } = await supabase.storage
-            .from("chat-attachments")
-            .upload(filePath, fileToSend);
+          const uploadRes = await fetch("/api/support/upload", {
+            method: "POST",
+            body: formData,
+          });
 
-          if (!uploadErr) {
-            const { data: urlData } = supabase.storage
-              .from("chat-attachments")
-              .getPublicUrl(filePath);
-            uploadedUrl = urlData.publicUrl;
-            uploadedName = fileToSend.name;
-            uploadedType = fileToSend.type;
-          } else {
-            console.error("Failed to upload attachment:", uploadErr);
+          if (!uploadRes.ok) {
+            const errData = await uploadRes.json().catch(() => ({}));
+            throw new Error(errData.error || `Upload failed with status ${uploadRes.status}`);
           }
-        } catch (uploadException) {
+
+          const uploadData = await uploadRes.json();
+          uploadedUrl = uploadData.url;
+          uploadedName = uploadData.name;
+          uploadedType = uploadData.type;
+        } catch (uploadException: any) {
           console.error("Chat attachment upload exception:", uploadException);
+          notify({
+            title: "Upload failed",
+            description: uploadException.message || "Failed to upload attachment.",
+          });
+          // Remove optimistic message and restore input
+          setMessages((current) => current.filter((m) => m.id !== tempId));
+          setSelectedFile(fileToSend);
+          setDraft(draft);
+          setSending(false);
+          return;
         }
       }
 
@@ -805,18 +826,19 @@ export function SupportConsole({ onTicketCreated }: SupportConsoleProps) {
               >
                 <p className="break-words whitespace-pre-wrap">{message.text}</p>
                 {message.attachmentUrl && (
-                  <div className="mt-2">
-                    {message.attachmentType?.startsWith("image/") || /\.(png|jpg|jpeg|webp|gif)$/i.test(message.attachmentUrl) ? (
+                  <div className="mt-2.5">
+                    {isImageAttachment(message.attachmentUrl, message.attachmentName, message.attachmentType) ? (
                       <a
                         href={message.attachmentUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="block overflow-hidden rounded-xl border border-white/20 shadow-sm hover:opacity-95 transition-opacity"
+                        className="block overflow-hidden rounded-xl border border-white/20 shadow-sm hover:opacity-95 transition-opacity max-w-sm"
                       >
                         <img
                           src={message.attachmentUrl}
                           alt={message.attachmentName || "Attachment"}
-                          className="max-h-52 max-w-full rounded-xl object-contain bg-black/5"
+                          className="max-h-60 max-w-full rounded-xl object-contain bg-black/10 cursor-zoom-in"
+                          loading="lazy"
                         />
                       </a>
                     ) : (
@@ -826,15 +848,33 @@ export function SupportConsole({ onTicketCreated }: SupportConsoleProps) {
                         rel="noopener noreferrer"
                         download={message.attachmentName || "attachment"}
                         className={cn(
-                          "flex items-center gap-2 p-2 rounded-xl border transition-colors text-xs font-semibold",
+                          "flex items-center gap-2.5 p-2.5 rounded-xl border transition-all text-xs font-semibold",
                           isUser
                             ? "bg-white/10 hover:bg-white/20 border-white/20 text-white"
                             : "bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-800"
                         )}
                       >
-                        <FileText className="h-4 w-4 shrink-0" />
-                        <span className="truncate flex-1">{message.attachmentName || "Download Attachment"}</span>
-                        <Download className="h-3.5 w-3.5 shrink-0" />
+                        <div className={cn(
+                          "h-8 w-8 rounded-lg flex items-center justify-center shrink-0",
+                          isUser ? "bg-white/20 text-white" : "bg-blue-50 text-blue-700"
+                        )}>
+                          <FileText className="h-4 w-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="truncate font-semibold">{message.attachmentName || "Download Attachment"}</p>
+                          <p className={cn(
+                            "text-[10px] uppercase font-mono tracking-wider",
+                            isUser ? "text-blue-200" : "text-slate-500"
+                          )}>
+                            {message.attachmentName?.split(".").pop() || "FILE"}
+                          </p>
+                        </div>
+                        <div className={cn(
+                          "p-1.5 rounded-lg transition-colors shrink-0",
+                          isUser ? "hover:bg-white/20 text-white" : "hover:bg-slate-200 text-slate-500"
+                        )}>
+                          <Download className="h-4 w-4" />
+                        </div>
                       </a>
                     )}
                   </div>
