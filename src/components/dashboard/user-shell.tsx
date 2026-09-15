@@ -5,14 +5,14 @@ import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Image from "next/image";
 import { useState, useRef, useEffect, useMemo } from "react";
-import { 
-  Bell, 
+import {
+  Bell,
   ChevronDown,
-  LayoutDashboard, 
-  Wallet, 
+  LayoutDashboard,
+  Wallet,
   BarChart3,
-  ArrowRightLeft, 
-  Settings, 
+  ArrowRightLeft,
+  Settings,
   HelpCircle,
   LogOut,
   User,
@@ -48,7 +48,7 @@ export function UserShell({ children }: { children: React.ReactNode }) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
-  
+
   const [userProfile, setUserProfile] = useState<{ email: string, fullName: string, initials: string, isKycVerified: boolean, kycStatus: string | null } | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [isFrozen, setIsFrozen] = useState(false);
@@ -263,7 +263,7 @@ export function UserShell({ children }: { children: React.ReactNode }) {
             .select("id", { count: "exact", head: true })
             .eq("user_id", user.id)
             .eq("status", "approved");
-          
+
           setIsHighValue((count || 0) > 0);
         }
       } catch (e) {
@@ -272,7 +272,7 @@ export function UserShell({ children }: { children: React.ReactNode }) {
         setNotificationsLoading(false);
       }
     }
-    
+
     fetchNotifications();
 
     const channel = supabase
@@ -294,7 +294,7 @@ export function UserShell({ children }: { children: React.ReactNode }) {
     if (saved) {
       try {
         setDeletedIds(JSON.parse(saved));
-      } catch (e) {}
+      } catch (e) { }
     }
 
     const handleStorageChange = () => {
@@ -302,10 +302,10 @@ export function UserShell({ children }: { children: React.ReactNode }) {
       if (updated) {
         try {
           setDeletedIds(JSON.parse(updated));
-        } catch (e) {}
+        } catch (e) { }
       }
     };
-    
+
     window.addEventListener("storage", handleStorageChange);
     return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
@@ -358,9 +358,9 @@ export function UserShell({ children }: { children: React.ReactNode }) {
               onClick={(e) => handleFrozenNav("/", e)}
               className={cn("flex items-center justify-center w-full", frozenNavClass("/"))}
             >
-              <Image 
-                src="/bluelogo.png" 
-                alt="CDNT" 
+              <Image
+                src="/bluelogo.png"
+                alt="CDNT"
                 width={100}
                 height={40}
                 className=" h-auto "
@@ -369,7 +369,7 @@ export function UserShell({ children }: { children: React.ReactNode }) {
               />
             </Link>
           </div>
-          
+
           {/* Nav Links */}
           <nav className="flex-1 space-y-1.5 px-4">
             {sidebarNav.map((item) => {
@@ -383,8 +383,8 @@ export function UserShell({ children }: { children: React.ReactNode }) {
                   onClick={(e) => handleFrozenNav(href, e)}
                   className={cn(
                     "flex items-center gap-3.5 rounded-xl px-4 py-3 text-[14px] font-medium transition-colors",
-                    active 
-                      ? "bg-[#113285] text-white shadow-md shadow-blue-900/10" 
+                    active
+                      ? "bg-[#113285] text-white shadow-md shadow-blue-900/10"
                       : "text-[#4A5568] hover:bg-gray-50 hover:text-[#0A0F2C]",
                     frozenNavClass(href)
                   )}
@@ -395,10 +395,10 @@ export function UserShell({ children }: { children: React.ReactNode }) {
               );
             })}
           </nav>
-          
+
           {/* Sign Out */}
           <div className="p-4 mb-4">
-            <button 
+            <button
               suppressHydrationWarning
               onClick={(e) => {
                 if (isFrozen) {
@@ -423,7 +423,7 @@ export function UserShell({ children }: { children: React.ReactNode }) {
       <div className="min-w-0 pb-20 lg:pb-0">
         {/* Announcement Banner */}
         <AnnouncementBanner />
-        
+
         {/* Top Header */}
         <header className={cn("sticky top-0 z-30 flex h-[88px] items-center justify-between border-b border-gray-100 bg-white px-4 sm:px-6 md:px-8", showFreezeOverlay && "pointer-events-none")}>
           <div className="flex flex-col justify-center min-w-0 mr-4">
@@ -434,10 +434,10 @@ export function UserShell({ children }: { children: React.ReactNode }) {
               {headerTagline}
             </p>
           </div>
-          
+
           <div className="flex items-center gap-3 sm:gap-6 flex-shrink-0">
             <div className="relative" ref={notificationsRef}>
-              <button 
+              <button
                 suppressHydrationWarning
                 onClick={(e) => {
                   if (isFrozen) {
@@ -469,7 +469,7 @@ export function UserShell({ children }: { children: React.ReactNode }) {
                   <div className="flex items-center justify-between px-4 py-2.5">
                     <span className="text-xs font-bold text-gray-900">Notifications</span>
                     {unreadCount > 0 && (
-                      <button 
+                      <button
                         suppressHydrationWarning
                         onClick={() => {
                           visibleNotifications.forEach(n => markNotificationAsRead(n.id));
@@ -494,11 +494,11 @@ export function UserShell({ children }: { children: React.ReactNode }) {
                     ) : (
                       visibleNotifications.slice(0, 5).map((n: any) => {
                         const Icon = n.type === "Info" ? Info :
-                                      n.type === "Warning" ? AlertCircle :
-                                      n.type === "Success" ? CheckCircle2 : XCircle;
+                          n.type === "Warning" ? AlertCircle :
+                            n.type === "Success" ? CheckCircle2 : XCircle;
                         return (
-                          <div 
-                            key={n.id} 
+                          <div
+                            key={n.id}
                             onClick={(e) => {
                               markNotificationAsRead(n.id);
                               // Route to transactions if it's a deposit or withdrawal notification
@@ -518,10 +518,10 @@ export function UserShell({ children }: { children: React.ReactNode }) {
                             }}
                             className="p-3.5 flex gap-3 hover:bg-gray-50/50 transition-colors cursor-pointer"
                           >
-                            <div className={cn("grid h-8 w-8 place-items-center rounded-lg shrink-0", 
+                            <div className={cn("grid h-8 w-8 place-items-center rounded-lg shrink-0",
                               n.type === "Info" ? "bg-blue-50 text-[#113285]" :
-                              n.type === "Warning" ? "bg-amber-50 text-amber-600" :
-                              n.type === "Success" ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
+                                n.type === "Warning" ? "bg-amber-50 text-amber-600" :
+                                  n.type === "Success" ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
                             )}>
                               <Icon className="h-4 w-4" />
                             </div>
@@ -542,8 +542,8 @@ export function UserShell({ children }: { children: React.ReactNode }) {
                   </div>
 
                   <div className="py-1 px-2">
-                    <Link 
-                      href="/notifications" 
+                    <Link
+                      href="/notifications"
                       onClick={(e) => {
                         handleFrozenNav("/notifications", e);
                         if (!e.defaultPrevented) setIsNotificationsOpen(false);
@@ -559,11 +559,11 @@ export function UserShell({ children }: { children: React.ReactNode }) {
                 </div>
               )}
             </div>
-            
+
             <div className="h-6 w-px bg-gray-200" />
-            
+
             <div className="relative" ref={dropdownRef}>
-              <button 
+              <button
                 suppressHydrationWarning
                 onClick={(e) => {
                   if (isFrozen) {
@@ -608,7 +608,7 @@ export function UserShell({ children }: { children: React.ReactNode }) {
                     </Link>
                   </div>
                   <div className="py-1">
-                    <button 
+                    <button
                       suppressHydrationWarning
                       onClick={(e) => {
                         if (isFrozen) {
@@ -648,7 +648,7 @@ export function UserShell({ children }: { children: React.ReactNode }) {
                   </p>
                   {lockReason && (
                     <div className="mt-2.5 flex items-start gap-2 rounded-lg bg-amber-500/15 border border-amber-500/30 px-3 py-2 text-[12px] text-amber-950">
-                      <span className="font-bold text-amber-900 shrink-0">Admin Message:</span>
+                      <span className="font-bold text-amber-900 shrink-0">Message:</span>
                       <span className="break-words whitespace-pre-wrap font-medium">{lockReason}</span>
                     </div>
                   )}
@@ -664,26 +664,26 @@ export function UserShell({ children }: { children: React.ReactNode }) {
           )}
 
           {/* Show KYC warning only when profile indicates not verified */}
-       {userProfile && userProfile.kycStatus === null && (
-  <div className="mb-6 rounded-xl bg-amber-50 border border-amber-200 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
-    <div className="flex items-start sm:items-center gap-3">
-      <div className="mt-0.5 sm:mt-0 flex-shrink-0">
-        <AlertCircle className="h-5 w-5 text-amber-500" strokeWidth={2.5} />
-      </div>
-      <div>
-        <h3 className="text-[14px] font-bold text-amber-900">Verification Incomplete</h3>
-        <p className="text-[13px] text-amber-700 mt-0.5">Please complete your KYC verification to unlock full account features and higher limits.</p>
-      </div>
-    </div>
-    <Link href="/kyc" onClick={(e) => handleFrozenNav("/kyc", e)} className={cn("whitespace-nowrap rounded-lg bg-amber-500 px-4 py-2 text-[13px] font-bold text-white shadow-sm hover:bg-amber-600 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 flex-shrink-0", frozenNavClass("/kyc"))}>Complete Verification</Link>
-  </div>
-)}
+          {userProfile && userProfile.kycStatus === null && (
+            <div className="mb-6 rounded-xl bg-amber-50 border border-amber-200 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
+              <div className="flex items-start sm:items-center gap-3">
+                <div className="mt-0.5 sm:mt-0 flex-shrink-0">
+                  <AlertCircle className="h-5 w-5 text-amber-500" strokeWidth={2.5} />
+                </div>
+                <div>
+                  <h3 className="text-[14px] font-bold text-amber-900">Verification Incomplete</h3>
+                  <p className="text-[13px] text-amber-700 mt-0.5">Please complete your KYC verification to unlock full account features and higher limits.</p>
+                </div>
+              </div>
+              <Link href="/kyc" onClick={(e) => handleFrozenNav("/kyc", e)} className={cn("whitespace-nowrap rounded-lg bg-amber-500 px-4 py-2 text-[13px] font-bold text-white shadow-sm hover:bg-amber-600 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 flex-shrink-0", frozenNavClass("/kyc"))}>Complete Verification</Link>
+            </div>
+          )}
           {children}
         </main>
       </div>
 
       {/* Mobile Bottom Navigation */}
-      <nav 
+      <nav
         className={cn(
           "fixed bottom-0 left-0 right-0 z-50 flex h-20 items-center border-t border-gray-200 bg-white px-2 shadow-[0_-4px_15px_rgba(0,0,0,0.03)] lg:hidden",
           showFreezeOverlay && "pointer-events-none"
@@ -695,7 +695,7 @@ export function UserShell({ children }: { children: React.ReactNode }) {
             const href = isFrozen && item.label === "Help & Support" ? FREEZE_SUPPORT_PATH : item.href;
             const active = pathname === href || pathname.startsWith(`${href}/`);
             const Icon = item.icon;
-            
+
             // Shorten label for mobile if needed
             const shortLabel = item.label === "Help & Support" ? "Support" : item.label;
 
@@ -706,8 +706,8 @@ export function UserShell({ children }: { children: React.ReactNode }) {
                 onClick={(e) => handleFrozenNav(href, e)}
                 className={cn(
                   "flex flex-1 min-w-[64px] flex-col items-center justify-center gap-1 rounded-xl p-1 transition-colors",
-                  active 
-                    ? "text-[#113285]" 
+                  active
+                    ? "text-[#113285]"
                     : "text-[#718096] hover:bg-gray-50 hover:text-[#0A0F2C]",
                   frozenNavClass(href)
                 )}
