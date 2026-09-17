@@ -29,6 +29,10 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning className={`${plusJakartaSans.variable} ${inter.variable}`}>
       <head>
+        <link rel="icon" href="/bluelogo.png" type="image/png" />
+        <link rel="icon" href="/icon.png" type="image/png" sizes="192x192" />
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="apple-touch-icon" href="/apple-icon.png" />
         <OrganizationJsonLd />
         <WebSiteJsonLd />
       </head>
