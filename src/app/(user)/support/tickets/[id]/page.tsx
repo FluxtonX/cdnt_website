@@ -16,6 +16,56 @@ import { useToast } from "@/components/ui/toast";
 
 
 
+function formatChatDateDivider(dateStr?: string | null): string {
+  if (!dateStr) return "Today";
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return "Today";
+
+  const now = new Date();
+  const isToday =
+    date.getDate() === now.getDate() &&
+    date.getMonth() === now.getMonth() &&
+    date.getFullYear() === now.getFullYear();
+
+  if (isToday) return "Today";
+
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const isYesterday =
+    date.getDate() === yesterday.getDate() &&
+    date.getMonth() === yesterday.getMonth() &&
+    date.getFullYear() === yesterday.getFullYear();
+
+  if (isYesterday) return "Yesterday";
+
+  if (date.getFullYear() === now.getFullYear()) {
+    return date.toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" });
+  }
+
+  return date.toLocaleDateString([], { weekday: "long", month: "short", day: "numeric", year: "numeric" });
+}
+
+function formatMessageTime(dateStr?: string | null): string {
+  if (!dateStr) return "";
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return "";
+  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+function formatFullDateTime(dateStr?: string | null): string {
+  if (!dateStr) return "";
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return "";
+  return date.toLocaleString([], {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 export default function TicketDetailPage({ params }: { params: Promise<{ id: string }> }) {
 
   const [thread, setThread] = useState<any>(null);
@@ -234,25 +284,39 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
 
               <p className="text-sm text-banking-muted text-center py-8">No messages yet</p>
 
-            ) : messages.map((msg) => (
+            ) : messages.map((msg, index) => {
+              const prevMsg = index > 0 ? messages[index - 1] : null;
+              const currentDateKey = msg.created_at ? new Date(msg.created_at).toDateString() : "";
+              const prevDateKey = prevMsg?.created_at ? new Date(prevMsg.created_at).toDateString() : "";
+              const showDateDivider = !prevMsg || (Boolean(currentDateKey) && currentDateKey !== prevDateKey);
 
-              <div key={msg.id} className={msg.sender === "Client" ? "flex justify-end" : "flex justify-start"}>
-
-                <div className={msg.sender === "Client" ? "max-w-[78%] rounded-lg bg-banking-blue p-3 text-sm text-white" : "max-w-[78%] rounded-lg bg-banking-offWhite p-3 text-sm text-banking-muted"}>
-
-                  <p>{msg.text}</p>
-
-                  <p className="text-[10px] mt-1 opacity-70">
-
-                    {new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-
-                  </p>
-
+              return (
+                <div key={msg.id} className="space-y-2">
+                  {showDateDivider && (
+                    <div className="flex items-center justify-center my-3 select-none">
+                      <div className="flex items-center gap-2">
+                        <div className="h-px w-10 bg-banking-border" />
+                        <span className="px-3 py-0.5 text-[10px] font-bold tracking-wide uppercase bg-banking-offWhite text-banking-muted rounded-full border border-banking-border shadow-2xs">
+                          {formatChatDateDivider(msg.created_at)}
+                        </span>
+                        <div className="h-px w-10 bg-banking-border" />
+                      </div>
+                    </div>
+                  )}
+                  <div className={msg.sender === "Client" ? "flex justify-end" : "flex justify-start"}>
+                    <div className={msg.sender === "Client" ? "max-w-[78%] rounded-lg bg-banking-blue p-3 text-sm text-white shadow-xs" : "max-w-[78%] rounded-lg bg-banking-offWhite border border-banking-border p-3 text-sm text-banking-text shadow-xs"}>
+                      <p className="whitespace-pre-wrap break-words">{msg.text}</p>
+                      <p 
+                        className={msg.sender === "Client" ? "text-[10px] mt-1 text-white/70 font-mono text-right cursor-default" : "text-[10px] mt-1 text-banking-muted font-mono cursor-default"}
+                        title={formatFullDateTime(msg.created_at)}
+                      >
+                        {formatMessageTime(msg.created_at)}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-
-              </div>
-
-            ))}
+              );
+            })}
 
             <div ref={messagesEndRef} />
 

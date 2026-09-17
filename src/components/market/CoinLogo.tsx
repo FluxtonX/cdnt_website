@@ -3,6 +3,17 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
+export function CanadaFlagIcon({ className }: { className?: string }) {
+  return (
+    <img
+      src="/assets/cad-logo.png"
+      alt="CAD Flag"
+      className={cn("h-full w-full object-contain", className)}
+      loading="lazy"
+    />
+  );
+}
+
 export function CoinLogo({
   src,
   symbol,
@@ -15,6 +26,7 @@ export function CoinLogo({
   imageClassName?: string;
 }) {
   const [failed, setFailed] = React.useState(false);
+  const isCad = symbol?.toUpperCase() === "CAD" || symbol?.toUpperCase() === "CADUSDT";
 
   return (
     <span
@@ -23,7 +35,9 @@ export function CoinLogo({
         className,
       )}
     >
-      {src && !failed ? (
+      {isCad ? (
+        <CanadaFlagIcon className={imageClassName} />
+      ) : src && !failed ? (
         <img
           src={src}
           alt={`${symbol} logo`}

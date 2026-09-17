@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { CONTAINER } from "./Navbar";
 import type { LandingHeroContent } from "@/lib/content-defaults";
@@ -76,12 +77,18 @@ export default function HeroSection({ content }: { content: LandingHeroContent }
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.75 }}
           >
-            <button className="bg-primary-navy text-white rounded-full px-7 py-3.5 font-semibold text-[15px] hover:bg-blue-900 transition-all flex items-center justify-center gap-2">
+            <Link
+              href="/register"
+              className="bg-primary-navy text-white rounded-full px-7 py-3.5 font-semibold text-[15px] hover:bg-blue-900 transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
               {content.btn1} <span>→</span>
-            </button>
-            <button className="bg-white border border-gray-200 text-gray-800 rounded-full px-7 py-3.5 font-medium text-[15px] hover:bg-gray-50 hover:border-gray-300 transition-all flex items-center justify-center gap-2">
+            </Link>
+            <Link
+              href="/products"
+              className="bg-white border border-gray-200 text-gray-800 rounded-full px-7 py-3.5 font-medium text-[15px] hover:bg-gray-50 hover:border-gray-300 transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
               {content.btn2} <span>↗</span>
-            </button>
+            </Link>
           </motion.div>
 
           {/* Stats Row */}

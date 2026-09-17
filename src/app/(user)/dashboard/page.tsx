@@ -835,7 +835,11 @@ export default function DashboardPage() {
           return (
             <div key={w.currency} className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex flex-col">
               <div className="flex items-start justify-between mb-4">
-                <CoinLogo src={getCoinBySymbol(`${w.currency}USDT`)?.logoUrl} symbol={w.currency} className="h-10 w-10 p-1.5" />
+                <CoinLogo
+                  src={getCoinBySymbol(`${w.currency}USDT`)?.logoUrl}
+                  symbol={w.currency}
+                  className={isCAD ? "h-10 w-10 p-0 overflow-hidden border-slate-200" : "h-10 w-10 p-1.5"}
+                />
                 <div className={isStable ? "bg-gray-100 text-[#718096] px-2 py-0.5 rounded text-[11px] font-bold" : "bg-green-50 text-[#10B981] px-2 py-0.5 rounded text-[11px] font-bold border border-green-100"}>
                   {isStable ? (isCAD ? "Fiat" : "Stable") : "Live"}
                 </div>

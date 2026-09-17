@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%">
+  <!-- Circular White Background with Red Border -->
+  <circle cx="250" cy="250" r="236" fill="#FFFFFF" stroke="#ED1B24" stroke-width="18" />
+  <!-- Canadian Red 11-Point Maple Leaf -->
+  <path
+    fill="#ED1B24"
+    d="M250 42 L270 116 L320 89 L310 160 L380 165 L350 218 L402 250 L328 276 L333 313 L284 303 L295 335 L263 330 L255 460 L245 460 L237 330 L205 335 L216 303 L167 313 L172 276 L98 250 L150 218 L120 165 L190 160 L180 89 L230 116 Z"
+  />
+</svg>
