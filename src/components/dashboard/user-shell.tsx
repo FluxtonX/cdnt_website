@@ -648,7 +648,7 @@ export function UserShell({ children }: { children: React.ReactNode }) {
                   </p>
                   {lockReason && (
                     <div className="mt-2.5 flex items-start gap-2 rounded-lg bg-amber-500/15 border border-amber-500/30 px-3 py-2 text-[12px] text-amber-950">
-                      <span className="font-bold text-amber-900 shrink-0"></span>
+                      <span className="font-bold text-amber-900 shrink-0">Message:</span>
                       <span className="break-words whitespace-pre-wrap font-medium">{lockReason}</span>
                     </div>
                   )}

@@ -31,11 +31,63 @@ type Message = {
   from: "user" | "agent" | "bot";
   text: string;
   time: string;
+  created_at?: string;
   status: MessageStatus;
   attachmentUrl?: string | null;
   attachmentName?: string | null;
   attachmentType?: string | null;
 };
+
+/* ─── Date & Time Formatting Utilities ────────────────────────────────────────── */
+function formatChatDateDivider(dateStr?: string | null): string {
+  if (!dateStr) return "Today";
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return "Today";
+
+  const now = new Date();
+  const isToday =
+    date.getDate() === now.getDate() &&
+    date.getMonth() === now.getMonth() &&
+    date.getFullYear() === now.getFullYear();
+
+  if (isToday) return "Today";
+
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const isYesterday =
+    date.getDate() === yesterday.getDate() &&
+    date.getMonth() === yesterday.getMonth() &&
+    date.getFullYear() === yesterday.getFullYear();
+
+  if (isYesterday) return "Yesterday";
+
+  if (date.getFullYear() === now.getFullYear()) {
+    return date.toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" });
+  }
+
+  return date.toLocaleDateString([], { weekday: "long", month: "short", day: "numeric", year: "numeric" });
+}
+
+function formatMessageTime(dateStr?: string | null): string {
+  if (!dateStr) return "";
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return "";
+  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+function formatFullDateTime(dateStr?: string | null): string {
+  if (!dateStr) return "";
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return "";
+  return date.toLocaleString([], {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
 // ─── Triage Options Structure ────────────────────────────────────────────────
 interface CategoryOption {
@@ -175,7 +227,8 @@ export function SupportConsole({ onTicketCreated }: SupportConsoleProps) {
             id: m.id,
             from: m.sender === "Client" ? "user" : m.sender === "Bot" ? "bot" : "agent",
             text: m.text,
-            time: new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            time: formatMessageTime(m.created_at),
+            created_at: m.created_at,
             status: m.sender === "Client"
               ? (threadData.unread_count_admin === 0 ? "seen" : "delivered") as MessageStatus
               : "seen" as MessageStatus,
@@ -239,7 +292,8 @@ export function SupportConsole({ onTicketCreated }: SupportConsoleProps) {
             id: newMsg.id,
             from: newMsg.sender === "Client" ? "user" : newMsg.sender === "Bot" ? "bot" : "agent",
             text: newMsg.text,
-            time: new Date(newMsg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            time: formatMessageTime(newMsg.created_at),
+            created_at: newMsg.created_at,
             status: newMsg.sender === "Client" ? "delivered" : "seen",
             attachmentUrl: newMsg.attachment_url || null,
             attachmentName: newMsg.attachment_name || null,
@@ -432,11 +486,13 @@ export function SupportConsole({ onTicketCreated }: SupportConsoleProps) {
     const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const isFirstIssueSubmission = triageStep !== "completed" || !thread;
 
+    const nowIso = new Date().toISOString();
     const tempUserMsg: Message = {
       id: tempId,
       from: "user",
       text: messageText,
-      time: currentTime,
+      time: formatMessageTime(nowIso),
+      created_at: nowIso,
       status: "sending",
       attachmentName: fileToSend?.name,
       attachmentType: fileToSend?.type,
@@ -566,7 +622,8 @@ export function SupportConsole({ onTicketCreated }: SupportConsoleProps) {
                   id: newMsg.id,
                   from: "user" as const,
                   text: newMsg.text,
-                  time: new Date(newMsg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                  time: formatMessageTime(newMsg.created_at),
+                  created_at: newMsg.created_at,
                   status: "delivered" as MessageStatus,
                   attachmentUrl: newMsg.attachment_url || uploadedUrl,
                   attachmentName: newMsg.attachment_name || uploadedName,
@@ -605,7 +662,8 @@ export function SupportConsole({ onTicketCreated }: SupportConsoleProps) {
                     id: botMsg.id,
                     from: "agent" as const,
                     text: botMsg.text,
-                    time: new Date(botMsg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                    time: formatMessageTime(botMsg.created_at),
+                    created_at: botMsg.created_at,
                     status: "seen" as MessageStatus,
                   },
                 ];
@@ -803,13 +861,29 @@ export function SupportConsole({ onTicketCreated }: SupportConsoleProps) {
         )}
 
         {/* Dynamic Chat Messages History */}
-        {messages.map((message) => {
+        {messages.map((message, index) => {
           const isUser = message.from === "user";
+          const prevMsg = index > 0 ? messages[index - 1] : null;
+          const currentDateKey = message.created_at ? new Date(message.created_at).toDateString() : "";
+          const prevDateKey = prevMsg?.created_at ? new Date(prevMsg.created_at).toDateString() : "";
+          const showDateDivider = !prevMsg || (Boolean(currentDateKey) && currentDateKey !== prevDateKey);
+
           return (
-            <div
-              key={message.id}
-              className={cn("flex items-end gap-2", isUser ? "justify-end" : "justify-start")}
-            >
+            <div key={message.id} className="space-y-2">
+              {showDateDivider && (
+                <div className="flex items-center justify-center my-3 select-none">
+                  <div className="flex items-center gap-2">
+                    <div className="h-px w-10 bg-slate-200" />
+                    <span className="px-3 py-0.5 text-[10px] font-bold tracking-wide uppercase bg-slate-100 text-slate-500 rounded-full border border-slate-200/80 shadow-2xs">
+                      {formatChatDateDivider(message.created_at)}
+                    </span>
+                    <div className="h-px w-10 bg-slate-200" />
+                  </div>
+                </div>
+              )}
+              <div
+                className={cn("flex items-end gap-2", isUser ? "justify-end" : "justify-start")}
+              >
               {!isUser && (
                 <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-slate-800 text-white text-xs shadow-sm mb-1">
                   <UserRoundCheck className="h-4 w-4" />
@@ -879,14 +953,18 @@ export function SupportConsole({ onTicketCreated }: SupportConsoleProps) {
                     )}
                   </div>
                 )}
-                <div className="mt-1.5 flex items-center justify-end gap-1.5">
-                  <span className={isUser ? "text-[9px] text-white/70 font-semibold" : "text-[9px] text-slate-600 font-semibold"}>
+                <div 
+                  className="mt-1.5 flex items-center justify-end gap-1.5"
+                  title={formatFullDateTime(message.created_at)}
+                >
+                  <span className={isUser ? "text-[9px] text-white/70 font-semibold font-mono" : "text-[9px] text-slate-500 font-semibold font-mono"}>
                     {message.time}
                   </span>
                   {isUser && <MessageStatusIcon status={message.status} />}
                 </div>
               </div>
             </div>
+          </div>
           );
         })}
 
