@@ -99,9 +99,25 @@ export function UserShell({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    router.push("/login");
+    try {
+      setIsLoggingOut(true);
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error("Sign out error:", err);
+    } finally {
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.removeItem("current_session_id");
+          localStorage.removeItem("read_notifications");
+          localStorage.removeItem("deleted_notifications");
+          sessionStorage.clear();
+        } catch {}
+        window.location.href = "/login";
+      }
+    }
   };
 
   useEffect(() => {
@@ -400,20 +416,13 @@ export function UserShell({ children }: { children: React.ReactNode }) {
           <div className="p-4 mb-4">
             <button
               suppressHydrationWarning
-              onClick={(e) => {
-                if (isFrozen) {
-                  e.preventDefault();
-                  return;
-                }
-                handleSignOut();
-              }}
-              className={cn(
-                "flex w-full items-center gap-3.5 rounded-xl px-4 py-3 text-[14px] font-medium text-[#E53E3E] hover:bg-red-50 transition-colors",
-                isFrozen && "pointer-events-none opacity-40 cursor-not-allowed"
-              )}
+              type="button"
+              onClick={handleSignOut}
+              disabled={isLoggingOut}
+              className="flex w-full items-center gap-3.5 rounded-xl px-4 py-3 text-[14px] font-medium text-[#E53E3E] hover:bg-red-50 transition-colors disabled:opacity-50 cursor-pointer"
             >
               <LogOut className="h-[18px] w-[18px]" strokeWidth={2} />
-              Sign Out
+              {isLoggingOut ? "Signing Out..." : "Sign Out"}
             </button>
           </div>
         </div>
@@ -610,20 +619,13 @@ export function UserShell({ children }: { children: React.ReactNode }) {
                   <div className="py-1">
                     <button
                       suppressHydrationWarning
-                      onClick={(e) => {
-                        if (isFrozen) {
-                          e.preventDefault();
-                          return;
-                        }
-                        handleSignOut();
-                      }}
-                      className={cn(
-                        "group flex w-full items-center px-4 py-2 text-[13px] text-[#E53E3E] hover:bg-red-50",
-                        isFrozen && "pointer-events-none opacity-40 cursor-not-allowed"
-                      )}
+                      type="button"
+                      onClick={handleSignOut}
+                      disabled={isLoggingOut}
+                      className="group flex w-full items-center px-4 py-2 text-[13px] text-[#E53E3E] hover:bg-red-50 disabled:opacity-50 cursor-pointer"
                     >
                       <LogOut className="mr-3 h-4 w-4 text-[#E53E3E]" />
-                      Logout
+                      {isLoggingOut ? "Signing Out..." : "Logout"}
                     </button>
                   </div>
                 </div>
@@ -741,12 +743,23 @@ export function UserShell({ children }: { children: React.ReactNode }) {
             <p className="mt-3 text-[14px] leading-relaxed text-[#718096]">
               Your account has been temporarily frozen. Please contact support.
             </p>
-            <Link
-              href={FREEZE_SUPPORT_PATH}
-              className="mt-6 inline-flex items-center justify-center rounded-lg bg-[#113285] px-5 py-2.5 text-[14px] font-bold text-white shadow-sm hover:bg-[#0d2668] transition-colors"
-            >
-              Contact Support
-            </Link>
+            <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
+              <Link
+                href={FREEZE_SUPPORT_PATH}
+                className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl bg-[#113285] px-6 py-2.5 text-[14px] font-bold text-white shadow-sm hover:bg-[#0d2668] transition-colors"
+              >
+                Contact Support
+              </Link>
+              <button
+                type="button"
+                onClick={handleSignOut}
+                disabled={isLoggingOut}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-[14px] font-semibold text-red-600 hover:bg-red-50 transition-colors cursor-pointer disabled:opacity-50"
+              >
+                <LogOut className="h-4 w-4" />
+                {isLoggingOut ? "Signing out..." : "Sign Out"}
+              </button>
+            </div>
           </div>
         </div>
       )}

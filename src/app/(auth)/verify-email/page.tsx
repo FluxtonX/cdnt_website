@@ -2,16 +2,20 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, MailCheck } from "lucide-react";
+import { ArrowLeft, MailCheck, Loader2 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useRef, useEffect, Suspense } from "react";
+import { createClient } from "@/lib/supabase/client";
 
 function VerifyEmailForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const email = searchParams.get("email") || "";
+  const emailParam = searchParams.get("email") || "";
+  const supabase = createClient();
   
+  const [email, setEmail] = useState(emailParam);
   const [isLoading, setIsLoading] = useState(false);
+  const [isBackLoading, setIsBackLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   
@@ -20,6 +24,24 @@ function VerifyEmailForm() {
   
   const [values, setValues] = useState(["", "", "", "", "", ""]);
   const refs = useRef<Array<HTMLInputElement | null>>([]);
+  const hasTriggeredInitialSend = useRef(false);
+
+  // If email param is missing from URL, fallback to authenticated user email
+  useEffect(() => {
+    async function resolveEmail() {
+      if (!email) {
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user?.email) {
+            setEmail(user.email);
+          }
+        } catch (e) {
+          console.error("Failed to retrieve current user email:", e);
+        }
+      }
+    }
+    resolveEmail();
+  }, [email, supabase]);
 
   function updateDigit(index: number, value: string) {
     const digit = value.replace(/\D/g, "").slice(-1);
@@ -31,6 +53,7 @@ function VerifyEmailForm() {
     }
   }
 
+  // Timer countdown
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (cooldown > 0) {
@@ -39,10 +62,51 @@ function VerifyEmailForm() {
     return () => clearTimeout(timer);
   }, [cooldown]);
 
+  // Automatically send OTP on mount if not recently sent
+  useEffect(() => {
+    if (!email || hasTriggeredInitialSend.current) return;
+    hasTriggeredInitialSend.current = true;
+
+    const sessionKey = `otp_last_sent_${email}`;
+    const lastSent = sessionStorage.getItem(sessionKey);
+    const now = Date.now();
+
+    if (lastSent && now - parseInt(lastSent, 10) < 60000) {
+      const remainingSeconds = Math.max(1, Math.ceil((60000 - (now - parseInt(lastSent, 10))) / 1000));
+      setCooldown(remainingSeconds);
+      setSuccess("A verification code was recently sent. Please check your inbox.");
+      return;
+    }
+
+    async function sendInitialOtp() {
+      try {
+        setIsResending(true);
+        const response = await fetch("/api/auth/send-otp", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, purpose: "email-verification" }),
+        });
+
+        if (response.ok) {
+          sessionStorage.setItem(sessionKey, Date.now().toString());
+          setCooldown(60);
+          setSuccess("A 6-digit verification code has been sent to your email.");
+        }
+      } catch (err) {
+        console.error("Auto send OTP error:", err);
+      } finally {
+        setIsResending(false);
+      }
+    }
+
+    sendInitialOtp();
+  }, [email]);
+
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) {
-      setError("No email found to verify. Please try registering again.");
+    const activeEmail = email.trim();
+    if (!activeEmail) {
+      setError("No email found to verify. Please return to sign in.");
       return;
     }
     
@@ -56,7 +120,7 @@ function VerifyEmailForm() {
       const response = await fetch("/api/auth/verify-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, code }),
+        body: JSON.stringify({ email: activeEmail, code }),
       });
 
       const data = await response.json();
@@ -67,8 +131,8 @@ function VerifyEmailForm() {
 
       setSuccess("Email verified successfully! Redirecting...");
       setTimeout(() => {
-        router.push("/dashboard");
-      }, 1500);
+        window.location.href = "/dashboard";
+      }, 1000);
     } catch (err: any) {
       setError(err.message);
       setIsLoading(false);
@@ -76,7 +140,8 @@ function VerifyEmailForm() {
   };
 
   const handleResend = async () => {
-    if (cooldown > 0 || !email) return;
+    const activeEmail = email.trim();
+    if (cooldown > 0 || !activeEmail) return;
     
     setIsResending(true);
     setError(null);
@@ -86,7 +151,7 @@ function VerifyEmailForm() {
       const response = await fetch("/api/auth/send-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, purpose: "email-verification" }),
+        body: JSON.stringify({ email: activeEmail, purpose: "email-verification" }),
       });
 
       const data = await response.json();
@@ -95,6 +160,7 @@ function VerifyEmailForm() {
         throw new Error(data.error || "Failed to resend code");
       }
 
+      sessionStorage.setItem(`otp_last_sent_${activeEmail}`, Date.now().toString());
       setSuccess("A new verification code has been sent to your email.");
       setCooldown(60);
     } catch (err: any) {
@@ -104,17 +170,37 @@ function VerifyEmailForm() {
     }
   };
 
+  const handleSignOutAndBack = async () => {
+    setIsBackLoading(true);
+    try {
+      await supabase.auth.signOut();
+    } catch (e) {
+      console.error("Sign out error:", e);
+    } finally {
+      if (typeof window !== "undefined") {
+        try {
+          sessionStorage.clear();
+          localStorage.removeItem("current_session_id");
+          localStorage.removeItem("read_notifications");
+          localStorage.removeItem("deleted_notifications");
+        } catch {}
+        window.location.href = "/login";
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#1855C0] bg-gradient-to-br from-[#1C5BD0] to-[#123E95] flex flex-col items-center justify-center p-6 relative">
       
-      {/* Back to home arrow */}
-      <Link 
-        href="/" 
-        className="absolute top-8 left-8 flex items-center gap-2 text-white/80 hover:text-white transition-colors"
+      {/* Back to sign in arrow */}
+      <button 
+        type="button"
+        onClick={handleSignOutAndBack}
+        className="absolute top-8 left-8 flex items-center gap-2 text-white/80 hover:text-white transition-colors cursor-pointer"
       >
         <ArrowLeft className="w-5 h-5" />
-        <span className="font-medium">Back to Home</span>
-      </Link>
+        <span className="font-medium">Back to Sign In</span>
+      </button>
 
       {/* Header */}
       <div className="flex flex-col items-center mb-6">
@@ -130,7 +216,7 @@ function VerifyEmailForm() {
           />
         </div>
         <h1 className="text-white text-2xl font-bold mb-1">Verify Email</h1>
-        <p className="text-blue-100 text-[14px]">Check your inbox for a verification link or code</p>
+        <p className="text-blue-100 text-[14px]">Check your inbox for your verification code</p>
       </div>
 
       {/* Verification Card */}
@@ -189,15 +275,20 @@ function VerifyEmailForm() {
           <div className="flex gap-4 pt-2">
             <button 
               type="button"
-              onClick={() => router.back()}
-              className="w-1/2 bg-white border border-gray-200 hover:bg-gray-50 text-[#0A0F2C] font-bold text-[15px] py-3.5 rounded-xl transition-colors"
+              onClick={handleSignOutAndBack}
+              disabled={isBackLoading}
+              className="w-1/2 bg-white border border-gray-200 hover:bg-gray-50 text-[#0A0F2C] font-bold text-[14px] py-3.5 rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-1.5"
             >
-              Back
+              {isBackLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin text-gray-500" />
+              ) : (
+                "Sign In"
+              )}
             </button>
             <button 
               type="submit"
               disabled={isLoading || values.some(v => v === "")}
-              className="w-1/2 bg-[#113285] hover:bg-[#0D266A] disabled:opacity-60 disabled:hover:bg-[#113285] text-white font-bold text-[15px] py-3.5 rounded-xl transition-colors shadow-md flex justify-center items-center"
+              className="w-1/2 bg-[#113285] hover:bg-[#0D266A] disabled:opacity-60 disabled:hover:bg-[#113285] text-white font-bold text-[14px] py-3.5 rounded-xl transition-colors shadow-md flex justify-center items-center cursor-pointer"
             >
               {isLoading ? (
                 <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
@@ -212,9 +303,10 @@ function VerifyEmailForm() {
           <p className="text-[13px] text-gray-500">
             Did not receive it?{" "}
             <button 
+              type="button"
               onClick={handleResend}
               disabled={cooldown > 0 || isResending}
-              className="text-[#113285] font-bold hover:underline focus:outline-none disabled:opacity-50 disabled:hover:no-underline"
+              className="text-[#113285] font-bold hover:underline focus:outline-none disabled:opacity-50 disabled:hover:no-underline cursor-pointer"
             >
               {isResending ? "Sending..." : cooldown > 0 ? `Resend code in ${cooldown}s` : "Resend code"}
             </button>
